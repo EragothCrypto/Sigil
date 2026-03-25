@@ -1,0 +1,14 @@
+packages:
+  "framer-motion": "For sleek cyberpunk scanning animations and page transitions"
+  "clsx": "For conditional tailwind classes"
+  "tailwind-merge": "For merging tailwind classes"
+  "lucide-react": "Icons for warnings, successes, and UI elements"
+images:
+  - path: "artifacts/sigil/public/images/hero-bg.png"
+    description: "Abstract dark cyberpunk background with subtle glowing cyan and emerald grid lines, dark mode, high tech security aesthetic, deep space black"
+    aspect_ratio: "16:9"
+  - path: "artifacts/sigil/public/images/sigil-logo.png"
+    description: "Minimalist glowing neon geometric sigil logo, sharp edges, tech cybersecurity theme on solid black background, cyan and purple"
+    aspect_ratio: "1:1"
+notes:
+  - "Using provided @workspace/api-client-react hooks for API interaction"

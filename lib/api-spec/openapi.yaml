@@ -1,15 +1,16 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Sigil — Web3 Trust Layer API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: sigil
+    description: Sigil transaction and contract analysis
 paths:
   /healthz:
     get:
@@ -24,6 +25,78 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /sigil/analyze:
+    post:
+      operationId: analyzeInput
+      tags: [sigil]
+      summary: Analyze a transaction hash or contract address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeInputBody"
+      responses:
+        "200":
+          description: Analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sigil/history:
+    get:
+      operationId: getAnalysisHistory
+      tags: [sigil]
+      summary: Get recent analysis history
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: number
+          description: Number of results to return
+      responses:
+        "200":
+          description: List of past analyses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalysisRecord"
+
+  /sigil/history/{id}:
+    get:
+      operationId: getAnalysisById
+      tags: [sigil]
+      summary: Get a specific analysis by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Analysis record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisRecord"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +107,132 @@ components:
       required:
         - status
 
+    AnalyzeInputBody:
+      type: object
+      properties:
+        input:
+          type: string
+          description: Transaction hash (0x...) or contract address
+        network:
+          type: string
+          description: Ethereum network (mainnet, goerli, etc.)
+          default: mainnet
+      required:
+        - input
+
+    AnalysisResult:
+      type: object
+      properties:
+        id:
+          type: string
+        input:
+          type: string
+        inputType:
+          type: string
+          enum: [transaction, contract, unknown]
+        network:
+          type: string
+        summary:
+          type: string
+          description: Plain English summary of what this does
+        riskScore:
+          type: number
+          description: Risk score from 0 (safe) to 100 (very risky)
+        riskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        warnings:
+          type: array
+          items:
+            type: string
+        positives:
+          type: array
+          items:
+            type: string
+        details:
+          $ref: "#/components/schemas/AnalysisDetails"
+        createdAt:
+          type: string
+      required:
+        - id
+        - input
+        - inputType
+        - network
+        - summary
+        - riskScore
+        - riskLevel
+        - warnings
+        - positives
+        - createdAt
+
+    AnalysisDetails:
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        value:
+          type: string
+        gasUsed:
+          type: string
+        methodName:
+          type: string
+        contractName:
+          type: string
+        tokenSymbol:
+          type: string
+        rawData:
+          type: object
+
+    AnalysisRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        input:
+          type: string
+        inputType:
+          type: string
+          enum: [transaction, contract, unknown]
+        network:
+          type: string
+        summary:
+          type: string
+        riskScore:
+          type: number
+        riskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        warnings:
+          type: array
+          items:
+            type: string
+        positives:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - input
+        - inputType
+        - network
+        - summary
+        - riskScore
+        - riskLevel
+        - warnings
+        - positives
+        - createdAt
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message

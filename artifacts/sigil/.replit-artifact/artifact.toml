@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Sigil — Web3 Trust Layer"
+version = "1.0.0"
+id = "artifacts/sigil"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23543
+
+[services.development]
+run = "pnpm --filter @workspace/sigil run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sigil", "run", "build" ]
+publicDir = "artifacts/sigil/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23543"
+BASE_PATH = "/"
