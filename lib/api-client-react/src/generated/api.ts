@@ -23,6 +23,8 @@ import type {
   ErrorResponse,
   GetAnalysisHistoryParams,
   HealthStatus,
+  SimulateTransactionBody,
+  SimulationResult,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -109,6 +111,92 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Simulate a raw transaction before signing
+ */
+export const getSimulateTransactionUrl = () => {
+  return `/api/sigil/simulate`;
+};
+
+export const simulateTransaction = async (
+  simulateTransactionBody: SimulateTransactionBody,
+  options?: RequestInit,
+): Promise<SimulationResult> => {
+  return customFetch<SimulationResult>(getSimulateTransactionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(simulateTransactionBody),
+  });
+};
+
+export const getSimulateTransactionMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof simulateTransaction>>,
+    TError,
+    { data: BodyType<SimulateTransactionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof simulateTransaction>>,
+  TError,
+  { data: BodyType<SimulateTransactionBody> },
+  TContext
+> => {
+  const mutationKey = ["simulateTransaction"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof simulateTransaction>>,
+    { data: BodyType<SimulateTransactionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return simulateTransaction(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SimulateTransactionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof simulateTransaction>>
+>;
+export type SimulateTransactionMutationBody = BodyType<SimulateTransactionBody>;
+export type SimulateTransactionMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Simulate a raw transaction before signing
+ */
+export const useSimulateTransaction = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof simulateTransaction>>,
+    TError,
+    { data: BodyType<SimulateTransactionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof simulateTransaction>>,
+  TError,
+  { data: BodyType<SimulateTransactionBody> },
+  TContext
+> => {
+  return useMutation(getSimulateTransactionMutationOptions(options));
+};
 
 /**
  * @summary Analyze a transaction hash or contract address

@@ -21,9 +21,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <span className="font-display font-bold text-2xl tracking-widest text-white group-hover:text-primary transition-colors">SIGIL</span>
             </Link>
-            <nav className="flex items-center gap-8">
+            <nav className="flex items-center gap-6">
               <Link href="/" className="text-sm font-mono text-muted-foreground hover:text-primary transition-colors cursor-pointer uppercase tracking-wider">Scanner</Link>
-              <Link href="/history" className="text-sm font-mono text-muted-foreground hover:text-primary transition-colors cursor-pointer uppercase tracking-wider">Global Feed</Link>
+              <Link href="/simulate" className="text-sm font-mono text-muted-foreground hover:text-primary transition-colors cursor-pointer uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                Simulate
+              </Link>
+              <Link href="/history" className="text-sm font-mono text-muted-foreground hover:text-primary transition-colors cursor-pointer uppercase tracking-wider">Feed</Link>
             </nav>
           </div>
         </header>

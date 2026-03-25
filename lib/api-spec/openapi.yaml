@@ -26,6 +26,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /sigil/simulate:
+    post:
+      operationId: simulateTransaction
+      tags: [sigil]
+      summary: Simulate a raw transaction before signing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulateTransactionBody"
+      responses:
+        "200":
+          description: Simulation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /sigil/analyze:
     post:
       operationId: analyzeInput
@@ -106,6 +131,85 @@ components:
           type: string
       required:
         - status
+
+    SimulateTransactionBody:
+      type: object
+      properties:
+        rawData:
+          type: string
+          description: Raw transaction data — hex calldata, JSON tx object, or wallet prompt text
+        network:
+          type: string
+          default: mainnet
+        fromAddress:
+          type: string
+          description: Optional wallet address doing the signing
+      required:
+        - rawData
+
+    SimulationAssetChange:
+      type: object
+      properties:
+        direction:
+          type: string
+          enum: [lose, receive, approve]
+        asset:
+          type: string
+          description: Token/asset name e.g. "USDC", "ETH", "NFT #1234"
+        amount:
+          type: string
+          description: Human-readable amount e.g. "250", "unlimited", "0"
+        usdValue:
+          type: string
+          description: Approximate USD value if known
+      required:
+        - direction
+        - asset
+        - amount
+
+    SimulationResult:
+      type: object
+      properties:
+        verdict:
+          type: string
+          enum: [safe, caution, dangerous]
+        verdictReason:
+          type: string
+        summary:
+          type: string
+          description: One sentence of what this transaction does
+        assetChanges:
+          type: array
+          items:
+            $ref: "#/components/schemas/SimulationAssetChange"
+          description: What will change in your wallet after signing
+        permissionsGranted:
+          type: array
+          items:
+            type: string
+          description: Permissions/approvals being granted
+        riskScore:
+          type: number
+        riskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        warnings:
+          type: array
+          items:
+            type: string
+        inputType:
+          type: string
+          description: What kind of input was detected e.g. "ERC-20 approve calldata"
+      required:
+        - verdict
+        - verdictReason
+        - summary
+        - assetChanges
+        - permissionsGranted
+        - riskScore
+        - riskLevel
+        - warnings
+        - inputType
 
     AnalyzeInputBody:
       type: object

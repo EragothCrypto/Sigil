@@ -16,6 +16,58 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary Simulate a raw transaction before signing
+ */
+export const simulateTransactionBodyNetworkDefault = `mainnet`;
+
+export const SimulateTransactionBody = zod.object({
+  rawData: zod
+    .string()
+    .describe(
+      "Raw transaction data — hex calldata, JSON tx object, or wallet prompt text",
+    ),
+  network: zod.string().default(simulateTransactionBodyNetworkDefault),
+  fromAddress: zod
+    .string()
+    .optional()
+    .describe("Optional wallet address doing the signing"),
+});
+
+export const SimulateTransactionResponse = zod.object({
+  verdict: zod.enum(["safe", "caution", "dangerous"]),
+  verdictReason: zod.string(),
+  summary: zod.string().describe("One sentence of what this transaction does"),
+  assetChanges: zod
+    .array(
+      zod.object({
+        direction: zod.enum(["lose", "receive", "approve"]),
+        asset: zod
+          .string()
+          .describe('Token\/asset name e.g. \"USDC\", \"ETH\", \"NFT'),
+        amount: zod
+          .string()
+          .describe('Human-readable amount e.g. \"250\", \"unlimited\", \"0\"'),
+        usdValue: zod
+          .string()
+          .optional()
+          .describe("Approximate USD value if known"),
+      }),
+    )
+    .describe("What will change in your wallet after signing"),
+  permissionsGranted: zod
+    .array(zod.string())
+    .describe("Permissions\/approvals being granted"),
+  riskScore: zod.number(),
+  riskLevel: zod.enum(["low", "medium", "high", "critical"]),
+  warnings: zod.array(zod.string()),
+  inputType: zod
+    .string()
+    .describe(
+      'What kind of input was detected e.g. \"ERC-20 approve calldata\"',
+    ),
+});
+
+/**
  * @summary Analyze a transaction hash or contract address
  */
 export const analyzeInputBodyNetworkDefault = `mainnet`;

@@ -9,6 +9,68 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface SimulateTransactionBody {
+  /** Raw transaction data — hex calldata, JSON tx object, or wallet prompt text */
+  rawData: string;
+  network?: string;
+  /** Optional wallet address doing the signing */
+  fromAddress?: string;
+}
+
+export type SimulationAssetChangeDirection =
+  (typeof SimulationAssetChangeDirection)[keyof typeof SimulationAssetChangeDirection];
+
+export const SimulationAssetChangeDirection = {
+  lose: "lose",
+  receive: "receive",
+  approve: "approve",
+} as const;
+
+export interface SimulationAssetChange {
+  direction: SimulationAssetChangeDirection;
+  /** Token/asset name e.g. "USDC", "ETH", "NFT */
+  asset: string;
+  /** Human-readable amount e.g. "250", "unlimited", "0" */
+  amount: string;
+  /** Approximate USD value if known */
+  usdValue?: string;
+}
+
+export type SimulationResultVerdict =
+  (typeof SimulationResultVerdict)[keyof typeof SimulationResultVerdict];
+
+export const SimulationResultVerdict = {
+  safe: "safe",
+  caution: "caution",
+  dangerous: "dangerous",
+} as const;
+
+export type SimulationResultRiskLevel =
+  (typeof SimulationResultRiskLevel)[keyof typeof SimulationResultRiskLevel];
+
+export const SimulationResultRiskLevel = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+  critical: "critical",
+} as const;
+
+export interface SimulationResult {
+  verdict: SimulationResultVerdict;
+  verdictReason: string;
+  /** One sentence of what this transaction does */
+  summary: string;
+  /** What will change in your wallet after signing */
+  assetChanges: SimulationAssetChange[];
+  /** Permissions/approvals being granted */
+  permissionsGranted: string[];
+  riskScore: number;
+  riskLevel: SimulationResultRiskLevel;
+  warnings: string[];
+  /** What kind of input was detected e.g. "ERC-20 approve calldata" */
+  inputType: string;
+}
+
 export interface AnalyzeInputBody {
   /** Transaction hash (0x...) or contract address */
   input: string;
