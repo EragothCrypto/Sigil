@@ -7,6 +7,7 @@
  */
 import type { AnalysisRecordInputType } from "./analysisRecordInputType";
 import type { AnalysisRecordRiskLevel } from "./analysisRecordRiskLevel";
+import type { AnalysisRecordVerdict } from "./analysisRecordVerdict";
 
 export interface AnalysisRecord {
   id: string;
@@ -14,6 +15,8 @@ export interface AnalysisRecord {
   inputType: AnalysisRecordInputType;
   network: string;
   summary: string;
+  verdict: AnalysisRecordVerdict;
+  verdictReason: string;
   riskScore: number;
   riskLevel: AnalysisRecordRiskLevel;
   warnings: string[];

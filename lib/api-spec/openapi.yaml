@@ -135,6 +135,13 @@ components:
         summary:
           type: string
           description: Plain English summary of what this does
+        verdict:
+          type: string
+          enum: [safe, caution, dangerous]
+          description: Should I sign this? clear decision
+        verdictReason:
+          type: string
+          description: Short reason for the verdict e.g. "Grants unlimited spending to an unverified contract"
         riskScore:
           type: number
           description: Risk score from 0 (safe) to 100 (very risky)
@@ -159,6 +166,8 @@ components:
         - inputType
         - network
         - summary
+        - verdict
+        - verdictReason
         - riskScore
         - riskLevel
         - warnings
@@ -199,6 +208,11 @@ components:
           type: string
         summary:
           type: string
+        verdict:
+          type: string
+          enum: [safe, caution, dangerous]
+        verdictReason:
+          type: string
         riskScore:
           type: number
         riskLevel:
@@ -220,6 +234,8 @@ components:
         - inputType
         - network
         - summary
+        - verdict
+        - verdictReason
         - riskScore
         - riskLevel
         - warnings

@@ -8,6 +8,8 @@ export const analysesTable = pgTable("analyses", {
   inputType: text("input_type").notNull().default("unknown"),
   network: text("network").notNull().default("mainnet"),
   summary: text("summary").notNull(),
+  verdict: text("verdict").notNull().default("caution"),
+  verdictReason: text("verdict_reason").notNull().default(""),
   riskScore: integer("risk_score").notNull().default(0),
   riskLevel: text("risk_level").notNull().default("low"),
   warnings: jsonb("warnings").$type<string[]>().notNull().default([]),

@@ -34,6 +34,14 @@ export const AnalyzeInputResponse = zod.object({
   inputType: zod.enum(["transaction", "contract", "unknown"]),
   network: zod.string(),
   summary: zod.string().describe("Plain English summary of what this does"),
+  verdict: zod
+    .enum(["safe", "caution", "dangerous"])
+    .describe("Should I sign this? clear decision"),
+  verdictReason: zod
+    .string()
+    .describe(
+      'Short reason for the verdict e.g. \"Grants unlimited spending to an unverified contract\"',
+    ),
   riskScore: zod
     .number()
     .describe("Risk score from 0 (safe) to 100 (very risky)"),
@@ -68,6 +76,8 @@ export const GetAnalysisHistoryResponseItem = zod.object({
   inputType: zod.enum(["transaction", "contract", "unknown"]),
   network: zod.string(),
   summary: zod.string(),
+  verdict: zod.enum(["safe", "caution", "dangerous"]),
+  verdictReason: zod.string(),
   riskScore: zod.number(),
   riskLevel: zod.enum(["low", "medium", "high", "critical"]),
   warnings: zod.array(zod.string()),
@@ -91,6 +101,8 @@ export const GetAnalysisByIdResponse = zod.object({
   inputType: zod.enum(["transaction", "contract", "unknown"]),
   network: zod.string(),
   summary: zod.string(),
+  verdict: zod.enum(["safe", "caution", "dangerous"]),
+  verdictReason: zod.string(),
   riskScore: zod.number(),
   riskLevel: zod.enum(["low", "medium", "high", "critical"]),
   warnings: zod.array(zod.string()),

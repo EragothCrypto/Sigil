@@ -25,6 +25,18 @@ export const AnalysisResultInputType = {
   unknown: "unknown",
 } as const;
 
+/**
+ * Should I sign this? clear decision
+ */
+export type AnalysisResultVerdict =
+  (typeof AnalysisResultVerdict)[keyof typeof AnalysisResultVerdict];
+
+export const AnalysisResultVerdict = {
+  safe: "safe",
+  caution: "caution",
+  dangerous: "dangerous",
+} as const;
+
 export type AnalysisResultRiskLevel =
   (typeof AnalysisResultRiskLevel)[keyof typeof AnalysisResultRiskLevel];
 
@@ -55,6 +67,10 @@ export interface AnalysisResult {
   network: string;
   /** Plain English summary of what this does */
   summary: string;
+  /** Should I sign this? clear decision */
+  verdict: AnalysisResultVerdict;
+  /** Short reason for the verdict e.g. "Grants unlimited spending to an unverified contract" */
+  verdictReason: string;
   /** Risk score from 0 (safe) to 100 (very risky) */
   riskScore: number;
   riskLevel: AnalysisResultRiskLevel;
@@ -73,6 +89,15 @@ export const AnalysisRecordInputType = {
   unknown: "unknown",
 } as const;
 
+export type AnalysisRecordVerdict =
+  (typeof AnalysisRecordVerdict)[keyof typeof AnalysisRecordVerdict];
+
+export const AnalysisRecordVerdict = {
+  safe: "safe",
+  caution: "caution",
+  dangerous: "dangerous",
+} as const;
+
 export type AnalysisRecordRiskLevel =
   (typeof AnalysisRecordRiskLevel)[keyof typeof AnalysisRecordRiskLevel];
 
@@ -89,6 +114,8 @@ export interface AnalysisRecord {
   inputType: AnalysisRecordInputType;
   network: string;
   summary: string;
+  verdict: AnalysisRecordVerdict;
+  verdictReason: string;
   riskScore: number;
   riskLevel: AnalysisRecordRiskLevel;
   warnings: string[];

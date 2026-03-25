@@ -3,6 +3,8 @@ import type { TransactionData, ContractData } from "./ethereum.js";
 
 export interface AIAnalysisResult {
   summary: string;
+  verdict: "safe" | "caution" | "dangerous";
+  verdictReason: string;
   riskScore: number;
   riskLevel: "low" | "medium" | "high" | "critical";
   warnings: string[];
@@ -14,6 +16,12 @@ function getRiskLevel(score: number): "low" | "medium" | "high" | "critical" {
   if (score <= 50) return "medium";
   if (score <= 75) return "high";
   return "critical";
+}
+
+function getVerdictFromScore(score: number): "safe" | "caution" | "dangerous" {
+  if (score <= 25) return "safe";
+  if (score <= 60) return "caution";
+  return "dangerous";
 }
 
 export async function analyzeTransaction(
@@ -45,10 +53,17 @@ ${txContext}
 Respond with a JSON object (no markdown, just raw JSON):
 {
   "summary": "One sentence plain English explanation of what this transaction does (e.g. 'This transaction approves Uniswap to spend up to 1000 USDC from your wallet')",
+  "verdict": "safe" | "caution" | "dangerous",
+  "verdictReason": "One short sentence (max 12 words) explaining the verdict. Start with the verdict word. E.g. 'Safe — standard transfer to a verified protocol' or 'Dangerous — grants unlimited spending to an unverified contract'",
   "riskScore": <0-100 integer, where 0=very safe, 100=extremely dangerous>,
   "warnings": ["Array of specific warning strings, empty if none"],
   "positives": ["Array of positive/safe attributes, empty if none"]
 }
+
+Verdict guidelines:
+- "safe" (score 0-25): Standard transfers to known/verified contracts, normal token transfers
+- "caution" (score 26-60): Approvals, swaps on known DEXes, unverified but seemingly benign contracts
+- "dangerous" (score 61-100): Unlimited approvals to unknown contracts, drain attacks, unrestricted minting, suspicious patterns
 
 Risk scoring guidelines:
 - 0-25 (low): Standard transfers to known contracts, verified contracts
@@ -76,8 +91,15 @@ Common warnings to check:
   try {
     const parsed = JSON.parse(content.trim());
     const score = Math.max(0, Math.min(100, parseInt(parsed.riskScore) || 0));
+    const verdictRaw = parsed.verdict;
+    const verdict: "safe" | "caution" | "dangerous" =
+      verdictRaw === "safe" || verdictRaw === "caution" || verdictRaw === "dangerous"
+        ? verdictRaw
+        : getVerdictFromScore(score);
     return {
       summary: parsed.summary || "Unable to analyze this transaction.",
+      verdict,
+      verdictReason: parsed.verdictReason || `${verdict.charAt(0).toUpperCase() + verdict.slice(1)} — based on risk analysis`,
       riskScore: score,
       riskLevel: getRiskLevel(score),
       warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
@@ -86,6 +108,8 @@ Common warnings to check:
   } catch {
     return {
       summary: content.substring(0, 500),
+      verdict: "caution",
+      verdictReason: "Caution — could not fully parse analysis results",
       riskScore: 50,
       riskLevel: "medium",
       warnings: ["Could not fully parse AI response"],
@@ -116,10 +140,17 @@ ${contractContext}
 Respond with a JSON object (no markdown, just raw JSON):
 {
   "summary": "One sentence plain English explanation of what this contract is/does",
+  "verdict": "safe" | "caution" | "dangerous",
+  "verdictReason": "One short sentence (max 12 words) explaining the verdict. Start with the verdict word. E.g. 'Safe — verified token contract from a known protocol' or 'Dangerous — unverified contract with unrestricted minting'",
   "riskScore": <0-100 integer>,
   "warnings": ["Array of specific warning strings"],
   "positives": ["Array of positive/safe attributes"]
 }
+
+Verdict guidelines:
+- "safe": Verified contract, well-known protocol, standard token
+- "caution": Unverified but standard patterns, or verified but with some risk
+- "dangerous": Unverified with suspicious patterns, unrestricted minting, honeypot indicators
 
 Risk scoring guidelines:
 - 0-25 (low): Verified contract, well-known protocol, standard token
@@ -146,8 +177,15 @@ Check for:
   try {
     const parsed = JSON.parse(content.trim());
     const score = Math.max(0, Math.min(100, parseInt(parsed.riskScore) || 0));
+    const verdictRaw = parsed.verdict;
+    const verdict: "safe" | "caution" | "dangerous" =
+      verdictRaw === "safe" || verdictRaw === "caution" || verdictRaw === "dangerous"
+        ? verdictRaw
+        : getVerdictFromScore(score);
     return {
       summary: parsed.summary || "Unable to analyze this contract.",
+      verdict,
+      verdictReason: parsed.verdictReason || `${verdict.charAt(0).toUpperCase() + verdict.slice(1)} — based on risk analysis`,
       riskScore: score,
       riskLevel: getRiskLevel(score),
       warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
@@ -156,6 +194,8 @@ Check for:
   } catch {
     return {
       summary: content.substring(0, 500),
+      verdict: "caution",
+      verdictReason: "Caution — could not fully parse analysis results",
       riskScore: 50,
       riskLevel: "medium",
       warnings: ["Could not fully parse AI response"],
@@ -167,6 +207,8 @@ Check for:
 export async function analyzeUnknown(input: string, network: string): Promise<AIAnalysisResult> {
   return {
     summary: `The input "${input.substring(0, 20)}..." does not appear to be a valid Ethereum transaction hash or contract address.`,
+    verdict: "caution",
+    verdictReason: "Caution — input format is not a valid transaction hash or address",
     riskScore: 0,
     riskLevel: "low",
     warnings: ["Invalid input format. Please provide a 0x transaction hash (66 chars) or contract address (42 chars)."],

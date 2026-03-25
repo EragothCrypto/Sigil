@@ -8,6 +8,7 @@
 import type { AnalysisDetails } from "./analysisDetails";
 import type { AnalysisResultInputType } from "./analysisResultInputType";
 import type { AnalysisResultRiskLevel } from "./analysisResultRiskLevel";
+import type { AnalysisResultVerdict } from "./analysisResultVerdict";
 
 export interface AnalysisResult {
   id: string;
@@ -16,6 +17,10 @@ export interface AnalysisResult {
   network: string;
   /** Plain English summary of what this does */
   summary: string;
+  /** Should I sign this? clear decision */
+  verdict: AnalysisResultVerdict;
+  /** Short reason for the verdict e.g. "Grants unlimited spending to an unverified contract" */
+  verdictReason: string;
   /** Risk score from 0 (safe) to 100 (very risky) */
   riskScore: number;
   riskLevel: AnalysisResultRiskLevel;
