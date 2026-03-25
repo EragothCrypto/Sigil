@@ -1,5 +1,6 @@
 import { openai } from "@workspace/integrations-openai-ai-server";
 import type { TransactionData, ContractData } from "./ethereum.js";
+import { hexWeiToEth } from "./ethereum.js";
 
 export interface AIAnalysisResult {
   summary: string;
@@ -33,22 +34,25 @@ export async function analyzeTransaction(
   const txContext = tx
     ? `Transaction Hash: ${tx.hash}
 From: ${tx.from}
-To: ${tx.to}
-Value: ${tx.value} (in wei, hex)
+To: ${tx.to ?? "contract creation"}
+Value transferred: ${hexWeiToEth(tx.value)} (raw hex: ${tx.value})
 Gas Used: ${tx.gasUsed ?? "unknown"}
-Method ID: ${tx.methodId ?? "none"}
-Method Name: ${methodName ?? "unknown"}
-Input Data (first 200 chars): ${tx.input?.substring(0, 200) ?? "none"}
-Status: ${tx.status === "0x1" ? "Success" : tx.status === "0x0" ? "Failed" : "Unknown"}
+Gas Price: ${tx.gasPrice}
+Method ID: ${tx.methodId ?? "0x (plain ETH transfer)"}
+Method Name: ${methodName ?? (tx.methodId ? "unknown method" : "plain ETH transfer — no calldata")}
+Calldata (first 300 chars): ${tx.input && tx.input !== "0x" ? tx.input.substring(0, 300) : "none (plain ETH transfer)"}
+Block: ${tx.blockNumber}
+Status: ${tx.status === "0x1" ? "Success ✓" : tx.status === "0x0" ? "Failed ✗" : "Pending/Unknown"}
 Network: ${network}`
-    : `Transaction hash provided but could not be fetched from blockchain.
+    : `Transaction not found on network "${network}".
 Hash: ${rawInput}
-Network: ${network}
-Note: This may be a pending transaction, wrong network, or invalid hash.`;
+This usually means: wrong network selected, transaction is very recent/pending, or the hash is incorrect.`;
 
   const prompt = `You are Sigil, a Web3 security analyst. Analyze this Ethereum transaction and explain it to a non-technical user in plain English.
 
 ${txContext}
+
+IMPORTANT: If the transaction was not found, set summary to explain the hash wasn't found and suggest the user check they have the right network selected. Still return valid JSON.
 
 Respond with a JSON object (no markdown, just raw JSON):
 {
