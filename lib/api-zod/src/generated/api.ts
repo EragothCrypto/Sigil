@@ -100,6 +100,29 @@ export const AnalyzeInputResponse = zod.object({
   riskLevel: zod.enum(["low", "medium", "high", "critical"]),
   warnings: zod.array(zod.string()),
   positives: zod.array(zod.string()),
+  knownEntity: zod
+    .object({
+      name: zod
+        .string()
+        .describe('Human-readable protocol name e.g. \"Uniswap V3 Router\"'),
+      category: zod
+        .string()
+        .describe(
+          'Protocol category e.g. \"DEX\", \"Lending\", \"NFT Marketplace\"',
+        ),
+      trustLevel: zod.enum(["trusted", "caution", "unknown"]),
+      url: zod.string().describe("Protocol website URL"),
+      description: zod
+        .string()
+        .describe("Short description of what the protocol does"),
+      logoLetter: zod
+        .string()
+        .describe("Single letter to use as logo placeholder"),
+    })
+    .optional()
+    .describe(
+      "Identified known protocol if the target address is a recognized contract",
+    ),
   details: zod
     .object({
       from: zod.string().optional(),

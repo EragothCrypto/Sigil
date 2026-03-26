@@ -1,6 +1,7 @@
 import { openai } from "@workspace/integrations-openai-ai-server";
 import type { TransactionData, ContractData } from "./ethereum.js";
 import { hexWeiToEth } from "./ethereum.js";
+import type { KnownEntity } from "./known-entities.js";
 
 export interface AIAnalysisResult {
   summary: string;
@@ -30,6 +31,7 @@ export async function analyzeTransaction(
   methodName: string | null,
   network: string,
   rawInput: string,
+  knownEntity?: KnownEntity | null,
 ): Promise<AIAnalysisResult> {
   const txContext = tx
     ? `Transaction Hash: ${tx.hash}
@@ -48,10 +50,14 @@ Network: ${network}`
 Hash: ${rawInput}
 This usually means: wrong network selected, transaction is very recent/pending, or the hash is incorrect.`;
 
+  const entityContext = knownEntity
+    ? `\nKNOWN PROTOCOL IDENTIFIED: The target address belongs to "${knownEntity.name}" (${knownEntity.category}) — ${knownEntity.description}. Trust level: ${knownEntity.trustLevel}. This is a well-known protocol so it should influence the verdict positively.\n`
+    : "";
+
   const prompt = `You are Sigil, a Web3 security analyst. Analyze this Ethereum transaction and explain it to a non-technical user in plain English.
 
 ${txContext}
-
+${entityContext}
 IMPORTANT: If the transaction was not found, set summary to explain the hash wasn't found and suggest the user check they have the right network selected. Still return valid JSON.
 
 Respond with a JSON object (no markdown, just raw JSON):
@@ -125,6 +131,7 @@ Common warnings to check:
 export async function analyzeContract(
   contract: ContractData,
   network: string,
+  knownEntity?: KnownEntity | null,
 ): Promise<AIAnalysisResult> {
   const contractContext = `Contract Address: ${contract.address}
 Contract Name: ${contract.contractName ?? "Unknown (unverified)"}
@@ -137,10 +144,14 @@ Compiler Version: ${contract.compilerVersion ?? "Unknown"}
 ABI Available: ${contract.abi && contract.abi !== "Contract source code not verified" ? "Yes" : "No"}
 Network: ${network}`;
 
+  const entityContext = knownEntity
+    ? `\nKNOWN PROTOCOL IDENTIFIED: This address is "${knownEntity.name}" (${knownEntity.category}) — ${knownEntity.description}. Trust level: ${knownEntity.trustLevel}. Factor this into your verdict.\n`
+    : "";
+
   const prompt = `You are Sigil, a Web3 security analyst. Analyze this smart contract and explain it to a non-technical user in plain English.
 
 ${contractContext}
-
+${entityContext}
 Respond with a JSON object (no markdown, just raw JSON):
 {
   "summary": "One sentence plain English explanation of what this contract is/does",

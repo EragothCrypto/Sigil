@@ -14,6 +14,7 @@ import {
   analyzeContract,
   analyzeUnknown,
 } from "./ai-analyzer.js";
+import { lookupEntity } from "./known-entities.js";
 
 const router: IRouter = Router();
 
@@ -32,25 +33,32 @@ router.post("/analyze", async (req, res) => {
     let aiResult;
     let details: Record<string, unknown> = {};
 
+    let knownEntity = null;
+
     if (inputType === "transaction") {
       const tx = await fetchTransaction(trimmed, network);
       const methodName = tx?.methodId ? decodeMethodId(tx.methodId) : null;
-      aiResult = await analyzeTransaction(tx, methodName, network, trimmed);
+      // Check both `to` and common proxy addresses for known entity
+      if (tx?.to) knownEntity = lookupEntity(tx.to);
+      aiResult = await analyzeTransaction(tx, methodName, network, trimmed, knownEntity);
       details = {
         from: tx?.from,
         to: tx?.to,
         value: tx?.value,
         gasUsed: tx?.gasUsed,
         methodName,
+        ...(knownEntity ? { protocol: knownEntity.name } : {}),
         rawData: { hash: tx?.hash, blockNumber: tx?.blockNumber, status: tx?.status },
       };
     } else if (inputType === "contract") {
+      knownEntity = lookupEntity(trimmed);
       const contract = await fetchContract(trimmed, network);
-      aiResult = await analyzeContract(contract, network);
+      aiResult = await analyzeContract(contract, network, knownEntity);
       details = {
         contractName: contract.contractName,
         tokenSymbol: contract.tokenSymbol,
         isVerified: contract.isVerified,
+        ...(knownEntity ? { protocol: knownEntity.name } : {}),
         rawData: {
           isToken: contract.isToken,
           tokenName: contract.tokenName,
@@ -90,6 +98,7 @@ router.post("/analyze", async (req, res) => {
       riskLevel: saved.riskLevel,
       warnings: saved.warnings as string[],
       positives: saved.positives as string[],
+      knownEntity: knownEntity ?? undefined,
       details: saved.details as Record<string, unknown>,
       createdAt: saved.createdAt.toISOString(),
     });

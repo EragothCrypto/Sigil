@@ -20,6 +20,8 @@ export * from "./analyzeInputBody";
 export * from "./errorResponse";
 export * from "./getAnalysisHistoryParams";
 export * from "./healthStatus";
+export * from "./knownEntity";
+export * from "./knownEntityTrustLevel";
 export * from "./simulateTransactionBody";
 export * from "./simulationAssetChange";
 export * from "./simulationAssetChangeDirection";

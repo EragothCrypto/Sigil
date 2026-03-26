@@ -9,6 +9,7 @@ import type { AnalysisDetails } from "./analysisDetails";
 import type { AnalysisResultInputType } from "./analysisResultInputType";
 import type { AnalysisResultRiskLevel } from "./analysisResultRiskLevel";
 import type { AnalysisResultVerdict } from "./analysisResultVerdict";
+import type { KnownEntity } from "./knownEntity";
 
 export interface AnalysisResult {
   id: string;
@@ -26,6 +27,8 @@ export interface AnalysisResult {
   riskLevel: AnalysisResultRiskLevel;
   warnings: string[];
   positives: string[];
+  /** Identified known protocol if the target address is a recognized contract */
+  knownEntity?: KnownEntity;
   details?: AnalysisDetails;
   createdAt: string;
 }

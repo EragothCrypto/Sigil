@@ -78,6 +78,29 @@ export interface AnalyzeInputBody {
   network?: string;
 }
 
+export type KnownEntityTrustLevel =
+  (typeof KnownEntityTrustLevel)[keyof typeof KnownEntityTrustLevel];
+
+export const KnownEntityTrustLevel = {
+  trusted: "trusted",
+  caution: "caution",
+  unknown: "unknown",
+} as const;
+
+export interface KnownEntity {
+  /** Human-readable protocol name e.g. "Uniswap V3 Router" */
+  name: string;
+  /** Protocol category e.g. "DEX", "Lending", "NFT Marketplace" */
+  category: string;
+  trustLevel: KnownEntityTrustLevel;
+  /** Protocol website URL */
+  url: string;
+  /** Short description of what the protocol does */
+  description: string;
+  /** Single letter to use as logo placeholder */
+  logoLetter: string;
+}
+
 export type AnalysisResultInputType =
   (typeof AnalysisResultInputType)[keyof typeof AnalysisResultInputType];
 
@@ -138,6 +161,8 @@ export interface AnalysisResult {
   riskLevel: AnalysisResultRiskLevel;
   warnings: string[];
   positives: string[];
+  /** Identified known protocol if the target address is a recognized contract */
+  knownEntity?: KnownEntity;
   details?: AnalysisDetails;
   createdAt: string;
 }

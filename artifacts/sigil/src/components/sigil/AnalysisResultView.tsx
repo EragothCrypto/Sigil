@@ -1,7 +1,53 @@
-import { ShieldCheck, ShieldAlert, CheckCircle2, Copy, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
-import type { AnalysisResult } from '@workspace/api-client-react';
+import { ShieldCheck, ShieldAlert, CheckCircle2, Copy, CheckCircle, AlertTriangle, XCircle, ExternalLink, BadgeCheck } from 'lucide-react';
+import type { AnalysisResult, KnownEntity } from '@workspace/api-client-react';
 import { RiskRing } from './RiskRing';
 import { useToast } from '@/hooks/use-toast';
+
+const CATEGORY_ICONS: Record<string, string> = {
+  "DEX": "⚡",
+  "Lending": "🏦",
+  "NFT Marketplace": "🖼️",
+  "Bridge": "🌉",
+  "Stablecoin": "💵",
+  "Wrapped Token": "🔀",
+  "Derivatives": "📈",
+  "Yield": "🌱",
+  "DAO": "🏛️",
+  "Oracle": "🔮",
+  "Wallet / Multisig": "🔐",
+  "Token": "🪙",
+};
+
+function KnownEntityBadge({ entity }: { entity: KnownEntity }) {
+  const icon = CATEGORY_ICONS[entity.category] ?? "🔷";
+  return (
+    <a
+      href={entity.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-4 bg-primary/5 border border-primary/25 hover:border-primary/50 hover:bg-primary/10 transition-all rounded-2xl px-6 py-4 group w-full"
+    >
+      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-2xl font-bold text-primary font-mono">
+        {entity.logoLetter}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-display font-semibold text-white text-lg leading-tight">{entity.name}</span>
+          <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">
+            {icon} {entity.category}
+          </span>
+          {entity.trustLevel === "trusted" && (
+            <span className="flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+              <BadgeCheck className="w-3 h-3" /> Trusted Protocol
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground mt-0.5 truncate">{entity.description}</p>
+      </div>
+      <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+    </a>
+  );
+}
 
 const VERDICT_CONFIG = {
   safe: {
@@ -73,6 +119,11 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
           </p>
         </div>
       </div>
+
+      {/* ── KNOWN ENTITY BANNER ── */}
+      {data.knownEntity && (
+        <KnownEntityBadge entity={data.knownEntity} />
+      )}
 
       {/* ── HEADER PANEL (summary + ring) ── */}
       <div className="bg-card/80 border border-card-border p-8 md:p-10 rounded-3xl shadow-2xl backdrop-blur-xl flex flex-col md:flex-row gap-10 items-center">

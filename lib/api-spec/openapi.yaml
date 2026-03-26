@@ -224,6 +224,35 @@ components:
       required:
         - input
 
+    KnownEntity:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Human-readable protocol name e.g. "Uniswap V3 Router"
+        category:
+          type: string
+          description: Protocol category e.g. "DEX", "Lending", "NFT Marketplace"
+        trustLevel:
+          type: string
+          enum: [trusted, caution, unknown]
+        url:
+          type: string
+          description: Protocol website URL
+        description:
+          type: string
+          description: Short description of what the protocol does
+        logoLetter:
+          type: string
+          description: Single letter to use as logo placeholder
+      required:
+        - name
+        - category
+        - trustLevel
+        - url
+        - description
+        - logoLetter
+
     AnalysisResult:
       type: object
       properties:
@@ -260,6 +289,9 @@ components:
           type: array
           items:
             type: string
+        knownEntity:
+          $ref: "#/components/schemas/KnownEntity"
+          description: Identified known protocol if the target address is a recognized contract
         details:
           $ref: "#/components/schemas/AnalysisDetails"
         createdAt:
