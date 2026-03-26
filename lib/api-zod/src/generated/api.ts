@@ -123,6 +123,90 @@ export const AnalyzeInputResponse = zod.object({
     .describe(
       "Identified known protocol if the target address is a recognized contract",
     ),
+  approvalInfo: zod
+    .object({
+      isApproval: zod.boolean(),
+      isRevoke: zod
+        .boolean()
+        .describe("True if approval amount is 0 (removing access)"),
+      approvalType: zod.string().describe("approve or increaseAllowance"),
+      spender: zod
+        .string()
+        .describe("Address receiving the spending permission"),
+      spenderEntity: zod
+        .object({
+          name: zod
+            .string()
+            .describe(
+              'Human-readable protocol name e.g. \"Uniswap V3 Router\"',
+            ),
+          category: zod
+            .string()
+            .describe(
+              'Protocol category e.g. \"DEX\", \"Lending\", \"NFT Marketplace\"',
+            ),
+          trustLevel: zod.enum(["trusted", "caution", "unknown"]),
+          url: zod.string().describe("Protocol website URL"),
+          description: zod
+            .string()
+            .describe("Short description of what the protocol does"),
+          logoLetter: zod
+            .string()
+            .describe("Single letter to use as logo placeholder"),
+        })
+        .optional()
+        .describe("Known entity for the spender address if recognized"),
+      tokenContract: zod
+        .string()
+        .describe("The token contract address being approved"),
+      tokenEntity: zod
+        .object({
+          name: zod
+            .string()
+            .describe(
+              'Human-readable protocol name e.g. \"Uniswap V3 Router\"',
+            ),
+          category: zod
+            .string()
+            .describe(
+              'Protocol category e.g. \"DEX\", \"Lending\", \"NFT Marketplace\"',
+            ),
+          trustLevel: zod.enum(["trusted", "caution", "unknown"]),
+          url: zod.string().describe("Protocol website URL"),
+          description: zod
+            .string()
+            .describe("Short description of what the protocol does"),
+          logoLetter: zod
+            .string()
+            .describe("Single letter to use as logo placeholder"),
+        })
+        .optional()
+        .describe("Known entity for the token contract if recognized"),
+      amountFormatted: zod
+        .string()
+        .describe('Human-readable amount e.g. \"Unlimited\" or \"500.00\"'),
+      isUnlimited: zod.boolean(),
+      riskLevel: zod.enum(["low", "medium", "high", "critical"]),
+      priorApprovals: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            analyzedAt: zod
+              .string()
+              .describe(
+                "ISO timestamp when this approval was previously analyzed",
+              ),
+            amountFormatted: zod.string(),
+            isUnlimited: zod.boolean(),
+            network: zod.string(),
+          }),
+        )
+        .describe("Previously analyzed approvals for the same spender"),
+    })
+    .optional()
+    .describe(
+      "Decoded approval details if this is a token approval transaction",
+    ),
   details: zod
     .object({
       from: zod.string().optional(),

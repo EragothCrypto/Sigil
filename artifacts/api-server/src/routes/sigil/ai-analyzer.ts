@@ -32,6 +32,14 @@ export async function analyzeTransaction(
   network: string,
   rawInput: string,
   knownEntity?: KnownEntity | null,
+  approvalInfo?: {
+    isRevoke: boolean;
+    isUnlimited: boolean;
+    amountFormatted: string;
+    spender: string;
+    spenderEntity?: KnownEntity | null;
+    approvalType: string;
+  } | null,
 ): Promise<AIAnalysisResult> {
   const txContext = tx
     ? `Transaction Hash: ${tx.hash}
@@ -54,10 +62,18 @@ This usually means: wrong network selected, transaction is very recent/pending, 
     ? `\nKNOWN PROTOCOL IDENTIFIED: The target address belongs to "${knownEntity.name}" (${knownEntity.category}) — ${knownEntity.description}. Trust level: ${knownEntity.trustLevel}. This is a well-known protocol so it should influence the verdict positively.\n`
     : "";
 
+  const approvalContext = approvalInfo
+    ? `\nAPPROVAL DETECTED: This is a token ${approvalInfo.approvalType} transaction.
+- Spender (who gets access): ${approvalInfo.spender}${approvalInfo.spenderEntity ? ` = ${approvalInfo.spenderEntity.name} (${approvalInfo.spenderEntity.trustLevel})` : " (unknown contract)"}
+- Amount approved: ${approvalInfo.amountFormatted}${approvalInfo.isUnlimited ? " ⚠️ UNLIMITED — this spender can drain ALL tokens of this type from the wallet" : ""}
+${approvalInfo.isRevoke ? "- This is a REVOKE — it removes a previously granted permission (positive action)" : ""}
+Make sure the summary clearly explains who is getting approval and for how much.\n`
+    : "";
+
   const prompt = `You are Sigil, a Web3 security analyst. Analyze this Ethereum transaction and explain it to a non-technical user in plain English.
 
 ${txContext}
-${entityContext}
+${entityContext}${approvalContext}
 IMPORTANT: If the transaction was not found, set summary to explain the hash wasn't found and suggest the user check they have the right network selected. Still return valid JSON.
 
 Respond with a JSON object (no markdown, just raw JSON):

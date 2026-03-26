@@ -78,6 +78,25 @@ export interface AnalyzeInputBody {
   network?: string;
 }
 
+export interface PriorApproval {
+  id: string;
+  /** ISO timestamp when this approval was previously analyzed */
+  analyzedAt: string;
+  amountFormatted: string;
+  isUnlimited: boolean;
+  network: string;
+}
+
+export type ApprovalInfoRiskLevel =
+  (typeof ApprovalInfoRiskLevel)[keyof typeof ApprovalInfoRiskLevel];
+
+export const ApprovalInfoRiskLevel = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+  critical: "critical",
+} as const;
+
 export type KnownEntityTrustLevel =
   (typeof KnownEntityTrustLevel)[keyof typeof KnownEntityTrustLevel];
 
@@ -99,6 +118,28 @@ export interface KnownEntity {
   description: string;
   /** Single letter to use as logo placeholder */
   logoLetter: string;
+}
+
+export interface ApprovalInfo {
+  isApproval: boolean;
+  /** True if approval amount is 0 (removing access) */
+  isRevoke: boolean;
+  /** approve or increaseAllowance */
+  approvalType: string;
+  /** Address receiving the spending permission */
+  spender: string;
+  /** Known entity for the spender address if recognized */
+  spenderEntity?: KnownEntity;
+  /** The token contract address being approved */
+  tokenContract: string;
+  /** Known entity for the token contract if recognized */
+  tokenEntity?: KnownEntity;
+  /** Human-readable amount e.g. "Unlimited" or "500.00" */
+  amountFormatted: string;
+  isUnlimited: boolean;
+  riskLevel: ApprovalInfoRiskLevel;
+  /** Previously analyzed approvals for the same spender */
+  priorApprovals: PriorApproval[];
 }
 
 export type AnalysisResultInputType =
@@ -163,6 +204,8 @@ export interface AnalysisResult {
   positives: string[];
   /** Identified known protocol if the target address is a recognized contract */
   knownEntity?: KnownEntity;
+  /** Decoded approval details if this is a token approval transaction */
+  approvalInfo?: ApprovalInfo;
   details?: AnalysisDetails;
   createdAt: string;
 }

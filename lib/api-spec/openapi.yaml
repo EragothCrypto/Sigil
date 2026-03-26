@@ -224,6 +224,74 @@ components:
       required:
         - input
 
+    PriorApproval:
+      type: object
+      properties:
+        id:
+          type: string
+        analyzedAt:
+          type: string
+          description: ISO timestamp when this approval was previously analyzed
+        amountFormatted:
+          type: string
+        isUnlimited:
+          type: boolean
+        network:
+          type: string
+      required:
+        - id
+        - analyzedAt
+        - amountFormatted
+        - isUnlimited
+        - network
+
+    ApprovalInfo:
+      type: object
+      properties:
+        isApproval:
+          type: boolean
+        isRevoke:
+          type: boolean
+          description: True if approval amount is 0 (removing access)
+        approvalType:
+          type: string
+          description: "approve or increaseAllowance"
+        spender:
+          type: string
+          description: Address receiving the spending permission
+        spenderEntity:
+          $ref: "#/components/schemas/KnownEntity"
+          description: Known entity for the spender address if recognized
+        tokenContract:
+          type: string
+          description: The token contract address being approved
+        tokenEntity:
+          $ref: "#/components/schemas/KnownEntity"
+          description: Known entity for the token contract if recognized
+        amountFormatted:
+          type: string
+          description: Human-readable amount e.g. "Unlimited" or "500.00"
+        isUnlimited:
+          type: boolean
+        riskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        priorApprovals:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriorApproval"
+          description: Previously analyzed approvals for the same spender
+      required:
+        - isApproval
+        - isRevoke
+        - approvalType
+        - spender
+        - tokenContract
+        - amountFormatted
+        - isUnlimited
+        - riskLevel
+        - priorApprovals
+
     KnownEntity:
       type: object
       properties:
@@ -292,6 +360,9 @@ components:
         knownEntity:
           $ref: "#/components/schemas/KnownEntity"
           description: Identified known protocol if the target address is a recognized contract
+        approvalInfo:
+          $ref: "#/components/schemas/ApprovalInfo"
+          description: Decoded approval details if this is a token approval transaction
         details:
           $ref: "#/components/schemas/AnalysisDetails"
         createdAt:

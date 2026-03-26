@@ -8,6 +8,8 @@ import {
   fetchTransaction,
   fetchContract,
   decodeMethodId,
+  decodeApprovalCalldata,
+  formatApprovalAmount,
 } from "./ethereum.js";
 import {
   analyzeTransaction,
@@ -35,21 +37,94 @@ router.post("/analyze", async (req, res) => {
 
     let knownEntity = null;
 
+    let approvalInfo = null;
+
     if (inputType === "transaction") {
       const tx = await fetchTransaction(trimmed, network);
       const methodName = tx?.methodId ? decodeMethodId(tx.methodId) : null;
       // Check both `to` and common proxy addresses for known entity
       if (tx?.to) knownEntity = lookupEntity(tx.to);
-      aiResult = await analyzeTransaction(tx, methodName, network, trimmed, knownEntity);
-      details = {
-        from: tx?.from,
-        to: tx?.to,
-        value: tx?.value,
-        gasUsed: tx?.gasUsed,
-        methodName,
-        ...(knownEntity ? { protocol: knownEntity.name } : {}),
-        rawData: { hash: tx?.hash, blockNumber: tx?.blockNumber, status: tx?.status },
-      };
+
+      // ── Approval Inspector ────────────────────────────────────────────────
+      const approval = tx?.input ? decodeApprovalCalldata(tx.input) : null;
+      if (approval && tx) {
+        const spenderEntity = lookupEntity(approval.spender);
+        const tokenEntity   = lookupEntity(tx.to);
+        const amountFormatted = formatApprovalAmount(approval);
+
+        // Risk level: revoke = low, exact amount = medium, unlimited to unknown = critical
+        let approvalRisk: "low" | "medium" | "high" | "critical" = "medium";
+        if (approval.isRevoke) approvalRisk = "low";
+        else if (approval.isUnlimited && !spenderEntity) approvalRisk = "critical";
+        else if (approval.isUnlimited && spenderEntity?.trustLevel === "trusted") approvalRisk = "medium";
+        else if (approval.isUnlimited) approvalRisk = "high";
+        else approvalRisk = "medium";
+
+        // Look up prior approvals to the same spender in our DB history
+        const allHistory = await db
+          .select()
+          .from(analysesTable)
+          .orderBy(desc(analysesTable.createdAt))
+          .limit(200);
+
+        const prior = allHistory
+          .filter((r) => {
+            const d = r.details as Record<string, unknown> | null;
+            return d?.spender === approval.spender && r.input !== trimmed;
+          })
+          .slice(0, 5)
+          .map((r) => {
+            const d = r.details as Record<string, unknown>;
+            return {
+              id: String(r.id),
+              analyzedAt: r.createdAt.toISOString(),
+              amountFormatted: String(d.approvalAmount ?? "unknown"),
+              isUnlimited: Boolean(d.approvalIsUnlimited),
+              network: r.network,
+            };
+          });
+
+        approvalInfo = {
+          isApproval: true,
+          isRevoke: approval.isRevoke,
+          approvalType: approval.type,
+          spender: approval.spender,
+          spenderEntity: spenderEntity ?? undefined,
+          tokenContract: tx.to,
+          tokenEntity: tokenEntity ?? undefined,
+          amountFormatted,
+          isUnlimited: approval.isUnlimited,
+          riskLevel: approvalRisk,
+          priorApprovals: prior,
+        };
+
+        // Store spender in details so future runs can find it
+        details = {
+          from: tx.from,
+          to: tx.to,
+          value: tx.value,
+          gasUsed: tx.gasUsed,
+          methodName,
+          spender: approval.spender,
+          approvalAmount: amountFormatted,
+          approvalIsUnlimited: approval.isUnlimited,
+          ...(spenderEntity ? { spenderProtocol: spenderEntity.name } : {}),
+          ...(knownEntity   ? { protocol: knownEntity.name } : {}),
+          rawData: { hash: tx.hash, blockNumber: tx.blockNumber, status: tx.status },
+        };
+      } else {
+        details = {
+          from: tx?.from,
+          to: tx?.to,
+          value: tx?.value,
+          gasUsed: tx?.gasUsed,
+          methodName,
+          ...(knownEntity ? { protocol: knownEntity.name } : {}),
+          rawData: { hash: tx?.hash, blockNumber: tx?.blockNumber, status: tx?.status },
+        };
+      }
+
+      aiResult = await analyzeTransaction(tx, methodName, network, trimmed, knownEntity, approvalInfo);
     } else if (inputType === "contract") {
       knownEntity = lookupEntity(trimmed);
       const contract = await fetchContract(trimmed, network);
@@ -99,6 +174,7 @@ router.post("/analyze", async (req, res) => {
       warnings: saved.warnings as string[],
       positives: saved.positives as string[],
       knownEntity: knownEntity ?? undefined,
+      approvalInfo: approvalInfo ?? undefined,
       details: saved.details as Record<string, unknown>,
       createdAt: saved.createdAt.toISOString(),
     });

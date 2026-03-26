@@ -9,6 +9,7 @@ import type { AnalysisDetails } from "./analysisDetails";
 import type { AnalysisResultInputType } from "./analysisResultInputType";
 import type { AnalysisResultRiskLevel } from "./analysisResultRiskLevel";
 import type { AnalysisResultVerdict } from "./analysisResultVerdict";
+import type { ApprovalInfo } from "./approvalInfo";
 import type { KnownEntity } from "./knownEntity";
 
 export interface AnalysisResult {
@@ -29,6 +30,8 @@ export interface AnalysisResult {
   positives: string[];
   /** Identified known protocol if the target address is a recognized contract */
   knownEntity?: KnownEntity;
+  /** Decoded approval details if this is a token approval transaction */
+  approvalInfo?: ApprovalInfo;
   details?: AnalysisDetails;
   createdAt: string;
 }

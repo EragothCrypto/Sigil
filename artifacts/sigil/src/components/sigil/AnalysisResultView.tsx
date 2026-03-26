@@ -1,6 +1,7 @@
 import { ShieldCheck, ShieldAlert, CheckCircle2, Copy, CheckCircle, AlertTriangle, XCircle, ExternalLink, BadgeCheck } from 'lucide-react';
 import type { AnalysisResult, KnownEntity } from '@workspace/api-client-react';
 import { RiskRing } from './RiskRing';
+import { ApprovalInspector } from './ApprovalInspector';
 import { useToast } from '@/hooks/use-toast';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -123,6 +124,11 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
       {/* ── KNOWN ENTITY BANNER ── */}
       {data.knownEntity && (
         <KnownEntityBadge entity={data.knownEntity} />
+      )}
+
+      {/* ── APPROVAL INSPECTOR ── */}
+      {data.approvalInfo?.isApproval && (
+        <ApprovalInspector info={data.approvalInfo} />
       )}
 
       {/* ── HEADER PANEL (summary + ring) ── */}

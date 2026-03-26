@@ -202,6 +202,75 @@ export async function fetchContract(address: string, network: string): Promise<C
   return result;
 }
 
+// Max uint256 — signals an unlimited approval
+const MAX_UINT256 = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+// Common "unlimited" threshold: anything above 10^30 tokens is effectively unlimited
+const UNLIMITED_THRESHOLD = BigInt("1000000000000000000000000000000"); // 10^30
+
+export interface ApprovalDecoded {
+  type: "approve" | "increaseAllowance" | "permit";
+  spender: string;
+  amountRaw: string;         // hex
+  amountDecimal: bigint;
+  isUnlimited: boolean;
+  isRevoke: boolean;         // amount === 0
+}
+
+// Decode ABI-encoded (address, uint256) from calldata (offset past methodId)
+function decodeAddressUint256(calldata: string): { address: string; amount: bigint } | null {
+  try {
+    const hex = calldata.replace(/^0x/, "");
+    if (hex.length < 8 + 64 + 64) return null; // need methodId + 2 x 32 bytes
+    const addressHex = hex.slice(8 + 24, 8 + 64);    // last 20 bytes of first 32-byte slot
+    const amountHex   = hex.slice(8 + 64, 8 + 64 + 64); // second 32-byte slot
+    return {
+      address: `0x${addressHex}`,
+      amount:  BigInt(`0x${amountHex}`),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function decodeApprovalCalldata(calldata: string): ApprovalDecoded | null {
+  if (!calldata || calldata === "0x" || calldata.length < 10) return null;
+  const methodId = calldata.substring(0, 10).toLowerCase();
+
+  let type: ApprovalDecoded["type"] | null = null;
+  if (methodId === "0x095ea7b3") type = "approve";
+  else if (methodId === "0x39509351") type = "increaseAllowance";
+  else return null;
+
+  const decoded = decodeAddressUint256(calldata);
+  if (!decoded) return null;
+
+  const isUnlimited = decoded.amount >= UNLIMITED_THRESHOLD;
+  const isRevoke    = decoded.amount === BigInt(0);
+
+  return {
+    type,
+    spender: `0x${decoded.address.replace(/^0x/, "").toLowerCase()}`,
+    amountRaw: `0x${decoded.amount.toString(16)}`,
+    amountDecimal: decoded.amount,
+    isUnlimited,
+    isRevoke,
+  };
+}
+
+export function formatApprovalAmount(decoded: ApprovalDecoded, tokenDecimals = 18): string {
+  if (decoded.isRevoke)    return "0 (Revoke — removes all access)";
+  if (decoded.isUnlimited) return "Unlimited (max uint256)";
+  try {
+    const divisor = BigInt(10 ** tokenDecimals);
+    const whole   = decoded.amountDecimal / divisor;
+    const frac    = decoded.amountDecimal % divisor;
+    const fracStr = frac.toString().padStart(tokenDecimals, "0").slice(0, 6).replace(/0+$/, "");
+    return fracStr ? `${whole.toString()}.${fracStr}` : whole.toString();
+  } catch {
+    return decoded.amountRaw;
+  }
+}
+
 const COMMON_METHOD_SIGNATURES: Record<string, string> = {
   "0xa9059cbb": "transfer(address,uint256) — Token Transfer",
   "0x23b872dd": "transferFrom(address,address,uint256) — Token Transfer From",
