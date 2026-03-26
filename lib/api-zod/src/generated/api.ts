@@ -207,6 +207,96 @@ export const AnalyzeInputResponse = zod.object({
     .describe(
       "Decoded approval details if this is a token approval transaction",
     ),
+  breakdown: zod
+    .object({
+      actionType: zod
+        .enum([
+          "swap",
+          "approve",
+          "transfer",
+          "mint",
+          "burn",
+          "bridge",
+          "stake",
+          "deposit",
+          "withdraw",
+          "revoke",
+          "deploy",
+          "other",
+        ])
+        .describe("Machine-readable action type"),
+      actionLabel: zod
+        .string()
+        .describe(
+          'Human-readable action label e.g. \"Token Swap\", \"Token Approval\"',
+        ),
+      assetsOut: zod
+        .array(
+          zod.object({
+            asset: zod
+              .string()
+              .describe('Token symbol or name e.g. \"USDC\", \"ETH\", \"NFT'),
+            amount: zod
+              .string()
+              .describe(
+                'Human-readable amount e.g. \"100\", \"0.05\", \"unlimited\"',
+              ),
+            usdValue: zod
+              .string()
+              .optional()
+              .describe('Approximate USD value if known e.g. \"~$100\"'),
+          }),
+        )
+        .describe("Assets leaving the wallet"),
+      assetsIn: zod
+        .array(
+          zod.object({
+            asset: zod
+              .string()
+              .describe('Token symbol or name e.g. \"USDC\", \"ETH\", \"NFT'),
+            amount: zod
+              .string()
+              .describe(
+                'Human-readable amount e.g. \"100\", \"0.05\", \"unlimited\"',
+              ),
+            usdValue: zod
+              .string()
+              .optional()
+              .describe('Approximate USD value if known e.g. \"~$100\"'),
+          }),
+        )
+        .describe("Assets entering the wallet"),
+      permissions: zod
+        .array(
+          zod.object({
+            asset: zod.string(),
+            spender: zod.string().describe("Who receives the permission"),
+            amount: zod.string().describe("How much access is granted"),
+          }),
+        )
+        .describe("Permissions or approvals granted"),
+      riskFactors: zod
+        .array(
+          zod.object({
+            severity: zod.enum([
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "positive",
+            ]),
+            label: zod
+              .string()
+              .describe('Short label e.g. \"Unlimited approval\"'),
+            detail: zod.string().describe("One sentence explanation"),
+          }),
+        )
+        .describe("Structured risk and trust factors with severity levels"),
+    })
+    .optional()
+    .describe(
+      "Structured visual breakdown of the transaction for dashboard display",
+    ),
   details: zod
     .object({
       from: zod.string().optional(),

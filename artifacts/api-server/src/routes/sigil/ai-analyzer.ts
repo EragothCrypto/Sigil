@@ -3,6 +3,33 @@ import type { TransactionData, ContractData } from "./ethereum.js";
 import { hexWeiToEth } from "./ethereum.js";
 import type { KnownEntity } from "./known-entities.js";
 
+export interface BreakdownAsset {
+  asset: string;
+  amount: string;
+  usdValue?: string;
+}
+
+export interface BreakdownPermission {
+  asset: string;
+  spender: string;
+  amount: string;
+}
+
+export interface BreakdownRiskFactor {
+  severity: "critical" | "high" | "medium" | "low" | "positive";
+  label: string;
+  detail: string;
+}
+
+export interface TransactionBreakdown {
+  actionType: "swap" | "approve" | "transfer" | "mint" | "burn" | "bridge" | "stake" | "deposit" | "withdraw" | "revoke" | "deploy" | "other";
+  actionLabel: string;
+  assetsOut: BreakdownAsset[];
+  assetsIn: BreakdownAsset[];
+  permissions: BreakdownPermission[];
+  riskFactors: BreakdownRiskFactor[];
+}
+
 export interface AIAnalysisResult {
   summary: string;
   verdict: "safe" | "caution" | "dangerous";
@@ -11,6 +38,7 @@ export interface AIAnalysisResult {
   riskLevel: "low" | "medium" | "high" | "critical";
   warnings: string[];
   positives: string[];
+  breakdown?: TransactionBreakdown;
 }
 
 function getRiskLevel(score: number): "low" | "medium" | "high" | "critical" {
@@ -78,33 +106,48 @@ IMPORTANT: If the transaction was not found, set summary to explain the hash was
 
 Respond with a JSON object (no markdown, just raw JSON):
 {
-  "summary": "One sentence plain English explanation of what this transaction does (e.g. 'This transaction approves Uniswap to spend up to 1000 USDC from your wallet')",
+  "summary": "One sentence plain English explanation of what this transaction does",
   "verdict": "safe" | "caution" | "dangerous",
-  "verdictReason": "One short sentence (max 12 words) explaining the verdict. Start with the verdict word. E.g. 'Safe — standard transfer to a verified protocol' or 'Dangerous — grants unlimited spending to an unverified contract'",
+  "verdictReason": "One short sentence (max 12 words) explaining the verdict. Start with the verdict word.",
   "riskScore": <0-100 integer, where 0=very safe, 100=extremely dangerous>,
   "warnings": ["Array of specific warning strings, empty if none"],
-  "positives": ["Array of positive/safe attributes, empty if none"]
+  "positives": ["Array of positive/safe attributes, empty if none"],
+  "breakdown": {
+    "actionType": "swap" | "approve" | "transfer" | "mint" | "burn" | "bridge" | "stake" | "deposit" | "withdraw" | "revoke" | "deploy" | "other",
+    "actionLabel": "Short human label e.g. 'Token Swap', 'Unlimited Approval', 'ETH Transfer', 'NFT Mint'",
+    "assetsOut": [
+      { "asset": "USDC", "amount": "100", "usdValue": "~$100" }
+    ],
+    "assetsIn": [
+      { "asset": "ETH", "amount": "0.05", "usdValue": "~$125" }
+    ],
+    "permissions": [
+      { "asset": "USDC", "spender": "Uniswap V3", "amount": "unlimited" }
+    ],
+    "riskFactors": [
+      { "severity": "high" | "medium" | "low" | "critical" | "positive", "label": "Short label", "detail": "One sentence detail" }
+    ]
+  }
 }
 
+Rules for breakdown:
+- assetsOut: tokens/ETH leaving the wallet (empty array if none)
+- assetsIn: tokens/ETH entering the wallet (empty array if none)
+- permissions: only include if access is being granted (approvals)
+- riskFactors: include BOTH risks (severity critical/high/medium/low) AND positives (severity "positive"). Always include at least one entry.
+- For pure ETH transfers: assetsOut = [{ asset: "ETH", amount: "X ETH" }], assetsIn = []
+- If tx not found: actionType = "other", actionLabel = "Unknown Transaction", empty arrays
+
 Verdict guidelines:
-- "safe" (score 0-25): Standard transfers to known/verified contracts, normal token transfers
-- "caution" (score 26-60): Approvals, swaps on known DEXes, unverified but seemingly benign contracts
-- "dangerous" (score 61-100): Unlimited approvals to unknown contracts, drain attacks, unrestricted minting, suspicious patterns
+- "safe" (score 0-25): Standard transfers to known/verified contracts
+- "caution" (score 26-60): Approvals, swaps on known DEXes, unverified but benign contracts
+- "dangerous" (score 61-100): Unlimited approvals to unknown contracts, drain attacks, minting
 
-Risk scoring guidelines:
-- 0-25 (low): Standard transfers to known contracts, verified contracts
-- 26-50 (medium): Approvals, swaps on known DEXes, interactions with unverified but seemingly benign contracts  
-- 51-75 (high): Unlimited approvals, large value transfers, interactions with unverified contracts, suspicious method calls
-- 76-100 (critical): Malicious patterns, drain attacks, unrestricted minting, honeypots, ownership transfers, proxy upgrades without timelock
-
-Common warnings to check:
-- Unlimited token approvals (max uint256)
-- Unverified contract
-- Transfer of large ETH value
-- Suspicious minting functions
-- setOwner or transferOwnership calls
-- Self-destruct patterns
-- Unusual gas usage`;
+Risk scoring:
+- 0-25: Verified contracts, known protocols
+- 26-50: Approvals/swaps on known DEXes, unverified but seemingly benign
+- 51-75: Unlimited approvals, large value transfers, unverified contracts
+- 76-100: Malicious patterns, drain attacks, unrestricted minting, ownership transfers`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-5.2",
@@ -122,6 +165,16 @@ Common warnings to check:
       verdictRaw === "safe" || verdictRaw === "caution" || verdictRaw === "dangerous"
         ? verdictRaw
         : getVerdictFromScore(score);
+    const bd = parsed.breakdown;
+    const breakdown: TransactionBreakdown | undefined = bd ? {
+      actionType: bd.actionType ?? "other",
+      actionLabel: bd.actionLabel ?? "Transaction",
+      assetsOut: Array.isArray(bd.assetsOut) ? bd.assetsOut : [],
+      assetsIn: Array.isArray(bd.assetsIn) ? bd.assetsIn : [],
+      permissions: Array.isArray(bd.permissions) ? bd.permissions : [],
+      riskFactors: Array.isArray(bd.riskFactors) ? bd.riskFactors : [],
+    } : undefined;
+
     return {
       summary: parsed.summary || "Unable to analyze this transaction.",
       verdict,
@@ -130,6 +183,7 @@ Common warnings to check:
       riskLevel: getRiskLevel(score),
       warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
       positives: Array.isArray(parsed.positives) ? parsed.positives : [],
+      breakdown,
     };
   } catch {
     return {
@@ -172,30 +226,35 @@ Respond with a JSON object (no markdown, just raw JSON):
 {
   "summary": "One sentence plain English explanation of what this contract is/does",
   "verdict": "safe" | "caution" | "dangerous",
-  "verdictReason": "One short sentence (max 12 words) explaining the verdict. Start with the verdict word. E.g. 'Safe — verified token contract from a known protocol' or 'Dangerous — unverified contract with unrestricted minting'",
+  "verdictReason": "One short sentence (max 12 words) explaining the verdict. Start with the verdict word.",
   "riskScore": <0-100 integer>,
   "warnings": ["Array of specific warning strings"],
-  "positives": ["Array of positive/safe attributes"]
+  "positives": ["Array of positive/safe attributes"],
+  "breakdown": {
+    "actionType": "deploy" | "other",
+    "actionLabel": "Short label e.g. 'ERC-20 Token Contract', 'DEX Router', 'NFT Contract', 'Lending Pool'",
+    "assetsOut": [],
+    "assetsIn": [],
+    "permissions": [],
+    "riskFactors": [
+      { "severity": "critical" | "high" | "medium" | "low" | "positive", "label": "Short label", "detail": "One sentence detail" }
+    ]
+  }
 }
+
+For contract analysis: assetsOut/assetsIn/permissions are almost always empty arrays.
+riskFactors should include BOTH risks AND positives (use severity "positive" for good attributes). Always include at least one entry.
 
 Verdict guidelines:
 - "safe": Verified contract, well-known protocol, standard token
-- "caution": Unverified but standard patterns, or verified but with some risk
+- "caution": Unverified but standard patterns
 - "dangerous": Unverified with suspicious patterns, unrestricted minting, honeypot indicators
 
-Risk scoring guidelines:
-- 0-25 (low): Verified contract, well-known protocol, standard token
-- 26-50 (medium): Unverified but standard patterns
-- 51-75 (high): Unverified, unusual patterns, minting capabilities
-- 76-100 (critical): Malicious patterns, unrestricted minting, honeypot indicators
-
-Check for:
-- Whether the contract is verified
-- Standard vs non-standard token implementations  
-- Ownership/admin controls
-- Minting and burning capabilities
-- Proxy patterns
-- Known protocols (Uniswap, Aave, Compound, etc.)`;
+Risk scoring:
+- 0-25: Verified contract, well-known protocol, standard token
+- 26-50: Unverified but standard patterns
+- 51-75: Unverified, unusual patterns, minting capabilities
+- 76-100: Malicious patterns, unrestricted minting, honeypot indicators`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-5.2",
@@ -213,6 +272,15 @@ Check for:
       verdictRaw === "safe" || verdictRaw === "caution" || verdictRaw === "dangerous"
         ? verdictRaw
         : getVerdictFromScore(score);
+    const bd2 = parsed.breakdown;
+    const breakdown: TransactionBreakdown | undefined = bd2 ? {
+      actionType: bd2.actionType ?? "other",
+      actionLabel: bd2.actionLabel ?? "Contract",
+      assetsOut: Array.isArray(bd2.assetsOut) ? bd2.assetsOut : [],
+      assetsIn: Array.isArray(bd2.assetsIn) ? bd2.assetsIn : [],
+      permissions: Array.isArray(bd2.permissions) ? bd2.permissions : [],
+      riskFactors: Array.isArray(bd2.riskFactors) ? bd2.riskFactors : [],
+    } : undefined;
     return {
       summary: parsed.summary || "Unable to analyze this contract.",
       verdict,
@@ -221,6 +289,7 @@ Check for:
       riskLevel: getRiskLevel(score),
       warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
       positives: Array.isArray(parsed.positives) ? parsed.positives : [],
+      breakdown,
     };
   } catch {
     return {

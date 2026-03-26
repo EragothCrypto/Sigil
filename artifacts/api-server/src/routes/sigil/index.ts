@@ -175,6 +175,7 @@ router.post("/analyze", async (req, res) => {
       positives: saved.positives as string[],
       knownEntity: knownEntity ?? undefined,
       approvalInfo: approvalInfo ?? undefined,
+      breakdown: aiResult.breakdown ?? undefined,
       details: saved.details as Record<string, unknown>,
       createdAt: saved.createdAt.toISOString(),
     });

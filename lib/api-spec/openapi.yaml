@@ -224,6 +224,93 @@ components:
       required:
         - input
 
+    BreakdownAsset:
+      type: object
+      properties:
+        asset:
+          type: string
+          description: Token symbol or name e.g. "USDC", "ETH", "NFT #1234"
+        amount:
+          type: string
+          description: Human-readable amount e.g. "100", "0.05", "unlimited"
+        usdValue:
+          type: string
+          description: Approximate USD value if known e.g. "~$100"
+      required:
+        - asset
+        - amount
+
+    BreakdownPermission:
+      type: object
+      properties:
+        asset:
+          type: string
+        spender:
+          type: string
+          description: Who receives the permission
+        amount:
+          type: string
+          description: How much access is granted
+      required:
+        - asset
+        - spender
+        - amount
+
+    BreakdownRiskFactor:
+      type: object
+      properties:
+        severity:
+          type: string
+          enum: [critical, high, medium, low, positive]
+        label:
+          type: string
+          description: Short label e.g. "Unlimited approval"
+        detail:
+          type: string
+          description: One sentence explanation
+      required:
+        - severity
+        - label
+        - detail
+
+    TransactionBreakdown:
+      type: object
+      properties:
+        actionType:
+          type: string
+          description: Machine-readable action type
+          enum: [swap, approve, transfer, mint, burn, bridge, stake, deposit, withdraw, revoke, deploy, other]
+        actionLabel:
+          type: string
+          description: Human-readable action label e.g. "Token Swap", "Token Approval"
+        assetsOut:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownAsset"
+          description: Assets leaving the wallet
+        assetsIn:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownAsset"
+          description: Assets entering the wallet
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownPermission"
+          description: Permissions or approvals granted
+        riskFactors:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownRiskFactor"
+          description: Structured risk and trust factors with severity levels
+      required:
+        - actionType
+        - actionLabel
+        - assetsOut
+        - assetsIn
+        - permissions
+        - riskFactors
+
     PriorApproval:
       type: object
       properties:
@@ -363,6 +450,9 @@ components:
         approvalInfo:
           $ref: "#/components/schemas/ApprovalInfo"
           description: Decoded approval details if this is a token approval transaction
+        breakdown:
+          $ref: "#/components/schemas/TransactionBreakdown"
+          description: Structured visual breakdown of the transaction for dashboard display
         details:
           $ref: "#/components/schemas/AnalysisDetails"
         createdAt:

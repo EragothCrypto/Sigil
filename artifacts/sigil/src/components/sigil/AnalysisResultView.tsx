@@ -2,6 +2,7 @@ import { ShieldCheck, ShieldAlert, CheckCircle2, Copy, CheckCircle, AlertTriangl
 import type { AnalysisResult, KnownEntity } from '@workspace/api-client-react';
 import { RiskRing } from './RiskRing';
 import { ApprovalInspector } from './ApprovalInspector';
+import { TransactionBreakdown } from './TransactionBreakdown';
 import { useToast } from '@/hooks/use-toast';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -166,44 +167,48 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
         </div>
       </div>
 
-      {/* ── VECTORS PANEL ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-destructive/5 border border-destructive/20 rounded-3xl p-8 space-y-6 shadow-xl shadow-destructive/5">
-          <h3 className="flex items-center gap-3 font-display text-xl text-destructive font-bold">
-            <ShieldAlert className="w-6 h-6" /> Threat Vectors
-          </h3>
-          {data.warnings.length === 0 ? (
-            <p className="text-muted-foreground text-sm font-mono bg-black/40 p-4 rounded-xl border border-white/5">No threats detected.</p>
-          ) : (
-            <ul className="space-y-4">
-              {data.warnings.map((w, i) => (
-                <li key={i} className="flex items-start gap-4 bg-black/40 p-4 rounded-xl border border-destructive/10">
-                  <ShieldAlert className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-                  <span className="text-sm text-white/90 leading-relaxed">{w}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+      {/* ── STRUCTURED BREAKDOWN ── */}
+      {data.breakdown ? (
+        <TransactionBreakdown data={data.breakdown} />
+      ) : (
+        /* Fallback: old two-column threat/trust panels if no breakdown data */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-destructive/5 border border-destructive/20 rounded-3xl p-8 space-y-6 shadow-xl shadow-destructive/5">
+            <h3 className="flex items-center gap-3 font-display text-xl text-destructive font-bold">
+              <ShieldAlert className="w-6 h-6" /> Threat Vectors
+            </h3>
+            {data.warnings.length === 0 ? (
+              <p className="text-muted-foreground text-sm font-mono bg-black/40 p-4 rounded-xl border border-white/5">No threats detected.</p>
+            ) : (
+              <ul className="space-y-4">
+                {data.warnings.map((w, i) => (
+                  <li key={i} className="flex items-start gap-4 bg-black/40 p-4 rounded-xl border border-destructive/10">
+                    <ShieldAlert className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                    <span className="text-sm text-white/90 leading-relaxed">{w}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="bg-success/5 border border-success/20 rounded-3xl p-8 space-y-6 shadow-xl shadow-success/5">
+            <h3 className="flex items-center gap-3 font-display text-xl text-success font-bold">
+              <ShieldCheck className="w-6 h-6" /> Trust Indicators
+            </h3>
+            {data.positives.length === 0 ? (
+              <p className="text-muted-foreground text-sm font-mono bg-black/40 p-4 rounded-xl border border-white/5">No positive indicators found.</p>
+            ) : (
+              <ul className="space-y-4">
+                {data.positives.map((p, i) => (
+                  <li key={i} className="flex items-start gap-4 bg-black/40 p-4 rounded-xl border border-success/10">
+                    <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
+                    <span className="text-sm text-white/90 leading-relaxed">{p}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
-
-        <div className="bg-success/5 border border-success/20 rounded-3xl p-8 space-y-6 shadow-xl shadow-success/5">
-          <h3 className="flex items-center gap-3 font-display text-xl text-success font-bold">
-            <ShieldCheck className="w-6 h-6" /> Trust Indicators
-          </h3>
-          {data.positives.length === 0 ? (
-            <p className="text-muted-foreground text-sm font-mono bg-black/40 p-4 rounded-xl border border-white/5">No positive indicators found.</p>
-          ) : (
-            <ul className="space-y-4">
-              {data.positives.map((p, i) => (
-                <li key={i} className="flex items-start gap-4 bg-black/40 p-4 rounded-xl border border-success/10">
-                  <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
-                  <span className="text-sm text-white/90 leading-relaxed">{p}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* ── RAW DETAILS ── */}
       {data.details && Object.keys(data.details).length > 0 && (

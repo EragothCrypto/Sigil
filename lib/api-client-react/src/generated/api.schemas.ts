@@ -78,6 +78,78 @@ export interface AnalyzeInputBody {
   network?: string;
 }
 
+export interface BreakdownAsset {
+  /** Token symbol or name e.g. "USDC", "ETH", "NFT */
+  asset: string;
+  /** Human-readable amount e.g. "100", "0.05", "unlimited" */
+  amount: string;
+  /** Approximate USD value if known e.g. "~$100" */
+  usdValue?: string;
+}
+
+export interface BreakdownPermission {
+  asset: string;
+  /** Who receives the permission */
+  spender: string;
+  /** How much access is granted */
+  amount: string;
+}
+
+export type BreakdownRiskFactorSeverity =
+  (typeof BreakdownRiskFactorSeverity)[keyof typeof BreakdownRiskFactorSeverity];
+
+export const BreakdownRiskFactorSeverity = {
+  critical: "critical",
+  high: "high",
+  medium: "medium",
+  low: "low",
+  positive: "positive",
+} as const;
+
+export interface BreakdownRiskFactor {
+  severity: BreakdownRiskFactorSeverity;
+  /** Short label e.g. "Unlimited approval" */
+  label: string;
+  /** One sentence explanation */
+  detail: string;
+}
+
+/**
+ * Machine-readable action type
+ */
+export type TransactionBreakdownActionType =
+  (typeof TransactionBreakdownActionType)[keyof typeof TransactionBreakdownActionType];
+
+export const TransactionBreakdownActionType = {
+  swap: "swap",
+  approve: "approve",
+  transfer: "transfer",
+  mint: "mint",
+  burn: "burn",
+  bridge: "bridge",
+  stake: "stake",
+  deposit: "deposit",
+  withdraw: "withdraw",
+  revoke: "revoke",
+  deploy: "deploy",
+  other: "other",
+} as const;
+
+export interface TransactionBreakdown {
+  /** Machine-readable action type */
+  actionType: TransactionBreakdownActionType;
+  /** Human-readable action label e.g. "Token Swap", "Token Approval" */
+  actionLabel: string;
+  /** Assets leaving the wallet */
+  assetsOut: BreakdownAsset[];
+  /** Assets entering the wallet */
+  assetsIn: BreakdownAsset[];
+  /** Permissions or approvals granted */
+  permissions: BreakdownPermission[];
+  /** Structured risk and trust factors with severity levels */
+  riskFactors: BreakdownRiskFactor[];
+}
+
 export interface PriorApproval {
   id: string;
   /** ISO timestamp when this approval was previously analyzed */
@@ -206,6 +278,8 @@ export interface AnalysisResult {
   knownEntity?: KnownEntity;
   /** Decoded approval details if this is a token approval transaction */
   approvalInfo?: ApprovalInfo;
+  /** Structured visual breakdown of the transaction for dashboard display */
+  breakdown?: TransactionBreakdown;
   details?: AnalysisDetails;
   createdAt: string;
 }

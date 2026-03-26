@@ -11,6 +11,7 @@ import type { AnalysisResultRiskLevel } from "./analysisResultRiskLevel";
 import type { AnalysisResultVerdict } from "./analysisResultVerdict";
 import type { ApprovalInfo } from "./approvalInfo";
 import type { KnownEntity } from "./knownEntity";
+import type { TransactionBreakdown } from "./transactionBreakdown";
 
 export interface AnalysisResult {
   id: string;
@@ -32,6 +33,8 @@ export interface AnalysisResult {
   knownEntity?: KnownEntity;
   /** Decoded approval details if this is a token approval transaction */
   approvalInfo?: ApprovalInfo;
+  /** Structured visual breakdown of the transaction for dashboard display */
+  breakdown?: TransactionBreakdown;
   details?: AnalysisDetails;
   createdAt: string;
 }
