@@ -5,7 +5,7 @@
 **Sigil — The Trust Layer of Web3**
 "Paste any transaction. Understand what you're signing."
 
-A Web3 security analysis tool that translates raw Ethereum transactions and contract addresses into plain English with AI-powered risk scoring.
+A Web3 security analysis tool that translates raw Ethereum transactions and contract addresses into plain English with AI-powered risk scoring. Includes a browser extension that intercepts MetaMask/Rabby transactions in real-time.
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 

@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { Shield } from 'lucide-react';
+import { Puzzle } from 'lucide-react';
 import React from 'react';
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -28,6 +28,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 Simulate
               </Link>
               <Link href="/history" className="text-sm font-mono text-muted-foreground hover:text-primary transition-colors cursor-pointer uppercase tracking-wider">Feed</Link>
+              <Link href="/extension" className="flex items-center gap-1.5 text-sm font-mono text-muted-foreground hover:text-primary transition-colors cursor-pointer uppercase tracking-wider">
+                <Puzzle className="w-3.5 h-3.5" />
+                Extension
+              </Link>
             </nav>
           </div>
         </header>

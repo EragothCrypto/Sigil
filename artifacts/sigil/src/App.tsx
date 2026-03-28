@@ -8,6 +8,7 @@ import Home from "@/pages/home";
 import HistoryPage from "@/pages/history";
 import AnalysisPage from "@/pages/analysis";
 import SimulatePage from "@/pages/simulate";
+import ExtensionPage from "@/pages/extension";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/simulate" component={SimulatePage} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/analysis/:id" component={AnalysisPage} />
+      <Route path="/extension" component={ExtensionPage} />
       <Route component={NotFound} />
     </Switch>
   );
