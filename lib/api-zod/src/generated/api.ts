@@ -297,6 +297,67 @@ export const AnalyzeInputResponse = zod.object({
     .describe(
       "Structured visual breakdown of the transaction for dashboard display",
     ),
+  reputation: zod
+    .object({
+      trustScore: zod
+        .number()
+        .describe("Trust score from 0 (untrusted) to 100 (fully trusted)"),
+      tier: zod
+        .enum([
+          "new",
+          "unproven",
+          "emerging",
+          "established",
+          "trusted",
+          "exploited",
+        ])
+        .describe("Human tier classification"),
+      tierLabel: zod
+        .string()
+        .describe('Short uppercase label e.g. \"TRUSTED\"'),
+      tierDescription: zod
+        .string()
+        .describe("One sentence description of what the tier means"),
+      summary: zod
+        .string()
+        .describe('Plain-English \"credit score\" verdict for this contract'),
+      isExploited: zod
+        .boolean()
+        .describe("Whether this contract is in the known exploit registry"),
+      exploitInfo: zod
+        .object({
+          name: zod.string().optional(),
+          lostUSD: zod.string().optional(),
+          date: zod.string().optional(),
+        })
+        .optional(),
+      ageInDays: zod.number().optional(),
+      deployedAt: zod
+        .string()
+        .optional()
+        .describe("ISO date string of contract deployment"),
+      deployerAddress: zod.string().optional(),
+      txCountEstimate: zod
+        .number()
+        .optional()
+        .describe("Estimated number of transactions (lower bound)"),
+      hasRecentActivity: zod.boolean().optional(),
+      factors: zod.array(
+        zod.object({
+          name: zod.string().describe('Factor name e.g. \"Contract Age\"'),
+          earned: zod.number().describe("Points earned for this factor"),
+          max: zod.number().describe("Maximum possible points for this factor"),
+          label: zod
+            .string()
+            .describe('Human-readable label e.g. \"Deployed 2 years ago\"'),
+          verdict: zod.enum(["positive", "neutral", "negative"]),
+        }),
+      ),
+    })
+    .optional()
+    .describe(
+      "Contract reputation \/ trust score (only present for contract address inputs)",
+    ),
   details: zod
     .object({
       from: zod.string().optional(),

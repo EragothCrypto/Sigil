@@ -3,6 +3,7 @@ import type { AnalysisResult, KnownEntity } from '@workspace/api-client-react';
 import { RiskRing } from './RiskRing';
 import { ApprovalInspector } from './ApprovalInspector';
 import { TransactionBreakdown } from './TransactionBreakdown';
+import { ContractReputationCard } from './ContractReputationCard';
 import { useToast } from '@/hooks/use-toast';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -166,6 +167,11 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
           </div>
         </div>
       </div>
+
+      {/* ── CONTRACT REPUTATION CARD ── */}
+      {data.reputation && (
+        <ContractReputationCard data={data.reputation} />
+      )}
 
       {/* ── STRUCTURED BREAKDOWN ── */}
       {data.breakdown ? (

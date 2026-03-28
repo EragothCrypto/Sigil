@@ -17,6 +17,7 @@ import {
   analyzeUnknown,
 } from "./ai-analyzer.js";
 import { lookupEntity } from "./known-entities.js";
+import { calculateContractReputation, type ContractReputation } from "./contract-reputation.js";
 
 const router: IRouter = Router();
 
@@ -36,8 +37,8 @@ router.post("/analyze", async (req, res) => {
     let details: Record<string, unknown> = {};
 
     let knownEntity = null;
-
     let approvalInfo = null;
+    let reputation: ContractReputation | null = null;
 
     if (inputType === "transaction") {
       const tx = await fetchTransaction(trimmed, network);
@@ -128,7 +129,21 @@ router.post("/analyze", async (req, res) => {
     } else if (inputType === "contract") {
       knownEntity = lookupEntity(trimmed);
       const contract = await fetchContract(trimmed, network);
-      aiResult = await analyzeContract(contract, network, knownEntity);
+
+      // Run AI analysis and reputation scoring in parallel
+      const [contractAiResult, contractReputation] = await Promise.all([
+        analyzeContract(contract, network, knownEntity),
+        calculateContractReputation(
+          trimmed,
+          network,
+          contract.isVerified,
+          contract.isToken ?? false,
+          knownEntity,
+        ),
+      ]);
+      aiResult = contractAiResult;
+      reputation = contractReputation;
+
       details = {
         contractName: contract.contractName,
         tokenSymbol: contract.tokenSymbol,
@@ -176,6 +191,7 @@ router.post("/analyze", async (req, res) => {
       knownEntity: knownEntity ?? undefined,
       approvalInfo: approvalInfo ?? undefined,
       breakdown: aiResult.breakdown ?? undefined,
+      reputation: reputation ?? undefined,
       details: saved.details as Record<string, unknown>,
       createdAt: saved.createdAt.toISOString(),
     });

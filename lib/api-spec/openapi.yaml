@@ -408,6 +408,87 @@ components:
         - description
         - logoLetter
 
+    ReputationFactor:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Factor name e.g. "Contract Age"
+        earned:
+          type: number
+          description: Points earned for this factor
+        max:
+          type: number
+          description: Maximum possible points for this factor
+        label:
+          type: string
+          description: Human-readable label e.g. "Deployed 2 years ago"
+        verdict:
+          type: string
+          enum: [positive, neutral, negative]
+      required:
+        - name
+        - earned
+        - max
+        - label
+        - verdict
+
+    ContractReputation:
+      type: object
+      properties:
+        trustScore:
+          type: number
+          description: Trust score from 0 (untrusted) to 100 (fully trusted)
+        tier:
+          type: string
+          enum: [new, unproven, emerging, established, trusted, exploited]
+          description: Human tier classification
+        tierLabel:
+          type: string
+          description: Short uppercase label e.g. "TRUSTED"
+        tierDescription:
+          type: string
+          description: One sentence description of what the tier means
+        summary:
+          type: string
+          description: Plain-English "credit score" verdict for this contract
+        isExploited:
+          type: boolean
+          description: Whether this contract is in the known exploit registry
+        exploitInfo:
+          type: object
+          properties:
+            name:
+              type: string
+            lostUSD:
+              type: string
+            date:
+              type: string
+        ageInDays:
+          type: number
+        deployedAt:
+          type: string
+          description: ISO date string of contract deployment
+        deployerAddress:
+          type: string
+        txCountEstimate:
+          type: number
+          description: Estimated number of transactions (lower bound)
+        hasRecentActivity:
+          type: boolean
+        factors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReputationFactor"
+      required:
+        - trustScore
+        - tier
+        - tierLabel
+        - tierDescription
+        - summary
+        - isExploited
+        - factors
+
     AnalysisResult:
       type: object
       properties:
@@ -453,6 +534,9 @@ components:
         breakdown:
           $ref: "#/components/schemas/TransactionBreakdown"
           description: Structured visual breakdown of the transaction for dashboard display
+        reputation:
+          $ref: "#/components/schemas/ContractReputation"
+          description: Contract reputation / trust score (only present for contract address inputs)
         details:
           $ref: "#/components/schemas/AnalysisDetails"
         createdAt:

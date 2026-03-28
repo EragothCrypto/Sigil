@@ -214,6 +214,72 @@ export interface ApprovalInfo {
   priorApprovals: PriorApproval[];
 }
 
+export type ReputationFactorVerdict =
+  (typeof ReputationFactorVerdict)[keyof typeof ReputationFactorVerdict];
+
+export const ReputationFactorVerdict = {
+  positive: "positive",
+  neutral: "neutral",
+  negative: "negative",
+} as const;
+
+export interface ReputationFactor {
+  /** Factor name e.g. "Contract Age" */
+  name: string;
+  /** Points earned for this factor */
+  earned: number;
+  /** Maximum possible points for this factor */
+  max: number;
+  /** Human-readable label e.g. "Deployed 2 years ago" */
+  label: string;
+  verdict: ReputationFactorVerdict;
+}
+
+/**
+ * Human tier classification
+ */
+export type ContractReputationTier =
+  (typeof ContractReputationTier)[keyof typeof ContractReputationTier];
+
+export const ContractReputationTier = {
+  new: "new",
+  unproven: "unproven",
+  emerging: "emerging",
+  established: "established",
+  trusted: "trusted",
+  exploited: "exploited",
+} as const;
+
+export type ContractReputationExploitInfo = {
+  name?: string;
+  lostUSD?: string;
+  date?: string;
+};
+
+export interface ContractReputation {
+  /** Trust score from 0 (untrusted) to 100 (fully trusted) */
+  trustScore: number;
+  /** Human tier classification */
+  tier: ContractReputationTier;
+  /** Short uppercase label e.g. "TRUSTED" */
+  tierLabel: string;
+  /** One sentence description of what the tier means */
+  tierDescription: string;
+  /** Plain-English "credit score" verdict for this contract */
+  summary: string;
+  /** Whether this contract is in the known exploit registry */
+  isExploited: boolean;
+  exploitInfo?: ContractReputationExploitInfo;
+  ageInDays?: number;
+  /** ISO date string of contract deployment */
+  deployedAt?: string;
+  deployerAddress?: string;
+  /** Estimated number of transactions (lower bound) */
+  txCountEstimate?: number;
+  hasRecentActivity?: boolean;
+  factors: ReputationFactor[];
+}
+
 export type AnalysisResultInputType =
   (typeof AnalysisResultInputType)[keyof typeof AnalysisResultInputType];
 
@@ -280,6 +346,8 @@ export interface AnalysisResult {
   approvalInfo?: ApprovalInfo;
   /** Structured visual breakdown of the transaction for dashboard display */
   breakdown?: TransactionBreakdown;
+  /** Contract reputation / trust score (only present for contract address inputs) */
+  reputation?: ContractReputation;
   details?: AnalysisDetails;
   createdAt: string;
 }

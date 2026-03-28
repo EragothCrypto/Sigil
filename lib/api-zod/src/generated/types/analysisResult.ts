@@ -10,6 +10,7 @@ import type { AnalysisResultInputType } from "./analysisResultInputType";
 import type { AnalysisResultRiskLevel } from "./analysisResultRiskLevel";
 import type { AnalysisResultVerdict } from "./analysisResultVerdict";
 import type { ApprovalInfo } from "./approvalInfo";
+import type { ContractReputation } from "./contractReputation";
 import type { KnownEntity } from "./knownEntity";
 import type { TransactionBreakdown } from "./transactionBreakdown";
 
@@ -35,6 +36,8 @@ export interface AnalysisResult {
   approvalInfo?: ApprovalInfo;
   /** Structured visual breakdown of the transaction for dashboard display */
   breakdown?: TransactionBreakdown;
+  /** Contract reputation / trust score (only present for contract address inputs) */
+  reputation?: ContractReputation;
   details?: AnalysisDetails;
   createdAt: string;
 }
