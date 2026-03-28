@@ -34,22 +34,23 @@ const KNOWN_EXPLOITS: Record<string, { name: string; lostUSD: string; date: stri
   "0x54a2d42a40f51259dedd1978f6c118a0f0eff078": { name: "Ronin Bridge Exploit", lostUSD: "$624M", date: "2022-03-23" },
 };
 
-// ── Etherscan helpers (no key required for basic queries) ─────────────────────
-const ETHERSCAN_DOMAINS: Record<string, string> = {
-  mainnet: "api.etherscan.io",
-  goerli: "api-goerli.etherscan.io",
-  sepolia: "api-sepolia.etherscan.io",
-  polygon: "api.polygonscan.com",
-  bsc: "api.bscscan.com",
-  arbitrum: "api.arbiscan.io",
-  optimism: "api-optimistic.etherscan.io",
-  base: "api.basescan.org",
+// ── Etherscan V2 API ──────────────────────────────────────────────────────────
+const ETHERSCAN_CHAIN_IDS: Record<string, string> = {
+  mainnet:  "1",
+  goerli:   "5",
+  sepolia:  "11155111",
+  polygon:  "137",
+  bsc:      "56",
+  arbitrum: "42161",
+  optimism: "10",
+  base:     "8453",
 };
 
 async function etherscanFetch(network: string, params: Record<string, string>): Promise<unknown> {
-  const domain = ETHERSCAN_DOMAINS[network] ?? "api.etherscan.io";
   const apiKey = process.env.ETHERSCAN_API_KEY ?? "YourApiKeyToken";
-  const url = new URL(`https://${domain}/api`);
+  const chainId = ETHERSCAN_CHAIN_IDS[network] ?? "1";
+  const url = new URL("https://api.etherscan.io/v2/api");
+  url.searchParams.set("chainid", chainId);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("apikey", apiKey);
   const res = await fetch(url.toString(), { signal: AbortSignal.timeout(9000) });
@@ -93,37 +94,22 @@ async function fetchReputationData(address: string, network: string): Promise<{
   const result: ReturnType<typeof fetchReputationData> extends Promise<infer R> ? R : never = {};
 
   try {
-    // 1. Contract creation info
+    // 1. Contract creation info — V2 API returns timestamp directly
     const creationRes = await etherscanFetch(network, {
       module: "contract",
       action: "getcontractcreation",
       contractaddresses: addr,
-    }) as { status: string; result?: Array<{ contractCreator: string; txHash: string }> };
+    }) as { status: string; result?: Array<{ contractCreator: string; txHash: string; timestamp?: string; blockNumber?: string }> };
 
     const creationInfo = creationRes?.result?.[0];
 
-    if (creationInfo?.txHash) {
-      // Fetch the creation tx to get the timestamp
-      const txRes = await etherscanFetch(network, {
-        module: "proxy",
-        action: "eth_getTransactionByHash",
-        txhash: creationInfo.txHash,
-      }) as { result?: { blockNumber: string } };
-
-      if (txRes?.result?.blockNumber) {
-        const blockRes = await etherscanFetch(network, {
-          module: "proxy",
-          action: "eth_getBlockByNumber",
-          tag: txRes.result.blockNumber,
-          boolean: "false",
-        }) as { result?: { timestamp: string } };
-
-        const timestamp = blockRes?.result?.timestamp;
-        if (timestamp) {
-          result.deployedAt = new Date(parseInt(timestamp, 16) * 1000);
-        }
-      }
+    if (creationInfo) {
       result.deployerAddress = creationInfo.contractCreator;
+
+      // V2 includes timestamp directly — no extra block lookup needed
+      if (creationInfo.timestamp) {
+        result.deployedAt = new Date(parseInt(creationInfo.timestamp, 10) * 1000);
+      }
     }
   } catch (err) {
     logger.warn({ err, address }, "Could not fetch contract creation info");

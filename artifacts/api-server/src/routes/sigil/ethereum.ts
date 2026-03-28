@@ -155,10 +155,25 @@ const ETHERSCAN_DOMAINS: Record<string, string> = {
   base:     "api.basescan.org",
 };
 
+// Etherscan chain IDs for V2 API
+const ETHERSCAN_CHAIN_IDS: Record<string, string> = {
+  mainnet:  "1",
+  goerli:   "5",
+  sepolia:  "11155111",
+  polygon:  "137",
+  bsc:      "56",
+  arbitrum: "42161",
+  optimism: "10",
+  base:     "8453",
+};
+
 async function etherscanFetch(network: string, params: Record<string, string>): Promise<unknown> {
-  const domain = ETHERSCAN_DOMAINS[network] ?? "api.etherscan.io";
   const apiKey = process.env.ETHERSCAN_API_KEY ?? "YourApiKeyToken";
-  const url = new URL(`https://${domain}/api`);
+  const chainId = ETHERSCAN_CHAIN_IDS[network] ?? "1";
+
+  // Use V2 unified API endpoint
+  const url = new URL("https://api.etherscan.io/v2/api");
+  url.searchParams.set("chainid", chainId);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("apikey", apiKey);
 
