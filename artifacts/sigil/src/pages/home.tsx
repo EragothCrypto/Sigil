@@ -22,7 +22,7 @@ const FEATURES = [
   {
     icon: ShieldCheck,
     title: "Risk Scoring",
-    desc: "0–100 AI-powered risk score. Flags unlimited approvals, rug pulls, and known exploits.",
+    desc: "0–100 risk score based on bytecode analysis, approval scope, and exploit history.",
   },
   {
     icon: Globe,
@@ -79,7 +79,7 @@ export default function Home() {
             className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-mono font-semibold uppercase tracking-widest mb-2"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            AI-Powered Web3 Security
+            Transaction Decoder · Web3 Security
           </motion.div>
 
           <h1 className="text-5xl md:text-[4.5rem] font-display font-extrabold text-white leading-[1.05] tracking-tight">

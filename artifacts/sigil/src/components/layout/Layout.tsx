@@ -10,7 +10,7 @@ const NAV_ITEMS = [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const logo = `${import.meta.env.BASE_URL}images/sigil-logo.png`;
+  const logo = `${import.meta.env.BASE_URL}sigil-logo.png`;
   const [location] = useLocation();
   const [scrolled, setScrolled] = useState(false);
 
