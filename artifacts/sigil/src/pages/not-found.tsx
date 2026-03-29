@@ -1,18 +1,28 @@
 import { Link } from "wouter";
-import { AlertTriangle } from "lucide-react";
+import { Home } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
-      <div className="relative">
-         <div className="absolute inset-0 bg-destructive/20 blur-2xl rounded-full" />
-         <AlertTriangle className="w-24 h-24 text-destructive relative z-10" />
+    <div className="flex flex-col items-center justify-center min-h-[70vh] text-center gap-8">
+      <div className="space-y-3">
+        <p
+          className="text-[7rem] md:text-[9rem] font-display font-black leading-none text-transparent bg-clip-text"
+          style={{ backgroundImage: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a855f7 100%)' }}
+        >
+          404
+        </p>
+        <h1 className="text-2xl font-display font-bold text-white/50">Signal lost</h1>
+        <p className="text-sm text-white/25 max-w-xs mx-auto leading-relaxed">
+          The page you're looking for doesn't exist in the registry.
+        </p>
       </div>
-      <h1 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tight">404 - Signal Lost</h1>
-      <p className="text-muted-foreground font-mono text-lg max-w-md">The requested endpoint does not exist in the operational registry.</p>
-      
-      <Link href="/" className="inline-block mt-8 px-8 py-4 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/50 shadow-[0_0_15px_rgba(0,229,255,0.1)] rounded-xl font-mono uppercase tracking-widest font-bold transition-all cursor-pointer">
-        Return to Scanner
+      <Link
+        href="/"
+        className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl font-display font-bold text-sm text-white uppercase tracking-wider transition-all"
+        style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)' }}
+      >
+        <Home className="w-4 h-4" />
+        Back to Scanner
       </Link>
     </div>
   );

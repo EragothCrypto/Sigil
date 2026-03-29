@@ -1,52 +1,92 @@
 import { motion } from 'framer-motion';
 
-export function RiskRing({ score, level }: { score: number, level: string }) {
-  const radius = 60;
-  const strokeWidth = 10;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
+const RISK_CONFIG = {
+  low:      { color: '#10b981', label: 'LOW',      shadow: 'rgba(16,185,129,0.3)' },
+  medium:   { color: '#f59e0b', label: 'MEDIUM',   shadow: 'rgba(245,158,11,0.3)' },
+  high:     { color: '#f97316', label: 'HIGH',     shadow: 'rgba(249,115,22,0.3)' },
+  critical: { color: '#f43f5e', label: 'CRITICAL', shadow: 'rgba(244,63,94,0.3)' },
+};
 
-  let colorClass = "text-success stroke-success drop-shadow-[0_0_15px_rgba(0,255,163,0.4)]";
-  if (score > 25) colorClass = "text-warning stroke-warning drop-shadow-[0_0_15px_rgba(255,176,32,0.4)]";
-  if (score > 50) colorClass = "text-orange-500 stroke-orange-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.4)]";
-  if (score > 75) colorClass = "text-destructive stroke-destructive drop-shadow-[0_0_15px_rgba(255,42,95,0.4)]";
+function getRiskConfig(score: number, level: string) {
+  const levelKey = level?.toLowerCase() as keyof typeof RISK_CONFIG;
+  if (RISK_CONFIG[levelKey]) return RISK_CONFIG[levelKey];
+  if (score <= 25) return RISK_CONFIG.low;
+  if (score <= 50) return RISK_CONFIG.medium;
+  if (score <= 75) return RISK_CONFIG.high;
+  return RISK_CONFIG.critical;
+}
+
+export function RiskRing({ score, level }: { score: number; level: string }) {
+  const R = 52;
+  const strokeW = 7;
+  const circ = 2 * Math.PI * R;
+  const offset = circ - (score / 100) * circ;
+  const cfg = getRiskConfig(score, level);
+  const cx = 70;
 
   return (
-    <div className="relative flex flex-col items-center justify-center shrink-0">
-      <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 160 160">
-        {/* Background track */}
-        <circle
-          cx="80"
-          cy="80"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          className="text-white/5"
+    <div className="relative flex flex-col items-center gap-3 shrink-0">
+      <div className="relative">
+        {/* Outer glow ring */}
+        <div
+          className="absolute inset-0 rounded-full blur-2xl opacity-20"
+          style={{ background: cfg.color }}
         />
-        {/* Progress ring */}
-        <motion.circle
-          cx="80"
-          cy="80"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
-          className={colorClass}
-        />
-      </svg>
-      <div className="absolute flex flex-col items-center justify-center">
-        <span className="text-5xl font-display font-bold text-white tracking-tighter">
-          {score}
-        </span>
+        <svg width={cx * 2} height={cx * 2} viewBox={`0 0 ${cx * 2} ${cx * 2}`} className="relative">
+          {/* Track */}
+          <circle
+            cx={cx} cy={cx} r={R}
+            fill="none"
+            stroke="rgba(255,255,255,0.05)"
+            strokeWidth={strokeW}
+          />
+          {/* Progress */}
+          <motion.circle
+            cx={cx} cy={cx} r={R}
+            fill="none"
+            stroke={cfg.color}
+            strokeWidth={strokeW}
+            strokeLinecap="round"
+            strokeDasharray={circ}
+            initial={{ strokeDashoffset: circ }}
+            animate={{ strokeDashoffset: offset }}
+            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+            transform={`rotate(-90 ${cx} ${cx})`}
+            style={{ filter: `drop-shadow(0 0 8px ${cfg.shadow})` }}
+          />
+
+          {/* Score label */}
+          <text
+            x={cx} y={cx - 4}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="white"
+            fontSize="26"
+            fontWeight="700"
+            fontFamily="'Space Grotesk', sans-serif"
+          >
+            {score}
+          </text>
+          <text
+            x={cx} y={cx + 16}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="rgba(255,255,255,0.3)"
+            fontSize="8"
+            fontWeight="600"
+            fontFamily="'JetBrains Mono', monospace"
+            letterSpacing="1.5"
+          >
+            RISK SCORE
+          </text>
+        </svg>
       </div>
-      <div className={`mt-5 font-mono text-sm uppercase tracking-[0.2em] font-bold ${colorClass.split(' ')[0]}`}>
-        {level} RISK
+
+      <div
+        className="px-3 py-1 rounded-full font-mono text-xs font-bold tracking-widest uppercase border"
+        style={{ color: cfg.color, borderColor: `${cfg.color}30`, background: `${cfg.color}12` }}
+      >
+        {cfg.label} RISK
       </div>
     </div>
   );
