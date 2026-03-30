@@ -30,6 +30,17 @@ export interface TransactionBreakdown {
   riskFactors: BreakdownRiskFactor[];
 }
 
+export interface AIPatternMatch {
+  id: string;
+  type: "drainer" | "honeypot" | "fake_approval" | "rug_pull" | "phishing" | "flash_loan" | "suspicious";
+  name: string;
+  confidence: "confirmed" | "high" | "medium" | "low";
+  description: string;
+  indicators: string[];
+  historicalContext?: string;
+  riskDelta: number;
+}
+
 export interface AIAnalysisResult {
   summary: string;
   verdict: "safe" | "caution" | "dangerous";
@@ -39,6 +50,7 @@ export interface AIAnalysisResult {
   warnings: string[];
   positives: string[];
   breakdown?: TransactionBreakdown;
+  aiPatterns?: AIPatternMatch[];
 }
 
 function getRiskLevel(score: number): "low" | "medium" | "high" | "critical" {
@@ -98,7 +110,7 @@ ${approvalInfo.isRevoke ? "- This is a REVOKE — it removes a previously grante
 Make sure the summary clearly explains who is getting approval and for how much.\n`
     : "";
 
-  const prompt = `You are Sigil, a Web3 security analyst. Analyze this Ethereum transaction and explain it to a non-technical user in plain English.
+  const prompt = `You are Sigil, a Web3 security analyst specializing in detecting scams and exploit patterns. Analyze this Ethereum transaction and explain it to a non-technical user in plain English.
 
 ${txContext}
 ${entityContext}${approvalContext}
@@ -112,29 +124,42 @@ Respond with a JSON object (no markdown, just raw JSON):
   "riskScore": <0-100 integer, where 0=very safe, 100=extremely dangerous>,
   "warnings": ["Array of specific warning strings, empty if none"],
   "positives": ["Array of positive/safe attributes, empty if none"],
+  "patternMatches": [
+    {
+      "id": "unique-kebab-id",
+      "type": "drainer" | "honeypot" | "fake_approval" | "rug_pull" | "phishing" | "flash_loan" | "suspicious",
+      "name": "Short name e.g. 'Wallet Drainer', 'Permit Phishing', 'Honeypot Token'",
+      "confidence": "confirmed" | "high" | "medium" | "low",
+      "description": "One or two sentences explaining this pattern and why it is dangerous.",
+      "indicators": ["Specific technical or behavioral signal observed", "Another signal"],
+      "historicalContext": "Optional: one sentence citing real-world exploit history or stats if applicable",
+      "riskDelta": <integer 0-30, how much this pattern increases risk>
+    }
+  ],
   "breakdown": {
     "actionType": "swap" | "approve" | "transfer" | "mint" | "burn" | "bridge" | "stake" | "deposit" | "withdraw" | "revoke" | "deploy" | "other",
     "actionLabel": "Short human label e.g. 'Token Swap', 'Unlimited Approval', 'ETH Transfer', 'NFT Mint'",
-    "assetsOut": [
-      { "asset": "USDC", "amount": "100", "usdValue": "~$100" }
-    ],
-    "assetsIn": [
-      { "asset": "ETH", "amount": "0.05", "usdValue": "~$125" }
-    ],
-    "permissions": [
-      { "asset": "USDC", "spender": "Uniswap V3", "amount": "unlimited" }
-    ],
+    "assetsOut": [{ "asset": "USDC", "amount": "100", "usdValue": "~$100" }],
+    "assetsIn": [{ "asset": "ETH", "amount": "0.05", "usdValue": "~$125" }],
+    "permissions": [{ "asset": "USDC", "spender": "Uniswap V3", "amount": "unlimited" }],
     "riskFactors": [
       { "severity": "high" | "medium" | "low" | "critical" | "positive", "label": "Short label", "detail": "One sentence detail" }
     ]
   }
 }
 
+Rules for patternMatches:
+- Only include patterns you actually detect from the calldata/context — do NOT fabricate matches
+- Leave patternMatches as an empty array [] if nothing suspicious is found
+- Patterns to look for: wallet drainers (setApprovalForAll, sweepToken, transferFrom after approval), permit phishing, honeypot tokens (hidden blacklist/sell restrictions), rug pulls (unrestricted mint, transferOwnership), flash loan attacks, multicall drain bundles, fake NFT minting scams
+- historicalContext should cite real incidents (Inferno Drainer, Monkey Drainer, Pink Drainer, various rugs) when relevant
+- Each indicator should be a concrete technical observation, not a vague statement
+
 Rules for breakdown:
 - assetsOut: tokens/ETH leaving the wallet (empty array if none)
 - assetsIn: tokens/ETH entering the wallet (empty array if none)
 - permissions: only include if access is being granted (approvals)
-- riskFactors: include BOTH risks (severity critical/high/medium/low) AND positives (severity "positive"). Always include at least one entry.
+- riskFactors: include BOTH risks AND positives (severity "positive"). Always include at least one entry.
 - For pure ETH transfers: assetsOut = [{ asset: "ETH", amount: "X ETH" }], assetsIn = []
 - If tx not found: actionType = "other", actionLabel = "Unknown Transaction", empty arrays
 
@@ -151,7 +176,7 @@ Risk scoring:
 
   const response = await openai.chat.completions.create({
     model: "gpt-5.2",
-    max_completion_tokens: 1024,
+    max_completion_tokens: 2048,
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -175,6 +200,19 @@ Risk scoring:
       riskFactors: Array.isArray(bd.riskFactors) ? bd.riskFactors : [],
     } : undefined;
 
+    const aiPatterns: AIPatternMatch[] = Array.isArray(parsed.patternMatches)
+      ? parsed.patternMatches.map((p: AIPatternMatch) => ({
+          id: String(p.id ?? `ai-${Math.random().toString(36).slice(2)}`),
+          type: p.type ?? "suspicious",
+          name: String(p.name ?? "Unknown Pattern"),
+          confidence: p.confidence ?? "medium",
+          description: String(p.description ?? ""),
+          indicators: Array.isArray(p.indicators) ? p.indicators : [],
+          historicalContext: p.historicalContext ? String(p.historicalContext) : undefined,
+          riskDelta: Math.max(0, Math.min(30, parseInt(String(p.riskDelta)) || 5)),
+        }))
+      : [];
+
     return {
       summary: parsed.summary || "Unable to analyze this transaction.",
       verdict,
@@ -184,6 +222,7 @@ Risk scoring:
       warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
       positives: Array.isArray(parsed.positives) ? parsed.positives : [],
       breakdown,
+      aiPatterns,
     };
   } catch {
     return {
@@ -218,7 +257,7 @@ Network: ${network}`;
     ? `\nKNOWN PROTOCOL IDENTIFIED: This address is "${knownEntity.name}" (${knownEntity.category}) — ${knownEntity.description}. Trust level: ${knownEntity.trustLevel}. Factor this into your verdict.\n`
     : "";
 
-  const prompt = `You are Sigil, a Web3 security analyst. Analyze this smart contract and explain it to a non-technical user in plain English.
+  const prompt = `You are Sigil, a Web3 security analyst specializing in detecting scams and exploit patterns. Analyze this smart contract and explain it to a non-technical user in plain English.
 
 ${contractContext}
 ${entityContext}
@@ -230,6 +269,18 @@ Respond with a JSON object (no markdown, just raw JSON):
   "riskScore": <0-100 integer>,
   "warnings": ["Array of specific warning strings"],
   "positives": ["Array of positive/safe attributes"],
+  "patternMatches": [
+    {
+      "id": "unique-kebab-id",
+      "type": "drainer" | "honeypot" | "fake_approval" | "rug_pull" | "phishing" | "flash_loan" | "suspicious",
+      "name": "Short pattern name",
+      "confidence": "confirmed" | "high" | "medium" | "low",
+      "description": "One or two sentences explaining this pattern and why it is dangerous.",
+      "indicators": ["Specific technical signal", "Another signal"],
+      "historicalContext": "Optional: cite real exploit history or stats",
+      "riskDelta": <integer 0-30>
+    }
+  ],
   "breakdown": {
     "actionType": "deploy" | "other",
     "actionLabel": "Short label e.g. 'ERC-20 Token Contract', 'DEX Router', 'NFT Contract', 'Lending Pool'",
@@ -242,8 +293,15 @@ Respond with a JSON object (no markdown, just raw JSON):
   }
 }
 
+Rules for patternMatches:
+- Only include patterns you actually detect — do NOT fabricate matches
+- Empty array [] if nothing suspicious found
+- For contracts look for: honeypot indicators (hidden blacklist, sell restrictions, _maxTxAmount, enableTrading flags), rug pull risks (unrestricted mint, transferable ownership, selfdestruct), phishing names (fake airdrop/reward/official contracts), proxy upgrade risks
+- historicalContext can cite real incidents when relevant
+- Leave patternMatches as [] for well-known verified contracts
+
 For contract analysis: assetsOut/assetsIn/permissions are almost always empty arrays.
-riskFactors should include BOTH risks AND positives (use severity "positive" for good attributes). Always include at least one entry.
+riskFactors should include BOTH risks AND positives (severity "positive"). Always include at least one entry.
 
 Verdict guidelines:
 - "safe": Verified contract, well-known protocol, standard token
@@ -258,7 +316,7 @@ Risk scoring:
 
   const response = await openai.chat.completions.create({
     model: "gpt-5.2",
-    max_completion_tokens: 1024,
+    max_completion_tokens: 2048,
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -281,6 +339,20 @@ Risk scoring:
       permissions: Array.isArray(bd2.permissions) ? bd2.permissions : [],
       riskFactors: Array.isArray(bd2.riskFactors) ? bd2.riskFactors : [],
     } : undefined;
+
+    const aiPatterns: AIPatternMatch[] = Array.isArray(parsed.patternMatches)
+      ? parsed.patternMatches.map((p: AIPatternMatch) => ({
+          id: String(p.id ?? `ai-${Math.random().toString(36).slice(2)}`),
+          type: p.type ?? "suspicious",
+          name: String(p.name ?? "Unknown Pattern"),
+          confidence: p.confidence ?? "medium",
+          description: String(p.description ?? ""),
+          indicators: Array.isArray(p.indicators) ? p.indicators : [],
+          historicalContext: p.historicalContext ? String(p.historicalContext) : undefined,
+          riskDelta: Math.max(0, Math.min(30, parseInt(String(p.riskDelta)) || 5)),
+        }))
+      : [];
+
     return {
       summary: parsed.summary || "Unable to analyze this contract.",
       verdict,
@@ -290,6 +362,7 @@ Risk scoring:
       warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
       positives: Array.isArray(parsed.positives) ? parsed.positives : [],
       breakdown,
+      aiPatterns,
     };
   } catch {
     return {

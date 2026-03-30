@@ -14,6 +14,28 @@ import type { ContractReputation } from "./contractReputation";
 import type { KnownEntity } from "./knownEntity";
 import type { TransactionBreakdown } from "./transactionBreakdown";
 
+export type PatternType =
+  | "drainer"
+  | "honeypot"
+  | "fake_approval"
+  | "rug_pull"
+  | "phishing"
+  | "flash_loan"
+  | "suspicious";
+
+export type PatternConfidence = "confirmed" | "high" | "medium" | "low";
+
+export interface PatternMatch {
+  id: string;
+  type: PatternType;
+  name: string;
+  confidence: PatternConfidence;
+  description: string;
+  indicators: string[];
+  historicalContext?: string;
+  riskDelta: number;
+}
+
 export interface AnalysisResult {
   id: string;
   input: string;
@@ -38,6 +60,8 @@ export interface AnalysisResult {
   breakdown?: TransactionBreakdown;
   /** Contract reputation / trust score (only present for contract address inputs) */
   reputation?: ContractReputation;
+  /** Detected scam / exploit patterns */
+  patterns?: PatternMatch[];
   details?: AnalysisDetails;
   createdAt: string;
 }

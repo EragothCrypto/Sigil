@@ -4,6 +4,7 @@ import { RiskRing } from './RiskRing';
 import { ApprovalInspector } from './ApprovalInspector';
 import { TransactionBreakdown } from './TransactionBreakdown';
 import { ContractReputationCard } from './ContractReputationCard';
+import { PatternDetectionCard } from './PatternDetectionCard';
 import { useToast } from '@/hooks/use-toast';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -164,6 +165,11 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
           </div>
         </div>
       </div>
+
+      {/* ── PATTERN DETECTION ── */}
+      {data.patterns && data.patterns.length > 0 && (
+        <PatternDetectionCard patterns={data.patterns} />
+      )}
 
       {/* ── CONTRACT REPUTATION ── */}
       {data.reputation && <ContractReputationCard data={data.reputation} />}

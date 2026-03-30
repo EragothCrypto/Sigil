@@ -18,6 +18,7 @@ import {
 } from "./ai-analyzer.js";
 import { lookupEntity } from "./known-entities.js";
 import { calculateContractReputation, type ContractReputation } from "./contract-reputation.js";
+import { detectPatterns, mergePatterns, type PatternMatch } from "./pattern-detector.js";
 
 const router: IRouter = Router();
 
@@ -39,6 +40,7 @@ router.post("/analyze", async (req, res) => {
     let knownEntity = null;
     let approvalInfo = null;
     let reputation: ContractReputation | null = null;
+    let patterns: PatternMatch[] = [];
 
     if (inputType === "transaction") {
       const tx = await fetchTransaction(trimmed, network);
@@ -126,6 +128,18 @@ router.post("/analyze", async (req, res) => {
       }
 
       aiResult = await analyzeTransaction(tx, methodName, network, trimmed, knownEntity, approvalInfo);
+
+      // Static pattern detection for transactions
+      const staticPatterns = detectPatterns({
+        tx: tx ?? undefined,
+        methodId: tx?.methodId ?? undefined,
+        calldata: tx?.input ?? undefined,
+        isUnlimitedApproval: approvalInfo?.isUnlimited ?? false,
+        spender: approvalInfo?.spender ?? undefined,
+        spenderKnown: !!approvalInfo?.spenderEntity,
+        knownEntity,
+      });
+      patterns = mergePatterns(staticPatterns, aiResult.aiPatterns ?? []);
     } else if (inputType === "contract") {
       knownEntity = lookupEntity(trimmed);
       const contract = await fetchContract(trimmed, network);
@@ -143,6 +157,13 @@ router.post("/analyze", async (req, res) => {
       ]);
       aiResult = contractAiResult;
       reputation = contractReputation;
+
+      // Static pattern detection for contracts
+      const staticContractPatterns = detectPatterns({
+        contract,
+        knownEntity,
+      });
+      patterns = mergePatterns(staticContractPatterns, contractAiResult.aiPatterns ?? []);
 
       details = {
         contractName: contract.contractName,
@@ -192,6 +213,7 @@ router.post("/analyze", async (req, res) => {
       approvalInfo: approvalInfo ?? undefined,
       breakdown: aiResult.breakdown ?? undefined,
       reputation: reputation ?? undefined,
+      patterns: patterns.length > 0 ? patterns : undefined,
       details: saved.details as Record<string, unknown>,
       createdAt: saved.createdAt.toISOString(),
     });
