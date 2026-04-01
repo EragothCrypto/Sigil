@@ -1,0 +1,58 @@
+[
+  {
+    "id": "a1b2c3d4-0001-4000-8000-000000000001",
+    "position": 1,
+    "filepath": "src/pages/slides/Cover.tsx",
+    "title": "Cover — The Trust Layer of Web3",
+    "description": "Title slide introducing Sigil and the Replit Agent 4 Hackathon context.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0002-4000-8000-000000000002",
+    "position": 2,
+    "filepath": "src/pages/slides/Problem.tsx",
+    "title": "Problem — You Can't Read What You're Signing",
+    "description": "The scale of crypto scam losses and why transactions are unreadable to humans.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0003-4000-8000-000000000003",
+    "position": 3,
+    "filepath": "src/pages/slides/Solution.tsx",
+    "title": "Solution — Sigil Decodes Any Transaction",
+    "description": "What Sigil does: decode, verify, and decide.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0004-4000-8000-000000000004",
+    "position": 4,
+    "filepath": "src/pages/slides/PatternDetection.tsx",
+    "title": "Pattern Detection Engine",
+    "description": "Two-layer threat detection catching drainers, honeypots, and rug pulls.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0005-4000-8000-000000000005",
+    "position": 5,
+    "filepath": "src/pages/slides/HowItWorks.tsx",
+    "title": "How It Works — Three Steps",
+    "description": "Paste, Analyze, Understand — the Sigil user flow.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0006-4000-8000-000000000006",
+    "position": 6,
+    "filepath": "src/pages/slides/BuiltWithReplit.tsx",
+    "title": "Built With Replit Agent 4",
+    "description": "Full-stack application built end-to-end in a single session with Replit Agent 4.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0007-4000-8000-000000000007",
+    "position": 7,
+    "filepath": "src/pages/slides/Closing.tsx",
+    "title": "Closing — The Trust Layer of Web3",
+    "description": "Vision statement and closing brand moment.",
+    "speakerNotes": ""
+  }
+]
