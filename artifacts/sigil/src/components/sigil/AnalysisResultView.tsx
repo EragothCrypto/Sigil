@@ -5,6 +5,7 @@ import { ApprovalInspector } from './ApprovalInspector';
 import { TransactionBreakdown } from './TransactionBreakdown';
 import { ContractReputationCard } from './ContractReputationCard';
 import { PatternDetectionCard } from './PatternDetectionCard';
+import { ShareButton } from './ShareButton';
 import { useToast } from '@/hooks/use-toast';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -121,6 +122,9 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
           </p>
         </div>
       </div>
+
+      {/* ── SHARE BUTTON ── */}
+      <ShareButton data={data} />
 
       {/* ── KNOWN ENTITY ── */}
       {data.knownEntity && <KnownEntityBadge entity={data.knownEntity} />}
