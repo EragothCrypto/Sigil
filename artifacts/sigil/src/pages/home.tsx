@@ -39,6 +39,7 @@ const FEATURES = [
 const EXAMPLES = [
   { label: 'USDC Contract', value: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' },
   { label: 'Uniswap V2', value: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f' },
+  { label: '⚠️ Approval Drain Tx', value: '0x4b66cc6b5bbda8b29c6f88b009a79ad1c66e3c9eb9c6af2e11e30f10bf5b8d4b' },
 ];
 
 export default function Home() {

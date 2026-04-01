@@ -46,12 +46,19 @@ artifacts-monorepo/
 
 ## Sigil Features
 
-- **Transaction Analysis**: Paste any Ethereum tx hash → AI explains in plain English
-- **Contract Analysis**: Paste any contract address → AI audits the contract
+- **Transaction Analysis**: Paste any Ethereum tx hash → plain English explanation
+- **Contract Analysis**: Paste any contract address → full audit
 - **Risk Scoring**: 0-100 score with low/medium/high/critical levels
-- **Warnings & Positives**: Specific flags (e.g., "Unlimited approval detected")
-- **Multi-network**: mainnet, polygon, BSC, arbitrum, goerli, sepolia
-- **History**: All past analyses stored in PostgreSQL and browsable
+- **Should I Sign This?**: Clear safe/caution/dangerous verdict with reason
+- **Pattern Detection**: Two-layer engine (static heuristics + AI) detecting drainers, honeypots, fake approvals, rug pulls, phishing permit attacks — with confidence ratings, matched indicators, and historical context citing real incidents
+- **Contract Reputation**: Trust score (0-100) with tier badge, age/verification/activity/exploit factors, SVG arc gauge
+- **Approval Inspector**: Decodes token approval transactions, shows spender identity, prior approval history, risk level
+- **Transaction Breakdown**: Visual asset-in/out layout with permissions and risk factors
+- **Known Protocol Recognition**: Identifies 30+ major protocols (Uniswap, Aave, Compound, etc.)
+- **Multi-network**: Ethereum, Polygon, Arbitrum, Optimism, Base (Etherscan V2 API with chainId)
+- **History Feed**: All past analyses stored in PostgreSQL, browsable as a real-time intel feed
+- **Browser Extension**: ZIP downloadable, intercepts MetaMask/Rabby transactions
+- **Transaction Simulator**: Paste raw calldata or JSON tx object to simulate before signing
 
 ## API Routes
 
