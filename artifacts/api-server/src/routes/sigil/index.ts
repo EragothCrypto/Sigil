@@ -19,6 +19,7 @@ import {
 import { lookupEntity } from "./known-entities.js";
 import { calculateContractReputation, type ContractReputation } from "./contract-reputation.js";
 import { detectPatterns, mergePatterns, type PatternMatch } from "./pattern-detector.js";
+import { computeContractDiff } from "./contract-diff.js";
 
 const router: IRouter = Router();
 
@@ -220,6 +221,21 @@ router.post("/analyze", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Analysis failed");
     res.status(500).json({ error: "analysis_failed", message: "Failed to analyze input" });
+  }
+});
+
+router.post("/contract-diff", async (req, res) => {
+  const { address, network = "mainnet" } = req.body as { address?: string; network?: string };
+  if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+    res.status(400).json({ error: "validation_error", message: "Invalid contract address" });
+    return;
+  }
+  try {
+    const result = await computeContractDiff(address, network);
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Contract diff failed");
+    res.status(500).json({ error: "diff_failed", message: "Failed to compute contract diff" });
   }
 });
 

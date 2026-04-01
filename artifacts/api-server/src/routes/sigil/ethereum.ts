@@ -76,7 +76,7 @@ const PUBLIC_RPC: Record<string, string[]> = {
   sepolia:  ["https://ethereum-sepolia.publicnode.com"],
 };
 
-async function rpcCall(network: string, method: string, params: unknown[]): Promise<unknown> {
+export async function rpcCall(network: string, method: string, params: unknown[]): Promise<unknown> {
   const endpoints = PUBLIC_RPC[network] ?? PUBLIC_RPC.mainnet;
   let lastErr: unknown;
 
@@ -167,7 +167,7 @@ const ETHERSCAN_CHAIN_IDS: Record<string, string> = {
   base:     "8453",
 };
 
-async function etherscanFetch(network: string, params: Record<string, string>): Promise<unknown> {
+export async function etherscanFetch(network: string, params: Record<string, string>): Promise<unknown> {
   const apiKey = process.env.ETHERSCAN_API_KEY ?? "YourApiKeyToken";
   const chainId = ETHERSCAN_CHAIN_IDS[network] ?? "1";
 

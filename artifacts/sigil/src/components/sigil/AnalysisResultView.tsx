@@ -6,6 +6,7 @@ import { TransactionBreakdown } from './TransactionBreakdown';
 import { ContractReputationCard } from './ContractReputationCard';
 import { PatternDetectionCard } from './PatternDetectionCard';
 import { ShareButton } from './ShareButton';
+import { ContractDiffView } from './ContractDiffView';
 import { useToast } from '@/hooks/use-toast';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -177,6 +178,11 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
 
       {/* ── CONTRACT REPUTATION ── */}
       {data.reputation && <ContractReputationCard data={data.reputation} />}
+
+      {/* ── UPGRADE DIFF ── */}
+      {data.inputType === 'contract' && (
+        <ContractDiffView address={data.input} network={data.network.toLowerCase()} />
+      )}
 
       {/* ── STRUCTURED BREAKDOWN ── */}
       {data.breakdown ? (
