@@ -22,6 +22,7 @@ import { detectPatterns, mergePatterns, type PatternMatch } from "./pattern-dete
 import { computeContractDiff } from "./contract-diff.js";
 import { computeScoreFactors } from "./score-factors.js";
 import { fetchTokenPrice, computeApprovalUsdValue } from "./token-price.js";
+import { analysisCache, cacheKey } from "./analysis-cache.js";
 
 const router: IRouter = Router();
 
@@ -32,9 +33,19 @@ router.post("/analyze", async (req, res) => {
     return;
   }
 
-  const { input, network = "mainnet" } = parseResult.data;
+  const { input, network = "mainnet", fresh } = parseResult.data as { input: string; network?: string; fresh?: boolean };
   const trimmed = input.trim();
   const inputType = detectInputType(trimmed);
+  const key = cacheKey(trimmed, network);
+
+  // ── Cache hit — return instantly without any API / AI calls ───────────────
+  if (!fresh) {
+    const hit = analysisCache.get(key);
+    if (hit) {
+      res.json({ ...(hit as object), cached: true });
+      return;
+    }
+  }
 
   try {
     let aiResult;
@@ -250,7 +261,7 @@ router.post("/analyze", async (req, res) => {
       })
       .returning();
 
-    res.json({
+    const result = {
       id: String(saved.id),
       input: saved.input,
       inputType: saved.inputType,
@@ -270,7 +281,12 @@ router.post("/analyze", async (req, res) => {
       scoreFactors: scoreFactors.length > 0 ? scoreFactors : undefined,
       details: saved.details as Record<string, unknown>,
       createdAt: saved.createdAt.toISOString(),
-    });
+    };
+
+    // Store in cache for future identical requests
+    analysisCache.set(key, result);
+
+    res.json(result);
   } catch (err) {
     req.log.error({ err }, "Analysis failed");
     res.status(500).json({ error: "analysis_failed", message: "Failed to analyze input" });

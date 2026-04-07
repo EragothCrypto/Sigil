@@ -74,4 +74,6 @@ export interface AnalysisResult {
   scoreFactors?: ScoreFactor[];
   details?: AnalysisDetails;
   createdAt: string;
+  /** True when this result was served from the in-memory cache (no new AI call was made) */
+  cached?: boolean;
 }

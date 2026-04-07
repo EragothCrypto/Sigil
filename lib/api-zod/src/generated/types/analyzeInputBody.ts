@@ -11,4 +11,6 @@ export interface AnalyzeInputBody {
   input: string;
   /** Ethereum network (mainnet, goerli, etc.) */
   network?: string;
+  /** If true, bypass the cache and run a fresh analysis */
+  fresh?: boolean;
 }

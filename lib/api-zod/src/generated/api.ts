@@ -78,6 +78,10 @@ export const AnalyzeInputBody = zod.object({
     .string()
     .default(analyzeInputBodyNetworkDefault)
     .describe("Ethereum network (mainnet, goerli, etc.)"),
+  fresh: zod
+    .boolean()
+    .optional()
+    .describe("If true, bypass the cache and run a fresh analysis"),
 });
 
 export const AnalyzeInputResponse = zod.object({

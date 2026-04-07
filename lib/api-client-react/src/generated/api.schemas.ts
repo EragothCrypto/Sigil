@@ -76,6 +76,8 @@ export interface AnalyzeInputBody {
   input: string;
   /** Ethereum network (mainnet, goerli, etc.) */
   network?: string;
+  /** If true, bypass the cache and run a fresh analysis */
+  fresh?: boolean;
 }
 
 export interface BreakdownAsset {
@@ -388,6 +390,8 @@ export interface AnalysisResult {
   scoreFactors?: ScoreFactor[];
   details?: AnalysisDetails;
   createdAt: string;
+  /** True when this result was served from the in-memory cache (no new AI call was made) */
+  cached?: boolean;
 }
 
 export type AnalysisRecordInputType =

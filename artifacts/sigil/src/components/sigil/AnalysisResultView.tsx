@@ -1,4 +1,4 @@
-import { ShieldCheck, ShieldAlert, CheckCircle2, Copy, CheckCircle, AlertTriangle, XCircle, ExternalLink, BadgeCheck } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, CheckCircle2, Copy, CheckCircle, AlertTriangle, XCircle, ExternalLink, BadgeCheck, Zap, RefreshCw } from 'lucide-react';
 import type { AnalysisResult, KnownEntity } from '@workspace/api-client-react';
 import { RiskRing } from './RiskRing';
 import { ApprovalInspector } from './ApprovalInspector';

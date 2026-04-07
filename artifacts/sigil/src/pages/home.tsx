@@ -4,6 +4,7 @@ import { useAnalyzeInput } from '@workspace/api-client-react';
 import { ScanAnimation } from '@/components/sigil/ScanAnimation';
 import { Shield, ChevronDown, ArrowRight, Zap, Globe, ShieldCheck, Layers } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useToast } from '@/hooks/use-toast';
 
 const NETWORKS = [
   { value: 'mainnet', label: 'Ethereum', emoji: '⬡' },
@@ -46,10 +47,22 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [network, setNetwork] = useState('mainnet');
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const analyzeMutation = useAnalyzeInput({
     mutation: {
-      onSuccess: (data) => setLocation(`/analysis/${data.id}`),
+      onSuccess: (data) => {
+        if (data.cached) {
+          toast({
+            title: "⚡ Instant result",
+            description: "Served from cache — no new AI call needed.",
+            duration: 3000,
+          });
+          setLocation(`/analysis/${data.id}?cached=1`);
+        } else {
+          setLocation(`/analysis/${data.id}`);
+        }
+      },
     }
   });
 
