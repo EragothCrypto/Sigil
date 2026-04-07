@@ -1,4 +1,4 @@
-export type TrustLevel = "trusted" | "caution" | "unknown";
+export type TrustLevel = "trusted" | "caution" | "unknown" | "dangerous";
 export type EntityCategory =
   | "DEX"
   | "Lending"
@@ -11,7 +11,10 @@ export type EntityCategory =
   | "DAO"
   | "Oracle"
   | "Wallet / Multisig"
-  | "Token";
+  | "Token"
+  | "Mixer"
+  | "Sanctioned"
+  | "Exploiter";
 
 export interface KnownEntity {
   name: string;
@@ -91,6 +94,26 @@ const ENTITIES: Record<string, KnownEntity> = {
   // ─── ENS ────────────────────────────────────────────────────────────────────
   "0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85": { name: "ENS: BaseRegistrarImplementation", category: "DAO", trustLevel: "trusted", url: "https://ens.domains", description: "Ethereum Name Service — .eth domain registrar", logoLetter: "E" },
   "0x283af0b28c62c092c9727f1ee09c02ca627eb7f5": { name: "ENS: ETHRegistrarController", category: "DAO", trustLevel: "trusted", url: "https://ens.domains", description: "ENS .eth domain registration controller", logoLetter: "E" },
+
+  // ─── ⚠ OFAC-SANCTIONED: Tornado Cash ────────────────────────────────────────
+  // US Treasury sanctioned these contracts on August 8, 2022 under EO 13694.
+  // Used to launder $7.6B+ including $455M stolen by North Korea's Lazarus Group.
+  // US persons are legally prohibited from interacting with any of these contracts.
+  "0xa160cdab225685da1d56aa342ad8841c3b53f291": { name: "Tornado Cash: ETH 100 Pool",  category: "Mixer", trustLevel: "dangerous", url: "https://home.treasury.gov/policy-issues/financial-sanctions/recent-actions/20220808", description: "OFAC-sanctioned cryptocurrency mixer (ETH 100-denomination pool). Sanctioned by the US Treasury on August 8, 2022. Used to launder $7.6B+ in cryptocurrency, including $455M stolen by North Korea's Lazarus Group. Interacting with this contract may violate OFAC sanctions law.", logoLetter: "!" },
+  "0x910cbd523d972eb0a6f4cae4618ad62622b39dbf": { name: "Tornado Cash: ETH 10 Pool",   category: "Mixer", trustLevel: "dangerous", url: "https://home.treasury.gov/policy-issues/financial-sanctions/recent-actions/20220808", description: "OFAC-sanctioned cryptocurrency mixer (ETH 10-denomination pool). Sanctioned by the US Treasury on August 8, 2022. Facilitates anonymous ETH transfers used for money laundering. US persons are prohibited from interacting with this contract.", logoLetter: "!" },
+  "0x47ce0c6ed5b0ce3d3a51fdb1c52dc66a7c3c2936": { name: "Tornado Cash: ETH 1 Pool",    category: "Mixer", trustLevel: "dangerous", url: "https://home.treasury.gov/policy-issues/financial-sanctions/recent-actions/20220808", description: "OFAC-sanctioned cryptocurrency mixer (ETH 1-denomination pool). Sanctioned by the US Treasury on August 8, 2022. Part of the Tornado Cash protocol used to launder billions in stolen cryptocurrency.", logoLetter: "!" },
+  "0x12d66f87a04a9e220c9d0d3e79a4b48a3e74f7a3": { name: "Tornado Cash: ETH 0.1 Pool",  category: "Mixer", trustLevel: "dangerous", url: "https://home.treasury.gov/policy-issues/financial-sanctions/recent-actions/20220808", description: "OFAC-sanctioned cryptocurrency mixer (ETH 0.1-denomination pool). Sanctioned by the US Treasury on August 8, 2022. Part of the Tornado Cash protocol on the OFAC SDN list.", logoLetter: "!" },
+  "0xd4b88df4d29f5cedd6857912842cff3b20c8cfa3": { name: "Tornado Cash: DAI Pool",       category: "Mixer", trustLevel: "dangerous", url: "https://home.treasury.gov/policy-issues/financial-sanctions/recent-actions/20220808", description: "OFAC-sanctioned Tornado Cash DAI stablecoin mixing pool. Sanctioned by the US Treasury on August 8, 2022.", logoLetter: "!" },
+  "0xfd8610d20aa15b7b2e3be39b396a1bc3516c7144": { name: "Tornado Cash: cDAI Pool",      category: "Mixer", trustLevel: "dangerous", url: "https://home.treasury.gov/policy-issues/financial-sanctions/recent-actions/20220808", description: "OFAC-sanctioned Tornado Cash Compound DAI (cDAI) mixing pool. Sanctioned by the US Treasury on August 8, 2022.", logoLetter: "!" },
+  "0x07687e702b410fa43f4cb4af7fa097918ffd2730": { name: "Tornado Cash: WBTC Pool",      category: "Mixer", trustLevel: "dangerous", url: "https://home.treasury.gov/policy-issues/financial-sanctions/recent-actions/20220808", description: "OFAC-sanctioned Tornado Cash Wrapped Bitcoin (WBTC) mixing pool. Sanctioned by the US Treasury on August 8, 2022.", logoLetter: "!" },
+  "0xd90e2f925da726b50c4ed8d0fb90ad053324f31b": { name: "Tornado Cash: Router",         category: "Mixer", trustLevel: "dangerous", url: "https://home.treasury.gov/policy-issues/financial-sanctions/recent-actions/20220808", description: "OFAC-sanctioned Tornado Cash main router contract. All deposits and withdrawals pass through this contract. Sanctioned by the US Treasury on August 8, 2022.", logoLetter: "!" },
+  "0x5efda50f22d34f262c29268506c5fa42cb56a1ce": { name: "Tornado Cash: Governance",     category: "Mixer", trustLevel: "dangerous", url: "https://home.treasury.gov/policy-issues/financial-sanctions/recent-actions/20220808", description: "OFAC-sanctioned Tornado Cash governance contract. Controls protocol parameters and upgrades. Sanctioned by the US Treasury on August 8, 2022.", logoLetter: "!" },
+  "0x527653ea119f3e6a1f5bd18fbf4714081d7b31ce": { name: "Tornado Cash: TreeUpdater",    category: "Mixer", trustLevel: "dangerous", url: "https://home.treasury.gov/policy-issues/financial-sanctions/recent-actions/20220808", description: "OFAC-sanctioned Tornado Cash Merkle tree updater contract used for privacy proofs. Sanctioned by the US Treasury on August 8, 2022.", logoLetter: "!" },
+
+  // ─── ⚠ Known Exploiters / Attackers ─────────────────────────────────────────
+  "0xb66cd966670d962c227b3eaba30a872dbfb995db": { name: "Euler Finance Attacker",       category: "Exploiter", trustLevel: "dangerous", url: "https://etherscan.io/address/0xb66cd966670d962c227b3eaba30a872dbfb995db", description: "Address that executed the Euler Finance flash loan attack on March 13, 2023. Stole $197M across multiple assets (DAI, USDC, stETH, WBTC) using a donation/liquidation exploit in Euler's donateToReserves function.", logoLetter: "!" },
+  "0x05328f171b8c1463eafdacca478d9ee6a1d923f8": { name: "Nomad Bridge Exploiter",       category: "Exploiter", trustLevel: "dangerous", url: "https://etherscan.io/address/0x05328f171b8c1463eafdacca478d9ee6a1d923f8", description: "One of many addresses that drained the Nomad cross-chain bridge in August 2022 using a merkle root initialization bug. Over $190M was stolen in a copy-cat free-for-all exploit.", logoLetter: "!" },
+  "0x9f26dc6e954072a8701f2af71db4f6b285b7ee8f": { name: "Lazarus Group (DPRK) Wallet",  category: "Sanctioned", trustLevel: "dangerous", url: "https://home.treasury.gov/policy-issues/financial-sanctions/recent-actions/20220414", description: "Wallet associated with North Korea's state-sponsored Lazarus Group hacking organization, sanctioned by OFAC. Lazarus Group stole $455M via Tornado Cash and $625M from the Axie Infinity Ronin Bridge.", logoLetter: "!" },
 };
 
 export function lookupEntity(address: string): KnownEntity | null {

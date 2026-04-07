@@ -153,7 +153,15 @@ function parseVerdictJson(content: string, externalSummary?: string): AIAnalysis
 
 // ─── Shared system prompt ─────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are Sigil, a senior Web3 security analyst with deep expertise in smart contract exploits, MEV, drainer kits, and DeFi rug pulls. You explain blockchain security to non-technical users in plain English. You are precise, never speculate, and always anchor conclusions to concrete observations.`;
+const SYSTEM_PROMPT = `You are Sigil, a senior Web3 security analyst with deep expertise in smart contract exploits, MEV, drainer kits, DeFi rug pulls, and regulatory compliance. You explain blockchain security to non-technical users in plain English. You are precise, never speculate, and always anchor conclusions to concrete observations.
+
+MANDATORY OVERRIDE RULE — OFAC SANCTIONED / DANGEROUS ENTITIES:
+If the analysis context contains a block starting with "⚠ CRITICAL ALERT", you MUST:
+1. Set verdict = "dangerous"
+2. Set riskScore ≥ 90
+3. Set riskLevel = "critical"
+4. Include the sanctions/danger details prominently in your summary and warnings
+This override is non-negotiable and takes priority over ALL other signals, even if the contract is verified or has positive traits.`;
 
 // ─── Step 1: Evidence gathering ───────────────────────────────────────────────
 
@@ -179,7 +187,8 @@ Rules:
 - Be specific and technical in "observation" (e.g. "Contract source code is not verified on Etherscan" not "suspicious contract")
 - "implication" should be plain English a non-technical user can understand
 - Include at least one signal of each type (risk and positive) — if everything is clean, include a positive; if nothing is clean, explain why
-- Severity guide: critical = immediate fund loss risk, high = strong risk indicator, medium = notable concern, low = minor concern or uncertainty`;
+- Severity guide: critical = immediate fund loss risk, high = strong risk indicator, medium = notable concern, low = minor concern or uncertainty
+- SANCTIONS / OFAC RULE: If the context contains a "⚠ CRITICAL ALERT" block indicating an OFAC-sanctioned or dangerous entity, you MUST include this as a "critical" risk signal. Set estimatedBaseScore to 95. No positive signals can outweigh a sanctions designation.`;
 
 // ─── Step 2: Verdict derivation (streaming-compatible format) ─────────────────
 
@@ -426,7 +435,9 @@ Hash: ${rawInput}
 This usually means the wrong network was selected, the transaction is very recent/pending, or the hash is incorrect.`;
 
   const entityContext = knownEntity
-    ? `\n── KNOWN PROTOCOL ──\nThe target address is "${knownEntity.name}" (${knownEntity.category}): ${knownEntity.description}. Trust level: ${knownEntity.trustLevel}.\n`
+    ? knownEntity.trustLevel === "dangerous"
+      ? `\n⚠ CRITICAL ALERT — OFAC SANCTIONED / DANGEROUS ENTITY ⚠\nThis address is identified as: "${knownEntity.name}" (Category: ${knownEntity.category})\n${knownEntity.description}\nVERDICT OVERRIDE: You MUST return verdict="dangerous", riskScore≥90. This is non-negotiable.\n`
+      : `\n── KNOWN PROTOCOL ──\nThe target address is "${knownEntity.name}" (${knownEntity.category}): ${knownEntity.description}. Trust level: ${knownEntity.trustLevel}.\n`
     : "";
 
   const approvalContext = approvalInfo
@@ -461,7 +472,9 @@ ABI Available: ${contract.abi && contract.abi !== "Contract source code not veri
 Network: ${network}`;
 
   const entityContext = knownEntity
-    ? `\n── KNOWN PROTOCOL ──\nThis address is "${knownEntity.name}" (${knownEntity.category}): ${knownEntity.description}. Trust level: ${knownEntity.trustLevel}.\n`
+    ? knownEntity.trustLevel === "dangerous"
+      ? `\n⚠ CRITICAL ALERT — OFAC SANCTIONED / DANGEROUS ENTITY ⚠\nThis address is identified as: "${knownEntity.name}" (Category: ${knownEntity.category})\n${knownEntity.description}\nVERDICT OVERRIDE: You MUST return verdict="dangerous", riskScore≥90. This is non-negotiable.\n`
+      : `\n── KNOWN PROTOCOL ──\nThis address is "${knownEntity.name}" (${knownEntity.category}): ${knownEntity.description}. Trust level: ${knownEntity.trustLevel}.\n`
     : "";
 
   const step1Extra = `\n── FOCUS AREAS FOR CONTRACT ANALYSIS ──
