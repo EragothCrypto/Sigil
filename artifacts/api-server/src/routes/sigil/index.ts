@@ -21,6 +21,7 @@ import { calculateContractReputation, type ContractReputation } from "./contract
 import { detectPatterns, mergePatterns, type PatternMatch } from "./pattern-detector.js";
 import { computeContractDiff } from "./contract-diff.js";
 import { computeScoreFactors } from "./score-factors.js";
+import { fetchTokenPrice, computeApprovalUsdValue } from "./token-price.js";
 
 const router: IRouter = Router();
 
@@ -130,7 +131,31 @@ router.post("/analyze", async (req, res) => {
         };
       }
 
-      aiResult = await analyzeTransaction(tx, methodName, network, trimmed, knownEntity, approvalInfo);
+      // Fetch AI analysis and token price in parallel (price only needed for approvals)
+      const pricePromise = (approval && tx?.to)
+        ? fetchTokenPrice(tx.to, network)
+        : Promise.resolve(null);
+
+      const [txAiResult, priceResult] = await Promise.all([
+        analyzeTransaction(tx, methodName, network, trimmed, knownEntity, approvalInfo),
+        pricePromise,
+      ]);
+      aiResult = txAiResult;
+
+      // Enrich approvalInfo with USD value now that both have resolved
+      if (priceResult && approvalInfo) {
+        const usd = computeApprovalUsdValue(
+          approvalInfo.amountFormatted,
+          approvalInfo.isUnlimited ?? false,
+          priceResult.priceUsd,
+        );
+        approvalInfo = {
+          ...approvalInfo,
+          tokenPriceUsd: priceResult.priceUsd,
+          approvalAmountUsd: usd?.approvalAmountUsd,
+          approvalUsdLabel: usd?.displayLabel,
+        };
+      }
 
       // Static pattern detection for transactions
       const staticPatterns = detectPatterns({
