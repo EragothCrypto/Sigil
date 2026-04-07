@@ -55,6 +55,16 @@ export interface AIAnalysisResult {
   aiPatterns?: AIPatternMatch[];
 }
 
+// ─── Streaming event types ─────────────────────────────────────────────────────
+
+export type StreamEvent =
+  | { type: "step"; step: number; label: string }
+  | { type: "metadata"; estimatedScore: number; signalCount: number; riskSignals: string[] }
+  | { type: "token"; text: string }
+  | { type: "result"; result: AIAnalysisResult }
+  | { type: "cached"; result: AIAnalysisResult }
+  | { type: "error"; message: string };
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getRiskLevel(score: number): "low" | "medium" | "high" | "critical" {
@@ -73,8 +83,9 @@ function getVerdictFromScore(score: number): "safe" | "caution" | "dangerous" {
 /**
  * Parse and sanitise the final JSON verdict response from step 2.
  * Returns a safe fallback on any parse failure.
+ * Accepts an optional externally-extracted summary to override.
  */
-function parseVerdictJson(content: string): AIAnalysisResult {
+function parseVerdictJson(content: string, externalSummary?: string): AIAnalysisResult {
   try {
     // Strip any accidental markdown fences the model adds
     const clean = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
@@ -112,8 +123,10 @@ function parseVerdictJson(content: string): AIAnalysisResult {
         }))
       : [];
 
+    const summary = externalSummary?.trim() || parsed.summary || "Unable to analyze this transaction.";
+
     return {
-      summary: parsed.summary || "Unable to analyze this transaction.",
+      summary,
       verdict,
       verdictReason:
         parsed.verdictReason ||
@@ -127,7 +140,7 @@ function parseVerdictJson(content: string): AIAnalysisResult {
     };
   } catch {
     return {
-      summary: content.substring(0, 400),
+      summary: externalSummary?.trim() || content.substring(0, 400),
       verdict: "caution",
       verdictReason: "Caution — could not fully parse analysis results",
       riskScore: 50,
@@ -168,63 +181,74 @@ Rules:
 - Include at least one signal of each type (risk and positive) — if everything is clean, include a positive; if nothing is clean, explain why
 - Severity guide: critical = immediate fund loss risk, high = strong risk indicator, medium = notable concern, low = minor concern or uncertainty`;
 
-// ─── Step 2: Verdict derivation ───────────────────────────────────────────────
+// ─── Step 2: Verdict derivation (streaming-compatible format) ─────────────────
 
-function buildStep2Prompt(signals: string): string {
+function buildStep2StreamingPrompt(signals: string): string {
   return `You have now gathered the evidence. Here is what you observed:
 
 ${signals}
 
-Now produce the final security verdict. Your riskScore MUST be consistent with those signals:
-- Only positive signals present → 0–25
+CRITICAL FORMATTING INSTRUCTIONS — follow this EXACTLY:
+
+Step A: Write ONE plain-English sentence (2–3 clauses max) that explains what this contract/transaction does and why it matters for the user's security. Write it as natural prose — not JSON, not a list.
+
+Step B: On its own line, write exactly this separator (nothing else on that line):
+---JSON---
+
+Step C: Output the JSON verdict object.
+
+Example of correct output:
+This contract requests unlimited USDC approval for a 3-day-old unverified address, meaning the recipient could drain your entire USDC balance any time without further permission from you.
+---JSON---
+{"verdict":"dangerous","verdictReason":"Dangerous — unlimited approval to unverified contract","riskScore":82,...}
+
+Your riskScore MUST be consistent with the signals:
+- Only positive signals → 0–25
 - Minor / low risks only → 10–35
 - Medium risks present → 30–55
 - High risks present → 50–75
 - Critical risks present → 65–100
 - Multiple critical risks → 80–100
 
-Respond ONLY with a JSON object (no markdown, just raw JSON):
+JSON object structure (do NOT include "summary" — it is the prose above):
 {
-  "summary": "One clear sentence explaining what this transaction/contract does — plain English for a non-technical user",
   "verdict": "safe" | "caution" | "dangerous",
-  "verdictReason": "One short sentence (max 12 words) explaining the verdict. Must start with the verdict word e.g. 'Dangerous — grants unlimited token access to an unverified contract'",
-  "riskScore": <integer 0-100 consistent with your signals above>,
-  "warnings": ["Specific warning derived directly from your risk signals — each must map to a signal you identified"],
-  "positives": ["Specific positive derived directly from your positive signals — each must map to a signal you identified"],
+  "verdictReason": "One short sentence (max 12 words). Must start with the verdict word e.g. 'Dangerous — grants unlimited token access to an unverified contract'",
+  "riskScore": <integer 0-100 consistent with signals>,
+  "warnings": ["Specific warning derived directly from your risk signals"],
+  "positives": ["Specific positive derived directly from your positive signals"],
   "patternMatches": [
     {
       "id": "unique-kebab-id",
       "type": "drainer" | "honeypot" | "fake_approval" | "rug_pull" | "phishing" | "flash_loan" | "suspicious",
-      "name": "Short name e.g. 'Wallet Drainer', 'Permit Phishing', 'Honeypot Token'",
+      "name": "Short name e.g. 'Wallet Drainer'",
       "confidence": "confirmed" | "high" | "medium" | "low",
       "description": "One or two sentences explaining this pattern and why it is dangerous",
-      "indicators": ["Technical signal from your evidence", "Another signal"],
-      "historicalContext": "One sentence citing real-world exploits or stats if applicable (omit if not relevant)",
-      "riskDelta": <integer 0-30, how much this pattern increases risk>
+      "indicators": ["Technical signal from evidence", "Another signal"],
+      "historicalContext": "One sentence citing real-world exploits (omit if not relevant)",
+      "riskDelta": <integer 0-30>
     }
   ],
   "breakdown": {
     "actionType": "swap" | "approve" | "transfer" | "mint" | "burn" | "bridge" | "stake" | "deposit" | "withdraw" | "revoke" | "deploy" | "other",
-    "actionLabel": "Short human label e.g. 'Token Swap', 'Unlimited Approval', 'ETH Transfer'",
+    "actionLabel": "Short human label e.g. 'Token Swap'",
     "assetsOut": [{ "asset": "USDC", "amount": "100", "usdValue": "~$100" }],
     "assetsIn": [{ "asset": "ETH", "amount": "0.05", "usdValue": "~$125" }],
     "permissions": [{ "asset": "USDC", "spender": "Uniswap V3", "amount": "unlimited" }],
     "riskFactors": [
-      { "severity": "high" | "medium" | "low" | "critical" | "positive", "label": "Short label", "detail": "One sentence detail" }
+      { "severity": "high" | "medium" | "low" | "critical" | "positive", "label": "Short label", "detail": "One sentence" }
     ]
   }
 }
 
-Additional rules:
-- patternMatches: ONLY include patterns you observed evidence for — never fabricate. Empty array [] if nothing suspicious.
-- Patterns to consider: wallet drainers (setApprovalForAll/sweepToken to unknown), permit phishing, honeypot tokens (hidden blacklist/sell restrictions), rug pulls (unrestricted mint/transferOwnership), flash loan attacks, multicall drain bundles
-- warnings: must be non-empty if riskScore > 25; must directly correspond to risk signals from your analysis
-- positives: must be non-empty if any positive signals were found
-- riskFactors in breakdown: always include at least one entry; include both risks and positives (severity "positive")
+Rules:
+- patternMatches: ONLY include patterns with real evidence — never fabricate. [] if nothing suspicious.
+- warnings: must be non-empty if riskScore > 25
+- positives: must be non-empty if any positive signals exist
 - verdict must be consistent with riskScore: safe ≤ 25, caution 26–60, dangerous ≥ 61`;
 }
 
-// ─── Two-step AI call ─────────────────────────────────────────────────────────
+// ─── Non-streaming two-step analysis (used by the original /analyze endpoint) ─
 
 async function runTwoStepAnalysis(
   contextBlock: string,
@@ -244,7 +268,7 @@ async function runTwoStepAnalysis(
 
   const step1Content = step1Response.choices[0]?.message?.content ?? "{}";
 
-  // Step 2 — derive verdict from committed signals
+  // Step 2 — derive verdict (streaming prompt format, but called non-streaming)
   const step2Response = await openai.chat.completions.create({
     model: "gpt-5.2",
     max_completion_tokens: 2048,
@@ -252,17 +276,124 @@ async function runTwoStepAnalysis(
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: step1UserContent },
       { role: "assistant", content: step1Content },
-      { role: "user", content: buildStep2Prompt(step1Content) },
+      { role: "user", content: buildStep2StreamingPrompt(step1Content) },
     ],
   });
 
   const step2Content = step2Response.choices[0]?.message?.content ?? "{}";
+
+  // Parse the new format (prose + ---JSON--- + json)
+  const sepIdx = step2Content.indexOf("---JSON---");
+  if (sepIdx !== -1) {
+    const prose = step2Content.slice(0, sepIdx).trim();
+    const jsonPart = step2Content.slice(sepIdx + 10).trim();
+    return parseVerdictJson(jsonPart, prose);
+  }
   return parseVerdictJson(step2Content);
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
+// ─── Streaming two-step analysis ─────────────────────────────────────────────
 
-export async function analyzeTransaction(
+export async function runStreamingAnalysis(
+  contextBlock: string,
+  step1Extra: string,
+  onEvent: (event: StreamEvent) => void,
+): Promise<AIAnalysisResult> {
+  onEvent({ type: "step", step: 1, label: "Gathering on-chain signals…" });
+
+  const step1UserContent = `${contextBlock}${step1Extra}\n${STEP1_INSTRUCTIONS}`;
+
+  // Step 1 — non-streaming (structured JSON only, fast)
+  const step1Response = await openai.chat.completions.create({
+    model: "gpt-5.2",
+    max_completion_tokens: 700,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: step1UserContent },
+    ],
+  });
+
+  const step1Content = step1Response.choices[0]?.message?.content ?? "{}";
+
+  // Parse Step 1 to emit metadata (estimated score + signal preview)
+  let estimatedScore = 50;
+  let signalCount = 0;
+  const riskSignals: string[] = [];
+  try {
+    const s1 = JSON.parse(step1Content) as {
+      signals?: Array<{ type: string; severity: string; observation: string }>;
+      estimatedBaseScore?: number;
+    };
+    estimatedScore = Math.max(0, Math.min(100, s1.estimatedBaseScore ?? 50));
+    if (Array.isArray(s1.signals)) {
+      signalCount = s1.signals.length;
+      riskSignals.push(
+        ...s1.signals
+          .filter((s) => s.type === "risk")
+          .slice(0, 3)
+          .map((s) => s.observation),
+      );
+    }
+  } catch {
+    // ignore parse errors
+  }
+  onEvent({ type: "metadata", estimatedScore, signalCount, riskSignals });
+
+  onEvent({ type: "step", step: 2, label: "Generating security verdict…" });
+
+  // Step 2 — STREAMING
+  const stream = await openai.chat.completions.create({
+    model: "gpt-5.2",
+    max_completion_tokens: 2048,
+    stream: true,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: step1UserContent },
+      { role: "assistant", content: step1Content },
+      { role: "user", content: buildStep2StreamingPrompt(step1Content) },
+    ],
+  });
+
+  let summaryBuffer = "";
+  let jsonBuffer = "";
+  let inJson = false;
+  const SEP = "---JSON---";
+
+  for await (const chunk of stream) {
+    const text = chunk.choices[0]?.delta?.content ?? "";
+    if (!text) continue;
+
+    if (!inJson) {
+      const combined = summaryBuffer + text;
+      const sepIdx = combined.indexOf(SEP);
+      if (sepIdx !== -1) {
+        // Emit the tail of the summary text up to the separator
+        const newSummaryTail = combined.slice(summaryBuffer.length, sepIdx);
+        if (newSummaryTail) onEvent({ type: "token", text: newSummaryTail });
+        summaryBuffer = combined.slice(0, sepIdx).trim();
+        jsonBuffer = combined.slice(sepIdx + SEP.length);
+        inJson = true;
+      } else {
+        // Stream summary tokens live
+        onEvent({ type: "token", text });
+        summaryBuffer += text;
+      }
+    } else {
+      // Accumulate JSON silently
+      jsonBuffer += text;
+    }
+  }
+
+  // Parse final JSON (strip any trailing markdown fences)
+  const cleanJson = jsonBuffer.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  const result = parseVerdictJson(cleanJson, summaryBuffer);
+  onEvent({ type: "result", result });
+  return result;
+}
+
+// ─── Public API: per-input-type analysers ────────────────────────────────────
+
+function buildTransactionContext(
   tx: TransactionData | null,
   methodName: string | null,
   network: string,
@@ -276,7 +407,7 @@ export async function analyzeTransaction(
     spenderEntity?: KnownEntity | null;
     approvalType: string;
   } | null,
-): Promise<AIAnalysisResult> {
+): { contextBlock: string; step1Extra: string } {
   const txContext = tx
     ? `Transaction Hash: ${tx.hash}
 From: ${tx.from}
@@ -309,15 +440,15 @@ ${approvalInfo.isRevoke ? "Note: this is a REVOKE — it removes a previously gr
     ? "\nIMPORTANT: The transaction was not found. Set summary to explain this and ask the user to verify the network. Still return valid JSON with actionType 'other' and empty asset arrays.\n"
     : "";
 
-  const context = `── TRANSACTION DATA ──\n${txContext}\n${entityContext}${approvalContext}${notFoundHint}`;
-  return runTwoStepAnalysis(context);
+  const contextBlock = `── TRANSACTION DATA ──\n${txContext}\n${entityContext}${approvalContext}${notFoundHint}`;
+  return { contextBlock, step1Extra: "" };
 }
 
-export async function analyzeContract(
+function buildContractContext(
   contract: ContractData,
   network: string,
   knownEntity?: KnownEntity | null,
-): Promise<AIAnalysisResult> {
+): { contextBlock: string; step1Extra: string } {
   const contractContext = `Contract Address: ${contract.address}
 Contract Name: ${contract.contractName ?? "Unknown (source not verified)"}
 Verified on Etherscan: ${contract.isVerified ? "Yes — source code publicly available" : "No — source code is not available, behaviour cannot be confirmed"}
@@ -336,8 +467,38 @@ Network: ${network}`;
   const step1Extra = `\n── FOCUS AREAS FOR CONTRACT ANALYSIS ──
 Look specifically for: honeypot indicators (hidden _blacklist, _isExcluded, enableTrading gate, sell restrictions beyond standard tax), rug pull risks (unrestricted owner mint, transferable ownership without timelock, selfdestruct), phishing/impersonation contracts (misleading names claiming to be official airdrop/reward/claim contracts), proxy upgrade risks (unaudited upgradeability), and any positive signals (verified source, reputable deployer, standard audited token patterns).`;
 
-  const context = `── CONTRACT DATA ──\n${contractContext}\n${entityContext}`;
-  return runTwoStepAnalysis(context, step1Extra);
+  const contextBlock = `── CONTRACT DATA ──\n${contractContext}\n${entityContext}`;
+  return { contextBlock, step1Extra };
+}
+
+// ─── Non-streaming public wrappers (used by original /analyze endpoint) ───────
+
+export async function analyzeTransaction(
+  tx: TransactionData | null,
+  methodName: string | null,
+  network: string,
+  rawInput: string,
+  knownEntity?: KnownEntity | null,
+  approvalInfo?: {
+    isRevoke: boolean;
+    isUnlimited: boolean;
+    amountFormatted: string;
+    spender: string;
+    spenderEntity?: KnownEntity | null;
+    approvalType: string;
+  } | null,
+): Promise<AIAnalysisResult> {
+  const { contextBlock, step1Extra } = buildTransactionContext(tx, methodName, network, rawInput, knownEntity, approvalInfo);
+  return runTwoStepAnalysis(contextBlock, step1Extra);
+}
+
+export async function analyzeContract(
+  contract: ContractData,
+  network: string,
+  knownEntity?: KnownEntity | null,
+): Promise<AIAnalysisResult> {
+  const { contextBlock, step1Extra } = buildContractContext(contract, network, knownEntity);
+  return runTwoStepAnalysis(contextBlock, step1Extra);
 }
 
 export async function analyzeUnknown(input: string, _network: string): Promise<AIAnalysisResult> {
@@ -352,4 +513,36 @@ export async function analyzeUnknown(input: string, _network: string): Promise<A
     ],
     positives: [],
   };
+}
+
+// ─── Streaming public wrappers ────────────────────────────────────────────────
+
+export async function analyzeTransactionStreaming(
+  tx: TransactionData | null,
+  methodName: string | null,
+  network: string,
+  rawInput: string,
+  onEvent: (event: StreamEvent) => void,
+  knownEntity?: KnownEntity | null,
+  approvalInfo?: {
+    isRevoke: boolean;
+    isUnlimited: boolean;
+    amountFormatted: string;
+    spender: string;
+    spenderEntity?: KnownEntity | null;
+    approvalType: string;
+  } | null,
+): Promise<AIAnalysisResult> {
+  const { contextBlock, step1Extra } = buildTransactionContext(tx, methodName, network, rawInput, knownEntity, approvalInfo);
+  return runStreamingAnalysis(contextBlock, step1Extra, onEvent);
+}
+
+export async function analyzeContractStreaming(
+  contract: ContractData,
+  network: string,
+  onEvent: (event: StreamEvent) => void,
+  knownEntity?: KnownEntity | null,
+): Promise<AIAnalysisResult> {
+  const { contextBlock, step1Extra } = buildContractContext(contract, network, knownEntity);
+  return runStreamingAnalysis(contextBlock, step1Extra, onEvent);
 }

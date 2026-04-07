@@ -15,6 +15,9 @@ import {
   analyzeTransaction,
   analyzeContract,
   analyzeUnknown,
+  analyzeTransactionStreaming,
+  analyzeContractStreaming,
+  type StreamEvent,
 } from "./ai-analyzer.js";
 import { lookupEntity } from "./known-entities.js";
 import { calculateContractReputation, type ContractReputation } from "./contract-reputation.js";
@@ -290,6 +293,312 @@ router.post("/analyze", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Analysis failed");
     res.status(500).json({ error: "analysis_failed", message: "Failed to analyze input" });
+  }
+});
+
+// ── Streaming analysis endpoint ─────────────────────────────────────────────
+router.post("/analyze-stream", async (req, res) => {
+  const parseResult = AnalyzeInputBody.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "validation_error", message: "Invalid request body" });
+    return;
+  }
+
+  const { input, network = "mainnet", fresh } = parseResult.data as { input: string; network?: string; fresh?: boolean };
+  const trimmed = input.trim();
+  const inputType = detectInputType(trimmed);
+  const key = cacheKey(trimmed, network);
+
+  // SSE setup
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+
+  const send = (event: Record<string, unknown>) => {
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+    // Flush the buffer to ensure the client receives the event immediately
+    if (typeof (res as unknown as { flush?: () => void }).flush === "function") {
+      (res as unknown as { flush: () => void }).flush();
+    }
+  };
+
+  // ── Cache hit — emit a cached event with the existing result ────────────
+  if (!fresh) {
+    const hit = analysisCache.get(key) as ({ id?: string } & Record<string, unknown>) | undefined;
+    if (hit) {
+      send({ type: "cached", id: hit.id, ...hit });
+      res.end();
+      return;
+    }
+  }
+
+  try {
+    let details: Record<string, unknown> = {};
+    let knownEntity = null;
+    let approvalInfo = null;
+    let reputation: ContractReputation | null = null;
+    let patterns: PatternMatch[] = [];
+    let isVerified: boolean | undefined = undefined;
+
+    // Emit events from the AI analyser in real-time
+    const onEvent = (event: StreamEvent) => send(event as unknown as Record<string, unknown>);
+
+    if (inputType === "transaction") {
+      const tx = await fetchTransaction(trimmed, network);
+      const methodName = tx?.methodId ? decodeMethodId(tx.methodId) : null;
+      if (tx?.to) knownEntity = lookupEntity(tx.to);
+
+      // Approval inspection
+      const approval = tx?.input ? decodeApprovalCalldata(tx.input) : null;
+      if (approval && tx) {
+        const spenderEntity = lookupEntity(approval.spender);
+        const tokenEntity = lookupEntity(tx.to);
+        const amountFormatted = formatApprovalAmount(approval);
+
+        let approvalRisk: "low" | "medium" | "high" | "critical" = "medium";
+        if (approval.isRevoke) approvalRisk = "low";
+        else if (approval.isUnlimited && !spenderEntity) approvalRisk = "critical";
+        else if (approval.isUnlimited && spenderEntity?.trustLevel === "trusted") approvalRisk = "medium";
+        else if (approval.isUnlimited) approvalRisk = "high";
+
+        approvalInfo = {
+          isApproval: true,
+          isRevoke: approval.isRevoke,
+          approvalType: approval.type,
+          spender: approval.spender,
+          spenderEntity: spenderEntity ?? undefined,
+          tokenContract: tx.to,
+          tokenEntity: tokenEntity ?? undefined,
+          amountFormatted,
+          isUnlimited: approval.isUnlimited,
+          riskLevel: approvalRisk,
+          priorApprovals: [],
+        };
+
+        details = {
+          from: tx.from,
+          to: tx.to,
+          value: tx.value,
+          gasUsed: tx.gasUsed,
+          methodName,
+          spender: approval.spender,
+          approvalAmount: amountFormatted,
+          approvalIsUnlimited: approval.isUnlimited,
+          ...(spenderEntity ? { spenderProtocol: spenderEntity.name } : {}),
+          ...(knownEntity ? { protocol: knownEntity.name } : {}),
+          rawData: { hash: tx.hash, blockNumber: tx.blockNumber, status: tx.status },
+        };
+      } else {
+        details = {
+          from: tx?.from,
+          to: tx?.to,
+          value: tx?.value,
+          gasUsed: tx?.gasUsed,
+          methodName,
+          ...(knownEntity ? { protocol: knownEntity.name } : {}),
+          rawData: { hash: tx?.hash, blockNumber: tx?.blockNumber, status: tx?.status },
+        };
+      }
+
+      // Fetch price in parallel while AI streams
+      const pricePromise = approval && tx?.to ? fetchTokenPrice(tx.to, network) : Promise.resolve(null);
+
+      const [aiResult, priceResult] = await Promise.all([
+        analyzeTransactionStreaming(tx, methodName, network, trimmed, onEvent, knownEntity, approvalInfo),
+        pricePromise,
+      ]);
+
+      if (priceResult && approvalInfo) {
+        const usd = computeApprovalUsdValue(
+          approvalInfo.amountFormatted,
+          approvalInfo.isUnlimited ?? false,
+          priceResult.priceUsd,
+        );
+        approvalInfo = {
+          ...approvalInfo,
+          tokenPriceUsd: priceResult.priceUsd,
+          approvalAmountUsd: usd?.approvalAmountUsd,
+          approvalUsdLabel: usd?.displayLabel,
+        };
+      }
+
+      const staticPatterns = detectPatterns({
+        tx: tx ?? undefined,
+        methodId: tx?.methodId ?? undefined,
+        calldata: tx?.input ?? undefined,
+        isUnlimitedApproval: approvalInfo?.isUnlimited ?? false,
+        spender: approvalInfo?.spender ?? undefined,
+        spenderKnown: !!approvalInfo?.spenderEntity,
+        knownEntity,
+      });
+      patterns = mergePatterns(staticPatterns, aiResult.aiPatterns ?? []);
+
+      const scoreFactors = computeScoreFactors({
+        inputType: inputType as "transaction" | "contract" | "unknown",
+        isVerified,
+        knownEntity,
+        approvalInfo: approvalInfo
+          ? {
+              isApproval: approvalInfo.isApproval,
+              isRevoke: approvalInfo.isRevoke,
+              isUnlimited: approvalInfo.isUnlimited,
+              riskLevel: approvalInfo.riskLevel,
+              spenderEntity: approvalInfo.spenderEntity,
+            }
+          : null,
+        reputation: null,
+        patterns,
+        riskScore: aiResult.riskScore,
+      });
+
+      const [saved] = await db
+        .insert(analysesTable)
+        .values({
+          input: trimmed,
+          inputType,
+          network,
+          summary: aiResult.summary,
+          verdict: aiResult.verdict,
+          verdictReason: aiResult.verdictReason,
+          riskScore: aiResult.riskScore,
+          riskLevel: aiResult.riskLevel,
+          warnings: aiResult.warnings,
+          positives: aiResult.positives,
+          details,
+        })
+        .returning();
+
+      const result = {
+        id: String(saved.id),
+        input: saved.input,
+        inputType: saved.inputType,
+        network: saved.network,
+        summary: saved.summary,
+        verdict: saved.verdict,
+        verdictReason: saved.verdictReason,
+        riskScore: saved.riskScore,
+        riskLevel: saved.riskLevel,
+        warnings: saved.warnings as string[],
+        positives: saved.positives as string[],
+        knownEntity: knownEntity ?? undefined,
+        approvalInfo: approvalInfo ?? undefined,
+        breakdown: aiResult.breakdown ?? undefined,
+        patterns: patterns.length > 0 ? patterns : undefined,
+        scoreFactors: scoreFactors.length > 0 ? scoreFactors : undefined,
+        details: saved.details as Record<string, unknown>,
+        createdAt: saved.createdAt.toISOString(),
+      };
+
+      analysisCache.set(key, result);
+      send({ type: "done", id: result.id });
+      res.end();
+      return;
+    }
+
+    if (inputType === "contract") {
+      knownEntity = lookupEntity(trimmed);
+      const contract = await fetchContract(trimmed, network);
+
+      const [aiResult, contractReputation] = await Promise.all([
+        analyzeContractStreaming(contract, network, onEvent, knownEntity),
+        calculateContractReputation(trimmed, network, contract.isVerified, contract.isToken ?? false, knownEntity),
+      ]);
+      reputation = contractReputation;
+
+      const staticContractPatterns = detectPatterns({ contract, knownEntity });
+      patterns = mergePatterns(staticContractPatterns, aiResult.aiPatterns ?? []);
+      isVerified = contract.isVerified;
+
+      details = {
+        contractName: contract.contractName,
+        tokenSymbol: contract.tokenSymbol,
+        isVerified: contract.isVerified,
+        ...(knownEntity ? { protocol: knownEntity.name } : {}),
+        rawData: { isToken: contract.isToken, tokenName: contract.tokenName, totalSupply: contract.totalSupply },
+      };
+
+      const scoreFactors = computeScoreFactors({
+        inputType: inputType as "transaction" | "contract" | "unknown",
+        isVerified,
+        knownEntity,
+        approvalInfo: null,
+        reputation: reputation
+          ? { tier: reputation.tier, trustScore: reputation.trustScore, isExploited: reputation.isExploited }
+          : null,
+        patterns,
+        riskScore: aiResult.riskScore,
+      });
+
+      const [saved] = await db
+        .insert(analysesTable)
+        .values({
+          input: trimmed,
+          inputType,
+          network,
+          summary: aiResult.summary,
+          verdict: aiResult.verdict,
+          verdictReason: aiResult.verdictReason,
+          riskScore: aiResult.riskScore,
+          riskLevel: aiResult.riskLevel,
+          warnings: aiResult.warnings,
+          positives: aiResult.positives,
+          details,
+        })
+        .returning();
+
+      const result = {
+        id: String(saved.id),
+        input: saved.input,
+        inputType: saved.inputType,
+        network: saved.network,
+        summary: saved.summary,
+        verdict: saved.verdict,
+        verdictReason: saved.verdictReason,
+        riskScore: saved.riskScore,
+        riskLevel: saved.riskLevel,
+        warnings: saved.warnings as string[],
+        positives: saved.positives as string[],
+        knownEntity: knownEntity ?? undefined,
+        breakdown: aiResult.breakdown ?? undefined,
+        reputation: reputation ?? undefined,
+        patterns: patterns.length > 0 ? patterns : undefined,
+        scoreFactors: scoreFactors.length > 0 ? scoreFactors : undefined,
+        details: saved.details as Record<string, unknown>,
+        createdAt: saved.createdAt.toISOString(),
+      };
+
+      analysisCache.set(key, result);
+      send({ type: "done", id: result.id });
+      res.end();
+      return;
+    }
+
+    // Unknown input type
+    const aiResult = await analyzeUnknown(trimmed, network);
+    const [saved] = await db
+      .insert(analysesTable)
+      .values({
+        input: trimmed,
+        inputType,
+        network,
+        summary: aiResult.summary,
+        verdict: aiResult.verdict,
+        verdictReason: aiResult.verdictReason,
+        riskScore: aiResult.riskScore,
+        riskLevel: aiResult.riskLevel,
+        warnings: aiResult.warnings,
+        positives: aiResult.positives,
+        details: {},
+      })
+      .returning();
+    send({ type: "done", id: String(saved.id) });
+    res.end();
+  } catch (err) {
+    req.log.error({ err }, "Streaming analysis failed");
+    send({ type: "error", message: "Failed to analyze input — please try again." });
+    res.end();
   }
 });
 
