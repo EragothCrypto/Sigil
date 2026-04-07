@@ -324,6 +324,34 @@ export interface AnalysisDetails {
   rawData?: AnalysisDetailsRawData;
 }
 
+export type PatternType =
+  | "drainer"
+  | "honeypot"
+  | "rug_pull"
+  | "fake_approval"
+  | "phishing"
+  | "unknown";
+
+export type PatternConfidence = "confirmed" | "high" | "medium" | "low";
+
+export interface PatternMatch {
+  name: string;
+  type: PatternType;
+  description: string;
+  confidence: PatternConfidence;
+  riskDelta: number;
+  evidence?: string[];
+  historicalContext?: string;
+}
+
+export interface ScoreFactor {
+  label: string;
+  delta: number;
+  severity: "critical" | "high" | "medium" | "positive";
+  category: "approval" | "contract" | "pattern" | "reputation" | "entity";
+  detail?: string;
+}
+
 export interface AnalysisResult {
   id: string;
   input: string;
@@ -348,6 +376,10 @@ export interface AnalysisResult {
   breakdown?: TransactionBreakdown;
   /** Contract reputation / trust score (only present for contract address inputs) */
   reputation?: ContractReputation;
+  /** Detected scam / exploit patterns */
+  patterns?: PatternMatch[];
+  /** Deterministic factors that explain what drove the risk score */
+  scoreFactors?: ScoreFactor[];
   details?: AnalysisDetails;
   createdAt: string;
 }

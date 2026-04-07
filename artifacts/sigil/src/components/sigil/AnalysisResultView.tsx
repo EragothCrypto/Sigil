@@ -7,6 +7,7 @@ import { ContractReputationCard } from './ContractReputationCard';
 import { PatternDetectionCard } from './PatternDetectionCard';
 import { ShareButton } from './ShareButton';
 import { ContractDiffView } from './ContractDiffView';
+import { RiskScoreBreakdown } from './RiskScoreBreakdown';
 import { useToast } from '@/hooks/use-toast';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -170,6 +171,11 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
           </div>
         </div>
       </div>
+
+      {/* ── SCORE BREAKDOWN ── */}
+      {data.scoreFactors && data.scoreFactors.length > 0 && (
+        <RiskScoreBreakdown factors={data.scoreFactors} riskScore={data.riskScore} />
+      )}
 
       {/* ── PATTERN DETECTION ── */}
       {data.patterns && data.patterns.length > 0 && (

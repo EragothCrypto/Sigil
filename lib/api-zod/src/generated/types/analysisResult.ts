@@ -36,6 +36,14 @@ export interface PatternMatch {
   riskDelta: number;
 }
 
+export interface ScoreFactor {
+  label: string;
+  delta: number;
+  severity: "critical" | "high" | "medium" | "positive";
+  category: "approval" | "contract" | "pattern" | "reputation" | "entity";
+  detail?: string;
+}
+
 export interface AnalysisResult {
   id: string;
   input: string;
@@ -62,6 +70,8 @@ export interface AnalysisResult {
   reputation?: ContractReputation;
   /** Detected scam / exploit patterns */
   patterns?: PatternMatch[];
+  /** Deterministic factors that explain what drove the risk score */
+  scoreFactors?: ScoreFactor[];
   details?: AnalysisDetails;
   createdAt: string;
 }

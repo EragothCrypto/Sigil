@@ -20,6 +20,7 @@ import { lookupEntity } from "./known-entities.js";
 import { calculateContractReputation, type ContractReputation } from "./contract-reputation.js";
 import { detectPatterns, mergePatterns, type PatternMatch } from "./pattern-detector.js";
 import { computeContractDiff } from "./contract-diff.js";
+import { computeScoreFactors } from "./score-factors.js";
 
 const router: IRouter = Router();
 
@@ -42,6 +43,7 @@ router.post("/analyze", async (req, res) => {
     let approvalInfo = null;
     let reputation: ContractReputation | null = null;
     let patterns: PatternMatch[] = [];
+    let isVerified: boolean | undefined = undefined;
 
     if (inputType === "transaction") {
       const tx = await fetchTransaction(trimmed, network);
@@ -166,6 +168,7 @@ router.post("/analyze", async (req, res) => {
       });
       patterns = mergePatterns(staticContractPatterns, contractAiResult.aiPatterns ?? []);
 
+      isVerified = contract.isVerified;
       details = {
         contractName: contract.contractName,
         tokenSymbol: contract.tokenSymbol,
@@ -180,6 +183,30 @@ router.post("/analyze", async (req, res) => {
     } else {
       aiResult = await analyzeUnknown(trimmed, network);
     }
+
+    const scoreFactors = computeScoreFactors({
+      inputType: inputType as "transaction" | "contract" | "unknown",
+      isVerified,
+      knownEntity,
+      approvalInfo: approvalInfo
+        ? {
+            isApproval: approvalInfo.isApproval,
+            isRevoke: approvalInfo.isRevoke,
+            isUnlimited: approvalInfo.isUnlimited,
+            riskLevel: approvalInfo.riskLevel,
+            spenderEntity: approvalInfo.spenderEntity,
+          }
+        : null,
+      reputation: reputation
+        ? {
+            tier: reputation.tier,
+            trustScore: reputation.trustScore,
+            isExploited: reputation.isExploited,
+          }
+        : null,
+      patterns,
+      riskScore: aiResult.riskScore,
+    });
 
     const [saved] = await db
       .insert(analysesTable)
@@ -215,6 +242,7 @@ router.post("/analyze", async (req, res) => {
       breakdown: aiResult.breakdown ?? undefined,
       reputation: reputation ?? undefined,
       patterns: patterns.length > 0 ? patterns : undefined,
+      scoreFactors: scoreFactors.length > 0 ? scoreFactors : undefined,
       details: saved.details as Record<string, unknown>,
       createdAt: saved.createdAt.toISOString(),
     });
