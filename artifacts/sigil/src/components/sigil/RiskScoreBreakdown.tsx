@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { JargonText } from './JargonTooltip';
 
 interface ScoreFactor {
   label: string;
@@ -61,7 +62,7 @@ function FactorRow({ factor, maxDelta }: { factor: ScoreFactor; maxDelta: number
 
       {showDetail && factor.detail && (
         <div className="ml-[4.25rem] px-3 py-2 rounded-lg bg-white/3 border border-white/6">
-          <p className="text-xs text-white/45 leading-relaxed">{factor.detail}</p>
+          <p className="text-xs text-white/45 leading-relaxed"><JargonText text={factor.detail} /></p>
         </div>
       )}
     </div>

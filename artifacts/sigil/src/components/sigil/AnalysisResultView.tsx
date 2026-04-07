@@ -8,6 +8,7 @@ import { PatternDetectionCard } from './PatternDetectionCard';
 import { ShareButton } from './ShareButton';
 import { ContractDiffView } from './ContractDiffView';
 import { RiskScoreBreakdown } from './RiskScoreBreakdown';
+import { JargonText } from './JargonTooltip';
 import { useToast } from '@/hooks/use-toast';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -120,7 +121,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
             {config.emoji} {config.label}
           </p>
           <p className="text-white/55 text-sm leading-relaxed">
-            {data.verdictReason}
+            <JargonText text={data.verdictReason} />
           </p>
         </div>
       </div>
@@ -152,7 +153,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
           </div>
 
           <h2 className="text-xl md:text-2xl font-display font-semibold text-white/90 leading-snug">
-            {data.summary}
+            <JargonText text={data.summary} />
           </h2>
 
           <div className="inline-flex items-center gap-2.5 text-white/30 bg-white/3 border border-white/6 px-4 py-2 rounded-xl mx-auto md:mx-0">
@@ -207,7 +208,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
                 {data.warnings.map((w, i) => (
                   <li key={i} className="flex items-start gap-3 p-3 rounded-xl border border-rose-500/8 bg-rose-500/4">
                     <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" strokeWidth={1.7} />
-                    <span className="text-sm text-white/75 leading-relaxed">{w}</span>
+                    <span className="text-sm text-white/75 leading-relaxed"><JargonText text={w} /></span>
                   </li>
                 ))}
               </ul>
@@ -226,7 +227,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
                 {data.positives.map((p, i) => (
                   <li key={i} className="flex items-start gap-3 p-3 rounded-xl border border-emerald-500/8 bg-emerald-500/4">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" strokeWidth={1.7} />
-                    <span className="text-sm text-white/75 leading-relaxed">{p}</span>
+                    <span className="text-sm text-white/75 leading-relaxed"><JargonText text={p} /></span>
                   </li>
                 ))}
               </ul>

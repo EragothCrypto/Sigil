@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, ShieldOff, Clock, ExternalLink, Infinity, BadgeCheck, DollarSign } from 'lucide-react';
 import type { ApprovalInfo, KnownEntity } from '@workspace/api-client-react';
+import { JargonTooltip, JargonText } from './JargonTooltip';
 
 function timeAgo(isoDate: string): string {
   const diff = Date.now() - new Date(isoDate).getTime();
@@ -155,6 +156,25 @@ export function ApprovalInspector({ info }: { info: ApprovalInfo }) {
           )}
         </div>
 
+        {/* ── Approval Method ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest w-32 shrink-0">Method</span>
+          <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 font-mono text-sm text-white/70">
+            <JargonTooltip
+              term={info.approvalType}
+              definition={
+                info.approvalType === 'setApprovalForAll'
+                  ? 'Grants a contract permission to transfer every NFT in a collection from your wallet — one of the most dangerous approvals you can sign.'
+                  : info.approvalType === 'increaseAllowance'
+                  ? 'Raises the amount a contract is allowed to spend from your wallet without issuing a new approval.'
+                  : 'Grants a contract permission to spend a specific token from your wallet on your behalf.'
+              }
+            >
+              {info.approvalType}()
+            </JargonTooltip>
+          </span>
+        </div>
+
         {/* ── Spender ── */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest w-32 shrink-0">Who Gets Access</span>
@@ -205,8 +225,8 @@ export function ApprovalInspector({ info }: { info: ApprovalInfo }) {
             <AlertTriangle className={`w-5 h-5 shrink-0 mt-0.5 ${!knownSpender ? "text-red-400" : "text-amber-400"}`} />
             <p className={`text-sm leading-relaxed ${!knownSpender ? "text-red-200" : "text-amber-200"}`}>
               {knownSpender
-                ? <>You are granting <strong>{knownSpender.name}</strong> unlimited access to spend this token. This is common for DEX interactions but consider approving only what you need.</>
-                : <>You are granting an <strong>unknown contract</strong> unlimited access to spend this token from your wallet. If this contract is malicious, it can drain your entire balance at any time.</>
+                ? <><JargonText text={`You are granting ${knownSpender.name} unlimited approval to spend this token. This is common for DEX interactions but consider approving only what you need.`} /></>
+                : <><JargonText text="You are granting an unknown contract unlimited approval to spend this token from your wallet. If this contract is malicious, it can drain your entire balance at any time." /></>
               }
             </p>
           </div>

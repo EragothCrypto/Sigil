@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, ShieldAlert, Bug, Skull, Flame, Zap, AlertTriangle, Eye } from 'lucide-react';
 import type { PatternMatch, PatternType, PatternConfidence } from '@workspace/api-client-react';
+import { JargonText } from './JargonTooltip';
 
 // ── Config ─────────────────────────────────────────────────────────────────
 
@@ -126,7 +127,7 @@ function PatternRow({ pattern }: { pattern: PatternMatch }) {
       {expanded && (
         <div className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3">
           {/* Description */}
-          <p className="text-sm text-white/65 leading-relaxed">{pattern.description}</p>
+          <p className="text-sm text-white/65 leading-relaxed"><JargonText text={pattern.description} /></p>
 
           {/* Indicators */}
           {pattern.indicators.length > 0 && (
