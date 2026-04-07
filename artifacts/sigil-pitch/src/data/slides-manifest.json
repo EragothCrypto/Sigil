@@ -3,56 +3,80 @@
     "id": "a1b2c3d4-0001-4000-8000-000000000001",
     "position": 1,
     "filepath": "src/pages/slides/Cover.tsx",
-    "title": "Cover — The Trust Layer of Web3",
-    "description": "Title slide introducing Sigil and the Replit Agent 4 Hackathon context.",
+    "title": "Cover — Week 3 · The Trust Layer of Web3",
+    "description": "Title slide for Week 3 of the Replit Agent 4 Buildathon. Sigil — The Trust Layer of Web3.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-0002-4000-8000-000000000002",
     "position": 2,
     "filepath": "src/pages/slides/Problem.tsx",
-    "title": "Problem — You Can't Read What You're Signing",
-    "description": "The scale of crypto scam losses and why transactions are unreadable to humans.",
+    "title": "Problem — $5.6B Lost to Blind Signing",
+    "description": "Scale of the crypto phishing crisis and why blind transaction signing is the root cause.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-0003-4000-8000-000000000003",
     "position": 3,
     "filepath": "src/pages/slides/Solution.tsx",
-    "title": "Solution — Sigil Decodes Any Transaction",
-    "description": "What Sigil does: decode, verify, and decide.",
+    "title": "Solution — Sigil's Complete Security Stack",
+    "description": "Sigil's full feature set across 8 categories built across 3 weeks.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-0004-4000-8000-000000000004",
     "position": 4,
-    "filepath": "src/pages/slides/PatternDetection.tsx",
-    "title": "Pattern Detection Engine",
-    "description": "Two-layer threat detection catching drainers, honeypots, and rug pulls.",
+    "filepath": "src/pages/slides/StreamingAI.tsx",
+    "title": "Streaming AI — Live Verdicts in Real Time",
+    "description": "Week 3's marquee feature: verdicts stream token-by-token instead of a 5-8 second spinner.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0008-4000-8000-000000000008",
+    "position": 5,
+    "filepath": "src/pages/slides/HallOfShame.tsx",
+    "title": "Hall of Shame — Real Incidents, Real Losses",
+    "description": "6 curated infamous exploits totaling $2.8B+. Sigil flags every one as CRITICAL/DANGEROUS.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0009-4000-8000-000000000009",
+    "position": 6,
+    "filepath": "src/pages/slides/FeatureVelocity.tsx",
+    "title": "Feature Velocity — Three Weeks, Full Stack",
+    "description": "Week-by-week breakdown of every feature shipped across the 3-week buildathon.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-0005-4000-8000-000000000005",
-    "position": 5,
+    "position": 7,
     "filepath": "src/pages/slides/HowItWorks.tsx",
-    "title": "How It Works — Three Steps",
-    "description": "Paste, Analyze, Understand — the Sigil user flow.",
+    "title": "How It Works — Paste, Stream, Understand",
+    "description": "The 3-step Sigil flow updated for streaming AI responses.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-0006-4000-8000-000000000006",
-    "position": 6,
+    "position": 8,
     "filepath": "src/pages/slides/BuiltWithReplit.tsx",
-    "title": "Built With Replit Agent 4",
-    "description": "Full-stack application built end-to-end in a single session with Replit Agent 4.",
+    "title": "Built With Replit Agent 4 — Week 3",
+    "description": "What Replit Agent 4 made possible: full-stack streaming app in a single conversation.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0010-4000-8000-000000000010",
+    "position": 9,
+    "filepath": "src/pages/slides/Market.tsx",
+    "title": "Market — $5.6B Problem, 500M Wallets",
+    "description": "The scale of the crypto security problem and Sigil's addressable market.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-0007-4000-8000-000000000007",
-    "position": 7,
+    "position": 10,
     "filepath": "src/pages/slides/Closing.tsx",
-    "title": "Closing — The Trust Layer of Web3",
-    "description": "Vision statement and closing brand moment.",
+    "title": "Closing — Week 3 Complete",
+    "description": "Confident closing — The Trust Layer of Web3. Week 3 complete.",
     "speakerNotes": ""
   }
 ]

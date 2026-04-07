@@ -60,11 +60,24 @@ artifacts-monorepo/
 - **Browser Extension**: ZIP downloadable, intercepts MetaMask/Rabby transactions
 - **Transaction Simulator**: Paste raw calldata or JSON tx object to simulate before signing
 
+## Week 3 Features (complete)
+
+- **Streaming AI**: `POST /api/sigil/analyze-stream` SSE endpoint; two-step format (signals → verdict badge + score ring in ~1s → token-by-token summary prose)
+- **Hall of Shame**: DB table `hallOfShame` seeded with 6 infamous exploits ($2.8B+); `GET /api/sigil/hall-of-shame` endpoint; shown above live feed on homepage
+- **Response Cache**: LRU + 30min TTL cache; `/analyze-stream` returns `{type:"cached",id}` event on hit for instant redirect
+- **Two-Step AI**: Step 1 gathers signals (static + AI), Step 2 streams `<prose>\n---JSON---\n<verdict JSON>` format
+
+## Pitch Deck (artifacts/sigil-pitch)
+
+10-slide Week 3 deck. Slides: Cover → Problem → Solution (8-feature grid) → Streaming AI → Hall of Shame → Feature Velocity → How It Works → Built With Replit → Market → Closing. Manifest: `src/data/slides-manifest.json`. All slides dark violet glassmorphism (#06040f bg, #8b5cf6 primary). Validate: `pnpm run --filter @workspace/sigil-pitch validate-slides`.
+
 ## API Routes
 
 - `POST /api/sigil/analyze` — Main analysis endpoint (tx hash or contract address)
-- `GET /api/sigil/history` — Recent analyses
+- `POST /api/sigil/analyze-stream` — Streaming SSE analysis (new Week 3)
+- `GET /api/sigil/history` — Recent analyses (excludes Hall of Shame rows)
 - `GET /api/sigil/history/:id` — Single analysis by ID
+- `GET /api/sigil/hall-of-shame` — Hall of Shame curated entries
 - `GET /api/healthz` — Health check
 
 ## Database
