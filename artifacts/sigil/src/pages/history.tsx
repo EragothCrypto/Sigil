@@ -2,6 +2,7 @@ import { useGetAnalysisHistory } from '@workspace/api-client-react';
 import { Link } from 'wouter';
 import { Activity, ArrowRight, Shield, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { HallOfShameSection } from '@/components/sigil/HallOfShameSection';
 
 function riskConfig(score: number) {
   if (score > 75) return { color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20', label: 'HIGH' };
@@ -28,6 +29,9 @@ export default function HistoryPage() {
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-10">
+
+      {/* Hall of Shame */}
+      <HallOfShameSection />
 
       {/* Header */}
       <motion.div

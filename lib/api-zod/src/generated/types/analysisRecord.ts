@@ -22,4 +22,8 @@ export interface AnalysisRecord {
   warnings: string[];
   positives: string[];
   createdAt: string;
+  /** True when this is a pre-curated Hall of Shame entry */
+  hallOfShame?: boolean;
+  /** Display label for Hall of Shame entries e.g. "Ronin Bridge · $625M" */
+  hallOfShameLabel?: string;
 }

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -16,6 +16,8 @@ export const analysesTable = pgTable("analyses", {
   positives: jsonb("positives").$type<string[]>().notNull().default([]),
   details: jsonb("details").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  hallOfShame: boolean("hall_of_shame").default(false).notNull(),
+  hallOfShameLabel: text("hall_of_shame_label"),
 });
 
 export const insertAnalysisSchema = createInsertSchema(analysesTable).omit({ id: true, createdAt: true });

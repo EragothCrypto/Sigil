@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { analysesTable } from "@workspace/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, ne } from "drizzle-orm";
 import { AnalyzeInputBody } from "@workspace/api-zod";
 import {
   detectInputType,
@@ -308,11 +308,39 @@ router.post("/contract-diff", async (req, res) => {
   }
 });
 
+router.get("/hall-of-shame", async (_req, res) => {
+  const records = await db
+    .select()
+    .from(analysesTable)
+    .where(eq(analysesTable.hallOfShame, true))
+    .orderBy(desc(analysesTable.riskScore));
+
+  res.json(
+    records.map((r) => ({
+      id: String(r.id),
+      input: r.input,
+      inputType: r.inputType,
+      network: r.network,
+      summary: r.summary,
+      verdict: r.verdict,
+      verdictReason: r.verdictReason,
+      riskScore: r.riskScore,
+      riskLevel: r.riskLevel,
+      warnings: r.warnings as string[],
+      positives: r.positives as string[],
+      createdAt: r.createdAt.toISOString(),
+      hallOfShame: true,
+      hallOfShameLabel: r.hallOfShameLabel ?? undefined,
+    })),
+  );
+});
+
 router.get("/history", async (req, res) => {
   const limit = Math.min(parseInt(String(req.query.limit ?? "20")), 100);
   const records = await db
     .select()
     .from(analysesTable)
+    .where(ne(analysesTable.hallOfShame, true))
     .orderBy(desc(analysesTable.createdAt))
     .limit(limit);
 
