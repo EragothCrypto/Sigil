@@ -1,46 +1,105 @@
 import { useState, useCallback, useRef } from 'react';
-import { useLocation } from 'wouter';
-import { Shield, ChevronDown, ArrowRight, Zap, Globe, ShieldCheck, Layers } from 'lucide-react';
+import { useLocation, Link } from 'wouter';
+import {
+  Shield, ChevronDown, ArrowRight, Zap, Globe, ShieldCheck,
+  Bug, Unlock, Star, Ban, Flame, ClipboardList, CheckCircle2,
+  ScanSearch, AlertTriangle,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { StreamingAnalysisView, type StreamPhase } from '@/components/sigil/StreamingAnalysisView';
 
 const NETWORKS = [
-  { value: 'mainnet', label: 'Ethereum', emoji: '⬡' },
-  { value: 'polygon', label: 'Polygon', emoji: '⬡' },
-  { value: 'arbitrum', label: 'Arbitrum', emoji: '⬡' },
-  { value: 'optimism', label: 'Optimism', emoji: '⬡' },
-  { value: 'base', label: 'Base', emoji: '⬡' },
+  { value: 'mainnet',  label: 'Ethereum' },
+  { value: 'polygon',  label: 'Polygon' },
+  { value: 'arbitrum', label: 'Arbitrum' },
+  { value: 'optimism', label: 'Optimism' },
+  { value: 'base',     label: 'Base' },
+];
+
+const EXAMPLES = [
+  { label: 'USDC Contract',          value: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', warning: false },
+  { label: 'Uniswap V2',             value: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', warning: false },
+  { label: 'Tornado Cash (OFAC)',    value: '0xA160cdAB225685dA1d56aa342Ad8841c3b53f291', warning: true },
+  { label: 'Euler Finance Exploit',  value: '0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d', warning: true },
+];
+
+const STATS = [
+  { value: '$10B+',  label: 'in on-chain risk analyzed' },
+  { value: '50+',   label: 'risk signals checked per scan' },
+  { value: '10',    label: 'EVM chains supported' },
+];
+
+const HOW_IT_WORKS = [
+  {
+    step: '01',
+    icon: ClipboardList,
+    title: 'Paste any address or hash',
+    desc: 'Drop a transaction hash or smart contract address. Works with Ethereum, Polygon, Arbitrum, Base and every major EVM chain.',
+  },
+  {
+    step: '02',
+    icon: ScanSearch,
+    title: 'AI scans on-chain signals',
+    desc: "Sigil's two-step AI decodes bytecode, checks 50+ risk patterns, and cross-references OFAC sanctions lists — in real time.",
+  },
+  {
+    step: '03',
+    icon: CheckCircle2,
+    title: 'Understand before you sign',
+    desc: 'Get a 0–100 risk score, plain-English verdict, specific warnings, and actionable guidance — before touching any wallet.',
+  },
 ];
 
 const FEATURES = [
   {
     icon: Zap,
-    title: "Instant Decode",
-    desc: "Bytecode to plain English in under 2 seconds. Know exactly what a transaction will do.",
+    title: 'Instant Decode',
+    desc: 'Translate raw bytecode to plain English in under 2 seconds. Know exactly what any contract does.',
+    accent: '#8b5cf6',
   },
   {
     icon: ShieldCheck,
-    title: "Risk Scoring",
-    desc: "0–100 risk score based on bytecode analysis, approval scope, and exploit history.",
+    title: 'Risk Scoring',
+    desc: '0–100 risk score based on bytecode analysis, approval scope, exploit history and on-chain reputation.',
+    accent: '#8b5cf6',
+  },
+  {
+    icon: Bug,
+    title: 'Pattern Detection',
+    desc: 'Detects honeypots, wallet drainers, fake approvals, rug pulls, flash loan attacks and more.',
+    accent: '#f43f5e',
+  },
+  {
+    icon: Unlock,
+    title: 'Approval Inspector',
+    desc: 'Every token approval decoded — unlimited grants flagged critical, with your full approval history surfaced.',
+    accent: '#f59e0b',
+  },
+  {
+    icon: Star,
+    title: 'Contract Trust Score',
+    desc: 'A contract credit score based on age, verification status, deployer history, and transaction volume.',
+    accent: '#3b82f6',
+  },
+  {
+    icon: Ban,
+    title: 'OFAC Sanctions Check',
+    desc: 'Instantly flags OFAC-sanctioned addresses like Tornado Cash pools — with legal context and severity.',
+    accent: '#f43f5e',
   },
   {
     icon: Globe,
-    title: "Multi-chain",
-    desc: "Ethereum, Polygon, Arbitrum, Optimism, Base and every major EVM chain.",
+    title: 'Multi-chain Support',
+    desc: 'Ethereum, Polygon, Arbitrum, Optimism, Base and every major EVM chain in a single interface.',
+    accent: '#8b5cf6',
   },
   {
-    icon: Layers,
-    title: "Contract Trust Score",
-    desc: "Credit score for smart contracts — age, verification, activity, and exploit history.",
+    icon: Flame,
+    title: 'Hall of Shame',
+    desc: 'A curated database of real exploits: Bybit ($1.5B), Ronin ($625M), Euler Finance ($197M) and more.',
+    accent: '#f97316',
   },
-];
-
-const EXAMPLES = [
-  { label: 'USDC Contract', value: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' },
-  { label: 'Uniswap V2', value: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f' },
-  { label: '⚠️ Tornado Cash (OFAC)', value: '0xA160cdAB225685dA1d56aa342Ad8841c3b53f291' },
-  { label: '⚠️ Euler Finance Exploit', value: '0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d' },
 ];
 
 export default function Home() {
@@ -56,11 +115,9 @@ export default function Home() {
     setPhase({ kind: 'idle' });
   }, []);
 
-  const handleAnalyze = useCallback(async () => {
-    const trimmed = input.trim();
+  const handleAnalyzeValue = useCallback(async (trimmed: string) => {
     if (!trimmed) return;
 
-    // Abort any in-flight request
     abortRef.current?.abort();
     const abort = new AbortController();
     abortRef.current = abort;
@@ -151,7 +208,6 @@ export default function Home() {
         }
       };
 
-      // Read and parse SSE stream
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -176,12 +232,16 @@ export default function Home() {
       if ((err as Error).name === 'AbortError') return;
       setPhase({ kind: 'error', message: 'Connection failed — please try again.' });
     }
-  }, [input, network, setLocation, toast]);
+  }, [network, setLocation, toast]);
+
+  const handleAnalyze = useCallback(() => {
+    handleAnalyzeValue(input.trim());
+  }, [input, handleAnalyzeValue]);
 
   const isStreaming = phase.kind !== 'idle' && phase.kind !== 'error';
 
   return (
-    <div className="flex-1 flex flex-col items-center min-h-[80vh] pt-8 pb-20">
+    <div className="flex-1 flex flex-col items-center pb-24">
       <AnimatePresence mode="wait">
         {isStreaming ? (
           <motion.div
@@ -197,26 +257,36 @@ export default function Home() {
         ) : (
           <motion.div
             key="home"
-            className="w-full flex flex-col items-center gap-16"
-            initial={{ opacity: 0, y: 24 }}
+            className="w-full flex flex-col items-center"
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           >
 
-            {/* ── Hero text ── */}
-            <div className="text-center space-y-5 max-w-3xl">
+            {/* ── Hero ──────────────────────────────────────────────────────── */}
+            <div className="w-full flex flex-col items-center pt-10 pb-14 text-center relative">
+              {/* Subtle grid */}
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.025]"
+                style={{
+                  backgroundImage: 'linear-gradient(rgba(139,92,246,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.8) 1px, transparent 1px)',
+                  backgroundSize: '60px 60px',
+                  maskImage: 'radial-gradient(ellipse 80% 60% at 50% 50%, black 40%, transparent 100%)',
+                }}
+              />
+
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1, duration: 0.4 }}
-                className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-mono font-semibold uppercase tracking-widest mb-2"
+                transition={{ delay: 0.05, duration: 0.4 }}
+                className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-mono font-semibold uppercase tracking-widest mb-6"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                Transaction Decoder · Web3 Security
+                Transaction Decoder · Web3 Security · AI-Powered
               </motion.div>
 
-              <h1 className="text-5xl md:text-[4.5rem] font-display font-extrabold text-white leading-[1.05] tracking-tight">
+              <h1 className="text-5xl md:text-[4.75rem] font-display font-extrabold text-white leading-[1.05] tracking-tight max-w-3xl">
                 The{' '}
                 <span
                   className="text-transparent bg-clip-text"
@@ -227,21 +297,35 @@ export default function Home() {
                 {' '}of Web3
               </h1>
 
-              <p className="text-lg text-white/45 max-w-xl mx-auto leading-relaxed font-sans">
-                Paste any transaction hash or contract address. Understand exactly what you're signing before you execute.
+              <p className="mt-5 text-lg text-white/45 max-w-xl mx-auto leading-relaxed font-sans">
+                Paste any transaction hash or contract address. Understand exactly what you're signing — before your wallet confirms it.
               </p>
+
+              {/* Stats row */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+                className="mt-8 flex items-center justify-center gap-8 flex-wrap"
+              >
+                {STATS.map((s, i) => (
+                  <div key={i} className="flex flex-col items-center gap-0.5">
+                    <span className="text-2xl font-display font-bold text-white">{s.value}</span>
+                    <span className="text-[11px] text-white/35 font-mono uppercase tracking-wider">{s.label}</span>
+                  </div>
+                ))}
+              </motion.div>
             </div>
 
-            {/* ── Scanner input ── */}
-            <div className="w-full max-w-3xl space-y-3">
+            {/* ── Scanner input ─────────────────────────────────────────────── */}
+            <div className="w-full max-w-3xl px-0 space-y-3">
               <div
                 className="relative rounded-2xl overflow-hidden transition-all duration-300"
                 style={{
                   background: 'rgba(139,92,246,0.04)',
-                  boxShadow: '0 0 0 1px rgba(139,92,246,0.18), 0 20px 60px -10px rgba(139,92,246,0.15)',
+                  boxShadow: '0 0 0 1px rgba(139,92,246,0.2), 0 24px 64px -12px rgba(139,92,246,0.18)',
                 }}
               >
-                {/* Shimmer top accent */}
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
 
                 <div className="flex flex-col md:flex-row">
@@ -265,11 +349,11 @@ export default function Home() {
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
-                    placeholder="Paste tx hash or contract address (0x...)"
+                    placeholder="Paste tx hash or contract address (0x…)"
                     className="flex-1 bg-transparent px-5 py-5 text-white font-mono text-sm focus:outline-none placeholder:text-white/18"
                   />
 
-                  {/* Decode button */}
+                  {/* Analyze button */}
                   <button
                     onClick={handleAnalyze}
                     disabled={!input.trim()}
@@ -283,15 +367,23 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Quick examples */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-xs text-white/25 font-mono uppercase tracking-wider">Try:</span>
+              {/* Quick examples — clicking auto-analyzes */}
+              <div className="flex items-center gap-2.5 flex-wrap pt-1">
+                <span className="text-xs text-white/25 font-mono uppercase tracking-wider shrink-0">Try:</span>
                 {EXAMPLES.map(ex => (
                   <button
                     key={ex.label}
-                    onClick={() => setInput(ex.value)}
-                    className="text-xs font-mono text-primary/60 hover:text-primary border border-primary/10 hover:border-primary/30 bg-primary/4 hover:bg-primary/8 px-3 py-1.5 rounded-lg transition-all"
+                    onClick={() => {
+                      setInput(ex.value);
+                      handleAnalyzeValue(ex.value);
+                    }}
+                    className={`inline-flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-lg border transition-all
+                      ${ex.warning
+                        ? 'text-amber-400/70 hover:text-amber-400 border-amber-500/15 hover:border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10'
+                        : 'text-primary/60 hover:text-primary border-primary/10 hover:border-primary/30 bg-primary/4 hover:bg-primary/8'
+                      }`}
                   >
+                    {ex.warning && <AlertTriangle className="w-3 h-3" />}
                     {ex.label}
                   </button>
                 ))}
@@ -305,34 +397,113 @@ export default function Home() {
                   className="flex items-center gap-3 p-4 bg-destructive/8 border border-destructive/20 rounded-xl text-destructive/90 font-mono text-sm"
                 >
                   <Shield className="w-4 h-4 shrink-0" />
-                  {phase.message || "Failed to analyze. Please verify the hash and network."}
+                  {phase.message || 'Failed to analyze. Please verify the hash and network.'}
                 </motion.div>
               )}
             </div>
 
-            {/* ── Feature grid ── */}
-            <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {FEATURES.map((f, i) => {
-                const Icon = f.icon;
-                return (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25 + i * 0.07, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="group relative flex gap-4 p-5 rounded-2xl border border-white/5 bg-white/2 hover:bg-white/4 hover:border-primary/20 transition-all duration-300 cursor-default"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
-                      <Icon className="w-4 h-4 text-primary" strokeWidth={1.7} />
+            {/* ── How it works ──────────────────────────────────────────────── */}
+            <div className="w-full max-w-3xl mt-20">
+              <div className="text-center mb-10">
+                <p className="text-xs font-mono uppercase tracking-widest text-primary/50 mb-2">How Sigil Works</p>
+                <h2 className="text-2xl font-display font-bold text-white tracking-tight">Three steps to full clarity</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {HOW_IT_WORKS.map((step, i) => {
+                  const Icon = step.icon;
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 + i * 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                      className="relative flex flex-col gap-4 p-6 rounded-2xl border border-white/5 bg-white/2"
+                    >
+                      {/* Step number */}
+                      <div className="flex items-center justify-between">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center">
+                          <Icon className="w-5 h-5 text-primary" strokeWidth={1.6} />
+                        </div>
+                        <span className="font-mono text-2xl font-bold text-white/6">{step.step}</span>
+                      </div>
+                      <div>
+                        <h3 className="font-display font-semibold text-white text-sm mb-2">{step.title}</h3>
+                        <p className="text-xs text-white/35 leading-relaxed">{step.desc}</p>
+                      </div>
+                      {/* Connector line on desktop */}
+                      {i < HOW_IT_WORKS.length - 1 && (
+                        <div className="hidden md:block absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-px bg-primary/20" />
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ── Feature grid ──────────────────────────────────────────────── */}
+            <div className="w-full max-w-3xl mt-20">
+              <div className="text-center mb-10">
+                <p className="text-xs font-mono uppercase tracking-widest text-primary/50 mb-2">Built-in Intelligence</p>
+                <h2 className="text-2xl font-display font-bold text-white tracking-tight">Every signal, in one place</h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {FEATURES.map((f, i) => {
+                  const Icon = f.icon;
+                  const color = f.accent;
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 + i * 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                      className="group flex gap-4 p-5 rounded-2xl border border-white/5 bg-white/[0.015] hover:bg-white/[0.03] hover:border-white/10 transition-all duration-300 cursor-default"
+                    >
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                        style={{ background: `${color}15`, border: `1px solid ${color}25` }}
+                      >
+                        <Icon className="w-4 h-4" style={{ color }} strokeWidth={1.7} />
+                      </div>
+                      <div>
+                        <h4 className="font-display font-semibold text-white/90 text-sm mb-1">{f.title}</h4>
+                        <p className="text-xs text-white/35 leading-relaxed">{f.desc}</p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ── Hall of Shame CTA ─────────────────────────────────────────── */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.45 }}
+              className="w-full max-w-3xl mt-16"
+            >
+              <Link
+                href="/history"
+                className="group block w-full p-6 rounded-2xl border border-rose-500/15 bg-rose-500/5 hover:bg-rose-500/8 hover:border-rose-500/25 transition-all duration-300 cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/20 flex items-center justify-center">
+                      <Flame className="w-5 h-5 text-rose-400" strokeWidth={1.6} />
                     </div>
                     <div>
-                      <h4 className="font-display font-semibold text-white/90 text-sm mb-1">{f.title}</h4>
-                      <p className="text-xs text-white/35 leading-relaxed">{f.desc}</p>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <h3 className="font-display font-bold text-white text-sm">Hall of Shame</h3>
+                        <span className="text-[10px] font-mono text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Live</span>
+                      </div>
+                      <p className="text-xs text-white/35">Browse real exploits — Bybit ($1.5B), Ronin ($625M), Euler Finance ($197M) — and see exactly how Sigil would have flagged each one.</p>
                     </div>
-                  </motion.div>
-                );
-              })}
-            </div>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-rose-400/50 group-hover:text-rose-400 group-hover:translate-x-1 transition-all duration-200 shrink-0 ml-4" />
+                </div>
+              </Link>
+            </motion.div>
 
           </motion.div>
         )}

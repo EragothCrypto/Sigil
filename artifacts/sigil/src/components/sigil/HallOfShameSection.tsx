@@ -1,4 +1,4 @@
-import { Link } from 'wouter';
+import { useLocation } from 'wouter';
 import { Flame, ArrowRight, ExternalLink, Skull } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useGetHallOfShame } from '@workspace/api-client-react';
@@ -24,10 +24,8 @@ const VECTOR_ICONS: Record<string, string> = {
 };
 
 function AttackerBadge({ record }: { record: AnalysisRecord }) {
-  const details = record as AnalysisRecord & { hallOfShameAmountUsd?: string; hallOfShameAttacker?: string; hallOfShameVector?: string };
-  const det = details as Record<string, unknown>;
-  const detailsObj = det as { details?: Record<string, unknown> };
-  const info = detailsObj.details as { hallOfShameAmountUsd?: string; hallOfShameAttacker?: string; hallOfShameVector?: string; hallOfShameYear?: string } | undefined;
+  const det = record as Record<string, unknown>;
+  const info = (det.details as { hallOfShameAmountUsd?: string; hallOfShameAttacker?: string; hallOfShameVector?: string; hallOfShameYear?: string } | undefined);
   return info ? (
     <div className="flex flex-wrap gap-1.5 mt-3">
       {info.hallOfShameYear && (
@@ -52,18 +50,30 @@ function AttackerBadge({ record }: { record: AnalysisRecord }) {
 function ShameCard({ record, index }: { record: AnalysisRecord; index: number }) {
   const { name, amount } = parseLabel(record.hallOfShameLabel ?? record.input);
   const isContract = /^0x[a-fA-F0-9]{40}$/i.test(record.input);
+  const [, navigate] = useLocation();
+
+  const etherscanUrl = isContract
+    ? `https://etherscan.io/address/${record.input}`
+    : `https://etherscan.io/tx/${record.input}`;
 
   return (
-    <Link href={`/analysis/${record.id}`} className="block outline-none">
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => navigate(`/analysis/${record.id}`)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/analysis/${record.id}`); }}
+      className="block outline-none cursor-pointer"
+    >
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.07, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="relative h-full flex flex-col p-5 rounded-2xl border border-rose-500/12 bg-rose-950/8 hover:bg-rose-950/14 hover:border-rose-500/25 transition-all duration-200 group cursor-pointer overflow-hidden"
+        className="relative h-full flex flex-col p-5 rounded-2xl border border-rose-500/12 bg-rose-950/8 hover:bg-rose-950/14 hover:border-rose-500/25 transition-all duration-200 group overflow-hidden"
       >
-        {/* Subtle glow on hover */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl"
-          style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(239,68,68,0.06) 0%, transparent 65%)' }} />
+        <div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl"
+          style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(239,68,68,0.06) 0%, transparent 65%)' }}
+        />
 
         {/* Risk badge + score */}
         <div className="flex items-start justify-between gap-3 mb-3">
@@ -103,24 +113,25 @@ function ShameCard({ record, index }: { record: AnalysisRecord; index: number })
         {/* Attack metadata tags */}
         <AttackerBadge record={record} />
 
-        {/* CTA */}
+        {/* Footer */}
         <div className="flex items-center justify-between border-t border-rose-500/8 pt-3 mt-3">
-          <a
-            href={`https://etherscan.io/address/${record.input}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(etherscanUrl, '_blank', 'noopener,noreferrer');
+            }}
             className="flex items-center gap-1 text-[11px] text-white/20 font-mono hover:text-white/40 transition-colors"
           >
             Etherscan <ExternalLink className="w-2.5 h-2.5" />
-          </a>
+          </button>
           <span className="flex items-center gap-1 text-[11px] text-rose-400/40 font-mono group-hover:text-rose-400 transition-colors">
             View Analysis
             <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
           </span>
         </div>
       </motion.div>
-    </Link>
+    </div>
   );
 }
 
@@ -167,15 +178,7 @@ export function HallOfShameSection() {
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/8 border border-rose-500/15">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-          <span className="text-xs font-mono text-rose-400/80">
-            ${data.reduce((acc, r) => {
-              const d = (r as AnalysisRecord & { details?: Record<string, unknown> }).details;
-              if (!d) return acc;
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const amt = (d as any).hallOfShameAmountUsd as string | undefined;
-              return acc; // just show count for now
-            }, 0) === 0 ? `${data.length} incidents` : `${data.length} incidents`}
-          </span>
+          <span className="text-xs font-mono text-rose-400/80">{data.length} incidents</span>
         </div>
       </div>
 
