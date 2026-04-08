@@ -283,7 +283,7 @@ export default function Home() {
                 className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-mono font-semibold uppercase tracking-widest mb-6"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                Transaction Decoder · Web3 Security · AI-Powered
+                On-Chain Risk Engine · 50+ Signals · 10 Chains
               </motion.div>
 
               <h1 className="text-5xl md:text-[4.75rem] font-display font-extrabold text-white leading-[1.05] tracking-tight max-w-3xl">

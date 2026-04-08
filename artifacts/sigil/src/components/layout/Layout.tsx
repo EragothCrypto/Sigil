@@ -41,11 +41,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between gap-6">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group cursor-pointer shrink-0">
-            <div className="relative w-9 h-9">
-              <div className="absolute inset-0 bg-primary/30 rounded-xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative w-9 h-9 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden group-hover:border-primary/50 transition-colors">
-                <img src={logo} alt="Sigil" className="w-6 h-6 object-contain" />
-              </div>
+            <div className="relative w-9 h-9 flex items-center justify-center shrink-0">
+              <div className="absolute inset-0 bg-primary/40 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 scale-110" />
+              <img src={logo} alt="Sigil" className="relative w-9 h-9 object-contain drop-shadow-[0_0_8px_rgba(139,92,246,0.5)] group-hover:drop-shadow-[0_0_12px_rgba(139,92,246,0.8)] transition-all duration-300" />
             </div>
             <span className="font-display font-bold text-xl tracking-[0.15em] text-white group-hover:text-primary transition-colors duration-200 uppercase">
               Sigil
