@@ -1,8 +1,13 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "hp2XzluSTiYfbD3nnkikQ"
 uri = "file://artifacts/sigil-pitch/public/hero-bg.png"
 type = "image"
 title = "generated_image"
+
+[[outputs]]
+id = "WCAxUWi_8t88xAMKjYu15"
+uri = "file://sigil-whitepaper.md"
+type = "text"
+title = "Sigil — Technical Whitepaper v1.0"
