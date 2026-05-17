@@ -19,18 +19,34 @@ test("normalizes settings with safe defaults", () => {
   assert.deepEqual(settings.trustedContracts, []);
 });
 
-test("extracts transaction address target before calldata", () => {
+test("extracts transaction address target when there is no calldata", () => {
   const target = {
     type: "transaction",
     data: {
       to: "0xA0b86991c6218b36c1d19D4a2e9eb0ce3606eb48",
-      data: "0x095ea7b3",
+      data: "0x",
     },
   };
 
   const input = core.getAnalysisInput(target);
   assert.equal(input.kind, "address");
   assert.equal(input.value, "0xA0b86991c6218b36c1d19D4a2e9eb0ce3606eb48");
+});
+
+test("uses calldata simulation before address lookup for contract calls", () => {
+  const target = {
+    type: "transaction",
+    data: {
+      to: "0xA0b86991c6218b36c1d19D4a2e9eb0ce3606eb48",
+      data: "0x095ea7b3000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25ef",
+      value: "0x0",
+    },
+  };
+
+  const input = core.getAnalysisInput(target);
+  assert.equal(input.kind, "simulation");
+  assert.match(input.value, /095ea7b3/);
+  assert.match(input.value, /A0b86991/);
 });
 
 test("extracts typed data as simulation input", () => {
@@ -102,4 +118,16 @@ test("history is trimmed to newest entries", () => {
   assert.equal(trimmed.length, 20);
   assert.equal(trimmed[0].id, 0);
   assert.equal(trimmed[19].id, 19);
+});
+
+test("history entries expose timestamp for popup rendering", () => {
+  const entry = core.createHistoryEntry({
+    method: "personal_sign",
+    url: "https://wallet.example",
+    input: { kind: "simulation", value: "hello" },
+    result: { verdict: "caution", riskScore: 42, summary: "Review this message" },
+  });
+
+  assert.equal(typeof entry.timestamp, "number");
+  assert.equal(entry.createdAt, new Date(entry.timestamp).toISOString());
 });

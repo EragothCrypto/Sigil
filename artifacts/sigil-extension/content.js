@@ -4,13 +4,9 @@
   const core = window.SigilExtensionCore;
   let overlayRoot = null;
   let shadowRoot = null;
-  let analysisInProgress = false;
   let currentRiskConfirmed = false;
-
-  const script = document.createElement("script");
-  script.src = chrome.runtime.getURL("inject.js");
-  script.onload = () => script.remove();
-  (document.head || document.documentElement).appendChild(script);
+  const requestQueue = [];
+  let activeRequest = null;
 
   function storageGet(area, defaults) {
     return new Promise((resolve) => chrome.storage[area].get(defaults, resolve));
@@ -124,10 +120,11 @@
     }, 320);
   }
 
-  function finish(action) {
-    analysisInProgress = false;
-    window.dispatchEvent(new CustomEvent("sigil:proceed", { detail: { action } }));
+  function finish(action, requestId = activeRequest?.requestId) {
+    window.dispatchEvent(new CustomEvent("sigil:decision", { detail: { requestId, action } }));
     hidePanel();
+    activeRequest = null;
+    processNextRequest();
   }
 
   function render({ method, url, result, input, loading = false, error = false, fullUrl = "" }, settings) {
@@ -211,16 +208,10 @@
     return response.json();
   }
 
-  window.addEventListener("sigil:intercept", async (event) => {
-    if (analysisInProgress) {
-      window.dispatchEvent(new CustomEvent("sigil:proceed", { detail: { action: "proceed" } }));
-      return;
-    }
-
-    analysisInProgress = true;
+  async function handleIntercept(eventDetail) {
     currentRiskConfirmed = false;
 
-    const { method, target } = event.detail;
+    const { requestId, method, target } = eventDetail;
     const url = window.location.href;
     const settings = await loadSettings();
     const input = core.getAnalysisInput(target);
@@ -228,7 +219,7 @@
 
     if (localResult.action === "proceed" && !localResult.requiresApi) {
       await saveHistory(core.createHistoryEntry({ method, url, input, result: localResult }), settings);
-      finish("proceed");
+      finish("proceed", requestId);
       return;
     }
 
@@ -258,5 +249,24 @@
       render({ method, url, result: fallback, input, error: true }, settings);
       await saveHistory(core.createHistoryEntry({ method, url, input, result: fallback }), settings);
     }
+  }
+
+  function processNextRequest() {
+    if (activeRequest || requestQueue.length === 0) return;
+    activeRequest = requestQueue.shift();
+    handleIntercept(activeRequest).catch(async () => {
+      window.dispatchEvent(new CustomEvent("sigil:decision", {
+        detail: { requestId: activeRequest?.requestId, action: "cancel" },
+      }));
+      activeRequest = null;
+      hidePanel();
+      processNextRequest();
+    });
+  }
+
+  window.addEventListener("sigil:intercept", (event) => {
+    if (!event.detail?.requestId) return;
+    requestQueue.push(event.detail);
+    processNextRequest();
   });
 })();

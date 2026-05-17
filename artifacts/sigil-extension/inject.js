@@ -18,6 +18,11 @@
 
   const patchedProviders = new WeakSet();
 
+  function createRequestId() {
+    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") return globalThis.crypto.randomUUID();
+    return `sigil-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
   function extractAnalysisTarget(method, params) {
     if (!params || params.length === 0) return null;
 
@@ -53,28 +58,33 @@
       if (SIGN_METHODS.has(method)) {
         const target = extractAnalysisTarget(method, params);
         if (target) {
+          const requestId = createRequestId();
           window.dispatchEvent(
             new CustomEvent("sigil:intercept", {
-              detail: { method, target, timestamp: Date.now() },
+              detail: { requestId, method, target, timestamp: Date.now() },
             })
           );
 
           const action = await new Promise((resolve) => {
             const handler = (e) => {
-              if (e.detail?.action === "proceed" || e.detail?.action === "cancel" || e.detail?.action === "timeout") {
-                window.removeEventListener("sigil:proceed", handler);
+              if (e.detail?.requestId !== requestId) return;
+              if (e.detail?.action === "proceed" || e.detail?.action === "cancel") {
+                window.removeEventListener("sigil:decision", handler);
                 resolve(e.detail.action);
               }
             };
-            window.addEventListener("sigil:proceed", handler);
+            window.addEventListener("sigil:decision", handler);
             setTimeout(() => {
-              window.removeEventListener("sigil:proceed", handler);
+              window.removeEventListener("sigil:decision", handler);
               resolve("timeout");
             }, 90000);
           });
 
           if (action === "cancel") {
             throw new Error("Sigil blocked wallet request");
+          }
+          if (action === "timeout") {
+            throw new Error("Sigil security check timed out");
           }
         }
       }
@@ -99,23 +109,13 @@
   function watchForProvider() {
     patchKnownProviders();
 
-    const originalDefineProperty = Object.defineProperty;
-    Object.defineProperty = function (obj, prop, descriptor) {
-      if (obj === window && prop === "ethereum") {
-        const wrappedDescriptor = { ...descriptor };
-        if (descriptor.set) {
-          wrappedDescriptor.set = function (val) {
-            descriptor.set.call(this, val);
-            patchKnownProviders();
-          };
-        }
-        return originalDefineProperty.call(this, obj, prop, wrappedDescriptor);
-      }
-      return originalDefineProperty.call(this, obj, prop, descriptor);
-    };
-
     window.addEventListener("ethereum#initialized", patchKnownProviders, { once: true });
-    setTimeout(patchKnownProviders, 1000);
+    let attempts = 0;
+    const poll = setInterval(() => {
+      patchKnownProviders();
+      attempts += 1;
+      if (attempts >= 20 || window.ethereum) clearInterval(poll);
+    }, 250);
   }
 
   watchForProvider();
