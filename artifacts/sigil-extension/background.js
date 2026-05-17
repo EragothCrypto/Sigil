@@ -1,13 +1,22 @@
 /**
- * Sigil — Background Service Worker (MV3)
- * Handles storage and badge updates.
+ * Sigil - Background Service Worker (MV3)
+ * Handles install defaults and badge updates.
  */
 
+const DEFAULT_API_URL = "https://95ae2332-deec-447d-95fe-36fd9971fd5a-00-3ledbqbdza8vc.worf.replit.dev";
+
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.sync.set({
-    apiUrl: "https://95ae2332-deec-447d-95fe-36fd9971fd5a-00-3ledbqbdza8vc.worf.replit.dev",
+  chrome.storage.sync.get({
+    apiUrl: DEFAULT_API_URL,
     enabled: true,
+    protectionMode: "standard",
+    trustedSites: [],
+    trustedContracts: [],
+    historyLimit: 20,
+  }, (settings) => {
+    chrome.storage.sync.set(settings);
   });
+
   chrome.action.setBadgeBackgroundColor({ color: "#00f5d4" });
 });
 

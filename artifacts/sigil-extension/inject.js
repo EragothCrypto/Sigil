@@ -16,6 +16,8 @@
     "eth_signTypedData_v4",
   ]);
 
+  const patchedProviders = new WeakSet();
+
   function extractAnalysisTarget(method, params) {
     if (!params || params.length === 0) return null;
 
@@ -40,7 +42,8 @@
   }
 
   function patchProvider(provider) {
-    if (!provider || provider.__sigilPatched) return;
+    if (!provider || patchedProviders.has(provider) || provider.__sigilPatched) return;
+    patchedProviders.add(provider);
     provider.__sigilPatched = true;
 
     const originalRequest = provider.request.bind(provider);
@@ -56,19 +59,23 @@
             })
           );
 
-          await new Promise((resolve) => {
+          const action = await new Promise((resolve) => {
             const handler = (e) => {
-              if (e.detail?.action === "proceed" || e.detail?.action === "timeout") {
+              if (e.detail?.action === "proceed" || e.detail?.action === "cancel" || e.detail?.action === "timeout") {
                 window.removeEventListener("sigil:proceed", handler);
-                resolve();
+                resolve(e.detail.action);
               }
             };
             window.addEventListener("sigil:proceed", handler);
             setTimeout(() => {
               window.removeEventListener("sigil:proceed", handler);
-              resolve();
+              resolve("timeout");
             }, 90000);
           });
+
+          if (action === "cancel") {
+            throw new Error("Sigil blocked wallet request");
+          }
         }
       }
 
@@ -76,10 +83,21 @@
     };
   }
 
-  function watchForProvider() {
+  function patchKnownProviders() {
     if (window.ethereum) {
       patchProvider(window.ethereum);
+      if (Array.isArray(window.ethereum.providers)) {
+        window.ethereum.providers.forEach(patchProvider);
+      }
     }
+    if (window.rabby) patchProvider(window.rabby);
+    if (window.coinbaseWalletExtension) patchProvider(window.coinbaseWalletExtension);
+    if (window.trustwallet) patchProvider(window.trustwallet);
+    if (window.frameEthereum) patchProvider(window.frameEthereum);
+  }
+
+  function watchForProvider() {
+    patchKnownProviders();
 
     const originalDefineProperty = Object.defineProperty;
     Object.defineProperty = function (obj, prop, descriptor) {
@@ -88,13 +106,16 @@
         if (descriptor.set) {
           wrappedDescriptor.set = function (val) {
             descriptor.set.call(this, val);
-            patchProvider(window.ethereum);
+            patchKnownProviders();
           };
         }
         return originalDefineProperty.call(this, obj, prop, wrappedDescriptor);
       }
       return originalDefineProperty.call(this, obj, prop, descriptor);
     };
+
+    window.addEventListener("ethereum#initialized", patchKnownProviders, { once: true });
+    setTimeout(patchKnownProviders, 1000);
   }
 
   watchForProvider();

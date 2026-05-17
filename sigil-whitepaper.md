@@ -717,6 +717,12 @@ The Hall of Shame is accessible directly from the homepage CTA and from the navi
 
 ## 17. Roadmap
 
+### Product North Star
+
+Sigil should become the lightweight security layer that follows a crypto user through ordinary daily activity: browsing dApps, approving swaps, signing messages, checking token contracts, reviewing past approvals, and reacting to suspicious prompts before funds are at risk.
+
+The browser extension is the primary product surface. The web app remains the deeper analysis console, history feed, and public education layer. API and SDK work should support that daily-use loop first, not turn Sigil into a heavy enterprise platform before the consumer workflow is excellent.
+
 ### Phase 1 — Foundation (Delivered)
 - [x] Streaming AI analysis with two-step chain-of-thought
 - [x] OFAC sanctions detection with verdict override
@@ -734,19 +740,66 @@ The Hall of Shame is accessible directly from the homepage CTA and from the navi
 - [x] Share button
 - [x] Hackathon pitch deck
 
-### Phase 2 — Intelligence (Next)
-- [ ] Mainnet mempool monitoring (flag suspicious transactions before they mine)
-- [ ] Wallet watch mode (monitor a given address for incoming risks)
-- [ ] Webhook integration (Slack/Discord alert on high-risk detection)
-- [ ] Extended Lazarus Group wallet database
-- [ ] Historical analysis replay (index past blocks)
+### Phase 2 — Daily Protection Extension
 
-### Phase 3 — Platform
-- [ ] Sigil API as a paid service (compliance, exchange, and protocol integrations)
-- [ ] SDK for dApp developers (embed Sigil inline in wallet flows)
-- [ ] DAO-governed threat intelligence (community-submitted risk signals)
-- [ ] Mobile app (iOS & Android)
-- [ ] Hardware wallet support (Ledger Live plugin)
+Goal: make Sigil useful every time a user touches a wallet, without feeling heavy, slow, or intrusive.
+
+- [ ] Harden the browser extension interception layer for MetaMask, Rabby, Coinbase Wallet, Trust Wallet, Frame, and other EIP-1193 providers
+- [ ] Add a fast local pre-screen before API calls so obvious safe/unsafe prompts render immediately
+- [ ] Support `eth_sendTransaction`, `eth_signTransaction`, `eth_sign`, `personal_sign`, and `eth_signTypedData_*` with method-specific explanations
+- [ ] Improve the extension overlay into a compact decision surface: verdict, risk score, asset changes, permissions, and one clear next action
+- [ ] Add configurable protection modes: Quiet, Standard, and Strict
+- [ ] Add trusted-site and trusted-contract allowlists with clear expiry controls
+- [ ] Add dangerous-action friction: require an explicit second confirmation for critical verdicts
+- [ ] Store lightweight local history in the extension so users can review recent prompts without creating an account
+- [ ] Add a one-click "Open full analysis" handoff from extension overlay to the web app
+- [ ] Package the extension for Chrome Web Store review, with a documented manual install path kept for power users
+
+### Phase 3 — Lightweight Daily Workflows
+
+Goal: make Sigil fit natural crypto habits instead of asking users to visit another dashboard.
+
+- [ ] Approval Health Check: show outstanding unlimited approvals and revoke recommendations
+- [ ] Address Watchlist: let users monitor important wallets, vaults, and multisigs without custody or wallet connection
+- [ ] dApp Session Summary: after a user interacts with a site, summarize approvals, signatures, and risks from that session
+- [ ] Site Reputation Layer: flag known phishing domains, suspicious clones, and recently created dApp frontends
+- [ ] Copy/Paste Analyzer: detect addresses, tx hashes, and calldata copied in the browser and offer a lightweight scan
+- [ ] Notification policy: notify only for critical findings, watched-wallet risks, or unusual approval changes
+- [ ] Sync optional settings across browsers while keeping analysis history local by default
+- [ ] Add a small onboarding flow that teaches approval risk, signatures, and sanctions in under two minutes
+
+### Phase 4 — Integration Surface
+
+Goal: let wallets and dApps adopt Sigil signals without forcing end users into a separate platform.
+
+- [ ] Public read-only analysis endpoint with strict rate limits and stable response schemas
+- [ ] Lightweight JavaScript SDK for dApps that want to show Sigil verdicts inline before wallet prompts
+- [ ] Wallet adapter examples for common dApp stacks
+- [ ] Signed threat-signal feed for extension and SDK consumers
+- [ ] Partner mode for wallets: embed Sigil risk summaries directly into wallet confirmation screens
+- [ ] Exportable analysis receipts for users who want to share a security explanation with a team or community
+
+### Phase 5 — Intelligence Expansion
+
+Goal: improve detection quality without bloating the user experience.
+
+- [ ] Extended malicious-address registry covering Lazarus Group, OFAC sanctions, drainers, exploiters, phishing kits, and compromised deployers
+- [ ] Cross-chain support expansion driven by extension usage data, not chain count vanity metrics
+- [ ] Contract upgrade monitoring for watched protocols and proxy contracts
+- [ ] Historical exploit replay dataset for regression testing the scoring engine
+- [ ] Community-submitted threat reports with internal review before any signal affects user verdicts
+- [ ] Optional webhook alerts for advanced users, teams, and small funds after the core consumer extension is stable
+
+### Deferred Until Pull Is Proven
+
+These ideas remain valuable, but they should wait until the extension has strong retention and daily usage:
+
+- Paid enterprise API
+- Native mobile app
+- Hardware wallet plugins
+- DAO-governed threat intelligence
+- Full mempool monitoring product
+- Compliance dashboard for exchanges
 
 ---
 

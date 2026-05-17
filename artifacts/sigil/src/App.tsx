@@ -9,6 +9,7 @@ import HistoryPage from "@/pages/history";
 import AnalysisPage from "@/pages/analysis";
 import SimulatePage from "@/pages/simulate";
 import ExtensionPage from "@/pages/extension";
+import { CookiePage, ImpressumPage, PrivacyPage, TermsPage } from "@/pages/legal";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -28,6 +29,10 @@ function Router() {
       <Route path="/history" component={HistoryPage} />
       <Route path="/analysis/:id" component={AnalysisPage} />
       <Route path="/extension" component={ExtensionPage} />
+      <Route path="/impressum" component={ImpressumPage} />
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/cookies" component={CookiePage} />
       <Route component={NotFound} />
     </Switch>
   );

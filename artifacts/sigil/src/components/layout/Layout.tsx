@@ -86,6 +86,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col">
         {children}
       </main>
+
+      <footer className="relative z-10 border-t border-white/6 bg-background/70">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/35">
+          <p>© 2026 S3ntryLabs. Sigil provides security analysis, not financial advice.</p>
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <Link href="/impressum" className="hover:text-primary transition-colors">Impressum</Link>
+            <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
+            <Link href="/cookies" className="hover:text-primary transition-colors">Cookies</Link>
+          </nav>
+        </div>
+      </footer>
     </div>
   );
 }

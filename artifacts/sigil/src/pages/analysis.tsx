@@ -1,5 +1,5 @@
 import { useParams, Link, useLocation } from 'wouter';
-import { useGetAnalysisById, useAnalyzeInput } from '@workspace/api-client-react';
+import { getGetAnalysisByIdQueryKey, useGetAnalysisById, useAnalyzeInput } from '@workspace/api-client-react';
 import { AnalysisResultView } from '@/components/sigil/AnalysisResultView';
 import { ArrowLeft, ShieldAlert, Zap, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -11,7 +11,7 @@ export default function AnalysisPage() {
   const isCached = location.includes('cached=1');
 
   const { data, isLoading, isError } = useGetAnalysisById(id, {
-    query: { enabled: !!id, retry: false }
+    query: { queryKey: getGetAnalysisByIdQueryKey(id), enabled: !!id, retry: false }
   });
 
   const reanalyzeMutation = useAnalyzeInput({

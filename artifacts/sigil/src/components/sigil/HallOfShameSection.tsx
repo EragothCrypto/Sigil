@@ -24,7 +24,7 @@ const VECTOR_ICONS: Record<string, string> = {
 };
 
 function AttackerBadge({ record }: { record: AnalysisRecord }) {
-  const det = record as Record<string, unknown>;
+  const det = record as unknown as Record<string, unknown>;
   const info = (det.details as { hallOfShameAmountUsd?: string; hallOfShameAttacker?: string; hallOfShameVector?: string; hallOfShameYear?: string } | undefined);
   return info ? (
     <div className="flex flex-wrap gap-1.5 mt-3">

@@ -55,6 +55,20 @@ export interface AIAnalysisResult {
   aiPatterns?: AIPatternMatch[];
 }
 
+interface ApprovalAnalysisContext {
+  isApproval?: boolean;
+  isRevoke: boolean;
+  isUnlimited: boolean;
+  amountFormatted: string;
+  spender: string;
+  spenderEntity?: KnownEntity | null;
+  approvalType: string;
+  tokenContract?: string;
+  tokenEntity?: KnownEntity | null;
+  riskLevel?: "low" | "medium" | "high" | "critical";
+  priorApprovals?: unknown[];
+}
+
 // ─── Streaming event types ─────────────────────────────────────────────────────
 
 export type StreamEvent =
@@ -492,14 +506,7 @@ export async function analyzeTransaction(
   network: string,
   rawInput: string,
   knownEntity?: KnownEntity | null,
-  approvalInfo?: {
-    isRevoke: boolean;
-    isUnlimited: boolean;
-    amountFormatted: string;
-    spender: string;
-    spenderEntity?: KnownEntity | null;
-    approvalType: string;
-  } | null,
+  approvalInfo?: ApprovalAnalysisContext | null,
 ): Promise<AIAnalysisResult> {
   const { contextBlock, step1Extra } = buildTransactionContext(tx, methodName, network, rawInput, knownEntity, approvalInfo);
   return runTwoStepAnalysis(contextBlock, step1Extra);
@@ -537,14 +544,7 @@ export async function analyzeTransactionStreaming(
   rawInput: string,
   onEvent: (event: StreamEvent) => void,
   knownEntity?: KnownEntity | null,
-  approvalInfo?: {
-    isRevoke: boolean;
-    isUnlimited: boolean;
-    amountFormatted: string;
-    spender: string;
-    spenderEntity?: KnownEntity | null;
-    approvalType: string;
-  } | null,
+  approvalInfo?: ApprovalAnalysisContext | null,
 ): Promise<AIAnalysisResult> {
   const { contextBlock, step1Extra } = buildTransactionContext(tx, methodName, network, rawInput, knownEntity, approvalInfo);
   return runStreamingAnalysis(contextBlock, step1Extra, onEvent);

@@ -1,13 +1,22 @@
 import { useState } from 'react';
+import type { ElementType } from 'react';
 import { ChevronDown, ChevronUp, ShieldAlert, Bug, Skull, Flame, Zap, AlertTriangle, Eye } from 'lucide-react';
 import type { PatternMatch, PatternType, PatternConfidence } from '@workspace/api-client-react';
 import { JargonText } from './JargonTooltip';
 
+type UiPatternType = PatternType | 'flash_loan' | 'suspicious';
+type UiPatternMatch = Omit<PatternMatch, 'type'> & {
+  id?: string;
+  type: UiPatternType;
+  indicators?: string[];
+  evidence?: string[];
+};
+
 // ── Config ─────────────────────────────────────────────────────────────────
 
-const TYPE_CONFIG: Record<PatternType, {
+const TYPE_CONFIG: Record<UiPatternType, {
   label: string;
-  icon: React.ElementType;
+  icon: ElementType;
   color: string;
   bg: string;
   border: string;
@@ -61,6 +70,13 @@ const TYPE_CONFIG: Record<PatternType, {
     bg: 'bg-amber-500/8',
     border: 'border-amber-500/20',
   },
+  unknown: {
+    label: 'Unknown',
+    icon: AlertTriangle,
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/8',
+    border: 'border-amber-500/20',
+  },
 };
 
 const CONFIDENCE_CONFIG: Record<PatternConfidence, {
@@ -77,11 +93,12 @@ const CONFIDENCE_CONFIG: Record<PatternConfidence, {
 
 // ── Single pattern row ──────────────────────────────────────────────────────
 
-function PatternRow({ pattern }: { pattern: PatternMatch }) {
+function PatternRow({ pattern }: { pattern: UiPatternMatch }) {
   const [expanded, setExpanded] = useState(false);
   const typeCfg = TYPE_CONFIG[pattern.type] ?? TYPE_CONFIG.suspicious;
   const confCfg = CONFIDENCE_CONFIG[pattern.confidence] ?? CONFIDENCE_CONFIG.medium;
   const Icon = typeCfg.icon;
+  const indicators = pattern.indicators ?? pattern.evidence ?? [];
 
   return (
     <div className={`rounded-xl border ${typeCfg.border} ${typeCfg.bg} overflow-hidden`}>
@@ -130,11 +147,11 @@ function PatternRow({ pattern }: { pattern: PatternMatch }) {
           <p className="text-sm text-white/65 leading-relaxed"><JargonText text={pattern.description} /></p>
 
           {/* Indicators */}
-          {pattern.indicators.length > 0 && (
+          {indicators.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-[10px] font-mono font-bold text-white/25 uppercase tracking-widest">Matched Signals</p>
               <ul className="space-y-1">
-                {pattern.indicators.map((ind, i) => (
+                {indicators.map((ind, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <span className={`text-xs mt-0.5 ${typeCfg.color} flex-shrink-0`}>›</span>
                     <span className="text-xs text-white/55 leading-snug font-mono">{ind}</span>
@@ -159,7 +176,7 @@ function PatternRow({ pattern }: { pattern: PatternMatch }) {
 
 // ── Card ───────────────────────────────────────────────────────────────────
 
-export function PatternDetectionCard({ patterns }: { patterns: PatternMatch[] }) {
+export function PatternDetectionCard({ patterns }: { patterns: UiPatternMatch[] }) {
   if (!patterns || patterns.length === 0) return null;
 
   // Severity summary
@@ -195,7 +212,7 @@ export function PatternDetectionCard({ patterns }: { patterns: PatternMatch[] })
       {/* Pattern rows */}
       <div className="p-3 space-y-2 bg-rose-500/2">
         {patterns.map((pattern) => (
-          <PatternRow key={pattern.id} pattern={pattern} />
+          <PatternRow key={pattern.id ?? `${pattern.type}-${pattern.name}`} pattern={pattern} />
         ))}
       </div>
     </div>
