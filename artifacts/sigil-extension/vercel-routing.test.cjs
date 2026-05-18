@@ -35,6 +35,7 @@ test("root Vercel API functions import the built Express app", () => {
   assert.equal(exists("api/[...path].js"), true);
   assert.match(read("api/index.js"), /artifacts\/api-server\/dist\/app\.mjs/);
   assert.match(read("api/[...path].js"), /artifacts\/api-server\/dist\/app\.mjs/);
+  assert.match(read("api/[...path].js"), /req\.url\.startsWith\("\/api"\)/);
 });
 
 test("artifact-root Vercel config exists for Vercel projects rooted at artifacts/sigil", () => {
@@ -45,6 +46,7 @@ test("artifact-root Vercel config exists for Vercel projects rooted at artifacts
   assert.equal(exists("artifacts/sigil/api/[...path].js"), true);
   assert.match(read("artifacts/sigil/api/index.js"), /api-server\/dist\/app\.mjs/);
   assert.match(read("artifacts/sigil/api/[...path].js"), /api-server\/dist\/app\.mjs/);
+  assert.match(read("artifacts/sigil/api/[...path].js"), /req\.url\.startsWith\("\/api"\)/);
 });
 
 test("api-server build emits an app bundle for Vercel functions", () => {
