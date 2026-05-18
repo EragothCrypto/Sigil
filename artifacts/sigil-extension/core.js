@@ -7,7 +7,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const DEFAULT_API_URL = "https://www.s3ntrylabs.com";
+  const DEFAULT_API_URL = "https://sigil.s3ntrylabs.com";
   const PROTECTION_MODES = new Set(["quiet", "standard", "strict"]);
   const SIGN_METHODS = new Set([
     "eth_sendTransaction",

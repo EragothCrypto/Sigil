@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { SimulateTransactionBody } from "@workspace/api-zod";
+import { getSigilAiModel } from "../../env.js";
 
 const router: IRouter = Router();
 
@@ -85,7 +86,7 @@ Verdict guidelines:
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-5.2",
+      model: getSigilAiModel(),
       max_completion_tokens: 1500,
       messages: [{ role: "user", content: prompt }],
     });

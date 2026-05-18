@@ -1,4 +1,5 @@
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { getSigilAiModel } from "../../env.js";
 import type { TransactionData, ContractData } from "./ethereum.js";
 import { hexWeiToEth } from "./ethereum.js";
 import type { KnownEntity } from "./known-entities.js";
@@ -177,6 +178,10 @@ If the analysis context contains a block starting with "⚠ CRITICAL ALERT", you
 4. Include the sanctions/danger details prominently in your summary and warnings
 This override is non-negotiable and takes priority over ALL other signals, even if the contract is verified or has positive traits.`;
 
+function chatModel(): string {
+  return getSigilAiModel();
+}
+
 // ─── Step 1: Evidence gathering ───────────────────────────────────────────────
 
 const STEP1_INSTRUCTIONS = `
@@ -281,7 +286,7 @@ async function runTwoStepAnalysis(
 
   // Step 1 — gather evidence signals
   const step1Response = await openai.chat.completions.create({
-    model: "gpt-5.2",
+    model: chatModel(),
     max_completion_tokens: 700,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
@@ -293,7 +298,7 @@ async function runTwoStepAnalysis(
 
   // Step 2 — derive verdict (streaming prompt format, but called non-streaming)
   const step2Response = await openai.chat.completions.create({
-    model: "gpt-5.2",
+    model: chatModel(),
     max_completion_tokens: 2048,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
@@ -328,7 +333,7 @@ export async function runStreamingAnalysis(
 
   // Step 1 — non-streaming (structured JSON only, fast)
   const step1Response = await openai.chat.completions.create({
-    model: "gpt-5.2",
+    model: chatModel(),
     max_completion_tokens: 700,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
@@ -366,7 +371,7 @@ export async function runStreamingAnalysis(
 
   // Step 2 — STREAMING
   const stream = await openai.chat.completions.create({
-    model: "gpt-5.2",
+    model: chatModel(),
     max_completion_tokens: 2048,
     stream: true,
     messages: [

@@ -1,4 +1,5 @@
 import app from "./app";
+import { assertRequiredEnv } from "./env.js";
 import { logger } from "./lib/logger";
 import { seedHallOfShame } from "./routes/sigil/hall-of-shame-seed.js";
 
@@ -15,6 +16,8 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+assertRequiredEnv();
 
 app.listen(port, (err) => {
   if (err) {

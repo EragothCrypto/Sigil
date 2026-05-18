@@ -15,6 +15,7 @@ test("normalizes settings with safe defaults", () => {
   const settings = core.normalizeSettings({});
   assert.equal(settings.enabled, true);
   assert.equal(settings.protectionMode, "standard");
+  assert.equal(settings.apiUrl, "https://sigil.s3ntrylabs.com");
   assert.deepEqual(settings.trustedSites, []);
   assert.deepEqual(settings.trustedContracts, []);
 });

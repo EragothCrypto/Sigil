@@ -3,7 +3,7 @@
  * Handles install defaults and badge updates.
  */
 
-const DEFAULT_API_URL = "https://www.s3ntrylabs.com";
+const DEFAULT_API_URL = "https://sigil.s3ntrylabs.com";
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.sync.get({

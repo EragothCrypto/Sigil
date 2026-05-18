@@ -45,6 +45,6 @@
     "storage"
   ],
   "host_permissions": [
-    "https://www.s3ntrylabs.com/*"
+    "https://sigil.s3ntrylabs.com/*"
   ]
 }

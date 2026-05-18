@@ -30,7 +30,7 @@ test("manifest uses a main-world injector and isolated UI bridge", () => {
 test("manifest uses minimum permissions for store submission", () => {
   const manifest = JSON.parse(read("manifest.json"));
   assert.deepEqual(manifest.permissions, ["storage"]);
-  assert.deepEqual(manifest.host_permissions, ["https://www.s3ntrylabs.com/*"]);
+  assert.deepEqual(manifest.host_permissions, ["https://sigil.s3ntrylabs.com/*"]);
 });
 
 test("popup does not load remote resources", () => {
