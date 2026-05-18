@@ -1,1 +1,1 @@
-export { default } from "../../api-server/src/app";
+export { default } from "../../api-server/src/app.js";

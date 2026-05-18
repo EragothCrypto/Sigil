@@ -31,8 +31,8 @@ test("root Vercel config routes API before SPA fallback", () => {
 test("root Vercel API functions export the Express app", () => {
   assert.equal(exists("api/index.ts"), true);
   assert.equal(exists("api/[...path].ts"), true);
-  assert.match(read("api/index.ts"), /artifacts\/api-server\/src\/app/);
-  assert.match(read("api/[...path].ts"), /artifacts\/api-server\/src\/app/);
+  assert.match(read("api/index.ts"), /artifacts\/api-server\/src\/app\.js/);
+  assert.match(read("api/[...path].ts"), /artifacts\/api-server\/src\/app\.js/);
 });
 
 test("artifact-root Vercel config exists for Vercel projects rooted at artifacts/sigil", () => {
@@ -40,8 +40,8 @@ test("artifact-root Vercel config exists for Vercel projects rooted at artifacts
   assert.deepEqual(config.rewrites[0], { source: "/api/:path*", destination: "/api/:path*" });
   assert.equal(exists("artifacts/sigil/api/index.ts"), true);
   assert.equal(exists("artifacts/sigil/api/[...path].ts"), true);
-  assert.match(read("artifacts/sigil/api/index.ts"), /api-server\/src\/app/);
-  assert.match(read("artifacts/sigil/api/[...path].ts"), /api-server\/src\/app/);
+  assert.match(read("artifacts/sigil/api/index.ts"), /api-server\/src\/app\.js/);
+  assert.match(read("artifacts/sigil/api/[...path].ts"), /api-server\/src\/app\.js/);
 });
 
 test("extension production origin matches the deployed Sigil subdomain", () => {
