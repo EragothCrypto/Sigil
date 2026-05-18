@@ -28,20 +28,27 @@ test("root Vercel config routes API before SPA fallback", () => {
   assert.deepEqual(config.rewrites.at(-1), { source: "/(.*)", destination: "/index.html" });
 });
 
-test("root Vercel API functions export the Express app", () => {
-  assert.equal(exists("api/index.ts"), true);
-  assert.equal(exists("api/[...path].ts"), true);
-  assert.match(read("api/index.ts"), /artifacts\/api-server\/src\/app\.js/);
-  assert.match(read("api/[...path].ts"), /artifacts\/api-server\/src\/app\.js/);
+test("root Vercel API functions import the built Express app", () => {
+  const config = JSON.parse(read("vercel.json"));
+  assert.match(config.buildCommand, /@workspace\/api-server build/);
+  assert.equal(exists("api/index.js"), true);
+  assert.equal(exists("api/[...path].js"), true);
+  assert.match(read("api/index.js"), /artifacts\/api-server\/dist\/app\.mjs/);
+  assert.match(read("api/[...path].js"), /artifacts\/api-server\/dist\/app\.mjs/);
 });
 
 test("artifact-root Vercel config exists for Vercel projects rooted at artifacts/sigil", () => {
   const config = JSON.parse(read("artifacts/sigil/vercel.json"));
+  assert.match(config.buildCommand, /@workspace\/api-server build/);
   assert.deepEqual(config.rewrites[0], { source: "/api/:path*", destination: "/api/:path*" });
-  assert.equal(exists("artifacts/sigil/api/index.ts"), true);
-  assert.equal(exists("artifacts/sigil/api/[...path].ts"), true);
-  assert.match(read("artifacts/sigil/api/index.ts"), /api-server\/src\/app\.js/);
-  assert.match(read("artifacts/sigil/api/[...path].ts"), /api-server\/src\/app\.js/);
+  assert.equal(exists("artifacts/sigil/api/index.js"), true);
+  assert.equal(exists("artifacts/sigil/api/[...path].js"), true);
+  assert.match(read("artifacts/sigil/api/index.js"), /api-server\/dist\/app\.mjs/);
+  assert.match(read("artifacts/sigil/api/[...path].js"), /api-server\/dist\/app\.mjs/);
+});
+
+test("api-server build emits an app bundle for Vercel functions", () => {
+  assert.match(read("artifacts/api-server/build.mjs"), /src\/app\.ts/);
 });
 
 test("extension production origin matches the deployed Sigil subdomain", () => {
