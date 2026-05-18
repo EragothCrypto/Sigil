@@ -33,6 +33,21 @@ test("root Vercel API functions import the built Express app", () => {
   assert.match(config.buildCommand, /@workspace\/api-server build/);
   assert.equal(exists("api/index.js"), true);
   assert.equal(exists("api/[...path].js"), true);
+  for (const route of [
+    ["api/healthz.js", "/api/healthz"],
+    ["api/readyz.js", "/api/readyz"],
+    ["api/sigil/analyze-stream.js", "/api/sigil/analyze-stream"],
+    ["api/sigil/analyze.js", "/api/sigil/analyze"],
+    ["api/sigil/simulate.js", "/api/sigil/simulate"],
+    ["api/sigil/contract-diff.js", "/api/sigil/contract-diff"],
+    ["api/sigil/history.js", "/api/sigil/history"],
+    ["api/sigil/hall-of-shame.js", "/api/sigil/hall-of-shame"],
+    ["api/sigil/history/[id].js", "/api/sigil/history/"],
+  ]) {
+    assert.equal(exists(route[0]), true, `${route[0]} should exist`);
+    assert.match(read(route[0]), /api-server\/dist\/app\.mjs/);
+    assert.match(read(route[0]), new RegExp(route[1].replaceAll("/", "\\/")));
+  }
   assert.match(read("api/index.js"), /artifacts\/api-server\/dist\/app\.mjs/);
   assert.match(read("api/[...path].js"), /artifacts\/api-server\/dist\/app\.mjs/);
   assert.match(read("api/[...path].js"), /req\.url\.startsWith\("\/api"\)/);
@@ -44,6 +59,21 @@ test("artifact-root Vercel config exists for Vercel projects rooted at artifacts
   assert.deepEqual(config.rewrites[0], { source: "/api/:path*", destination: "/api/:path*" });
   assert.equal(exists("artifacts/sigil/api/index.js"), true);
   assert.equal(exists("artifacts/sigil/api/[...path].js"), true);
+  for (const route of [
+    ["artifacts/sigil/api/healthz.js", "/api/healthz"],
+    ["artifacts/sigil/api/readyz.js", "/api/readyz"],
+    ["artifacts/sigil/api/sigil/analyze-stream.js", "/api/sigil/analyze-stream"],
+    ["artifacts/sigil/api/sigil/analyze.js", "/api/sigil/analyze"],
+    ["artifacts/sigil/api/sigil/simulate.js", "/api/sigil/simulate"],
+    ["artifacts/sigil/api/sigil/contract-diff.js", "/api/sigil/contract-diff"],
+    ["artifacts/sigil/api/sigil/history.js", "/api/sigil/history"],
+    ["artifacts/sigil/api/sigil/hall-of-shame.js", "/api/sigil/hall-of-shame"],
+    ["artifacts/sigil/api/sigil/history/[id].js", "/api/sigil/history/"],
+  ]) {
+    assert.equal(exists(route[0]), true, `${route[0]} should exist`);
+    assert.match(read(route[0]), /api-server\/dist\/app\.mjs/);
+    assert.match(read(route[0]), new RegExp(route[1].replaceAll("/", "\\/")));
+  }
   assert.match(read("artifacts/sigil/api/index.js"), /api-server\/dist\/app\.mjs/);
   assert.match(read("artifacts/sigil/api/[...path].js"), /api-server\/dist\/app\.mjs/);
   assert.match(read("artifacts/sigil/api/[...path].js"), /req\.url\.startsWith\("\/api"\)/);
