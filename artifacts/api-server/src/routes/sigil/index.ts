@@ -316,7 +316,10 @@ router.post("/analyze-stream", async (req, res) => {
     await ensureAnalysesSchema();
   } catch (err) {
     req.log.error({ err }, "Analysis schema check failed");
-    res.status(500).json({ error: "database_not_ready", message: "Analysis storage is not ready" });
+    res.status(500).json({
+      error: "database_not_ready",
+      message: "Analysis storage is not ready. Check the Vercel DATABASE_URL value and redeploy.",
+    });
     return;
   }
 

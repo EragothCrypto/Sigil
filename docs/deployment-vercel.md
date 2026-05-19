@@ -36,6 +36,8 @@ SIGIL_AI_MODEL=deepseek/deepseek-v4-flash:free
 
 Sigil creates or updates its small `analyses` table on first API use. For manual database management, the same schema can also be pushed from the repo with `pnpm --filter @workspace/db push`.
 
+Use the exact uppercase variable name `DATABASE_URL` in Vercel. `Database_Url`, `database_url`, and other casing variants will not be read by Node.js. Do not use Replit's internal/provisioned database URL in Vercel; use a database that accepts external connections from Vercel Functions.
+
 ## Local Setup
 
 Copy the template and fill in real values:
@@ -67,8 +69,8 @@ https://sigil.s3ntrylabs.com/api/readyz
 Expected:
 
 - `/api/healthz` returns `{ "status": "ok" }`
-- `/api/readyz` returns `status: "ready"`
+- `/api/readyz` returns `status: "ready"` and `database.status: "ready"`
 
-If `/api/readyz` returns `missing_env`, add the listed variables in Vercel and redeploy.
+If `/api/readyz` returns `missing_env`, add the listed variables in Vercel and redeploy. If it returns `storage_error`, replace `DATABASE_URL` with a hosted Postgres URL reachable from Vercel.
 
 If `/api/sigil/analyze-stream` returns 404, Vercel is still serving the frontend without the API route. Confirm that the latest commit is deployed and that the project root matches one of the included configs.

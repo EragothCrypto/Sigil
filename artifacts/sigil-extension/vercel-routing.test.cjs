@@ -87,6 +87,7 @@ test("api-server repairs Replit-created database schema on first use", () => {
   assert.match(read("artifacts/api-server/src/routes/sigil/analysis-schema.ts"), /CREATE TABLE IF NOT EXISTS analyses/);
   assert.match(read("artifacts/api-server/src/routes/sigil/analysis-schema.ts"), /ADD COLUMN IF NOT EXISTS hall_of_shame/);
   assert.match(read("artifacts/api-server/src/routes/sigil/index.ts"), /ensureAnalysesSchema/);
+  assert.match(read("artifacts/api-server/src/routes/health.ts"), /database\.status === "ready"/);
 });
 
 test("extension production origin matches the deployed Sigil subdomain", () => {
