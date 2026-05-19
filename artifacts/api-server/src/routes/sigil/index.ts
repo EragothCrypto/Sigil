@@ -348,6 +348,7 @@ router.post("/analyze-stream", async (req, res) => {
     }
   }
 
+  let stage = "start";
   try {
     let details: Record<string, unknown> = {};
     let knownEntity = null;
@@ -360,6 +361,7 @@ router.post("/analyze-stream", async (req, res) => {
     const onEvent = (event: StreamEvent) => send(event as unknown as Record<string, unknown>);
 
     if (inputType === "transaction") {
+      stage = "fetch_transaction";
       const tx = await fetchTransaction(trimmed, network);
       const methodName = tx?.methodId ? decodeMethodId(tx.methodId) : null;
       if (tx?.to) knownEntity = lookupEntity(tx.to);
@@ -419,6 +421,7 @@ router.post("/analyze-stream", async (req, res) => {
       // Fetch price in parallel while AI streams
       const pricePromise = approval && tx?.to ? fetchTokenPrice(tx.to, network) : Promise.resolve(null);
 
+      stage = "ai_transaction";
       const [aiResult, priceResult] = await Promise.all([
         analyzeTransactionStreaming(tx, methodName, network, trimmed, onEvent, knownEntity, approvalInfo),
         pricePromise,
@@ -467,6 +470,7 @@ router.post("/analyze-stream", async (req, res) => {
         riskScore: aiResult.riskScore,
       });
 
+      stage = "save_transaction";
       const [saved] = await db
         .insert(analysesTable)
         .values({
@@ -512,9 +516,11 @@ router.post("/analyze-stream", async (req, res) => {
     }
 
     if (inputType === "contract") {
+      stage = "fetch_contract";
       knownEntity = lookupEntity(trimmed);
       const contract = await fetchContract(trimmed, network);
 
+      stage = "ai_contract";
       const [aiResult, contractReputation] = await Promise.all([
         analyzeContractStreaming(contract, network, onEvent, knownEntity),
         calculateContractReputation(trimmed, network, contract.isVerified, contract.isToken ?? false, knownEntity),
@@ -545,6 +551,7 @@ router.post("/analyze-stream", async (req, res) => {
         riskScore: aiResult.riskScore,
       });
 
+      stage = "save_contract";
       const [saved] = await db
         .insert(analysesTable)
         .values({
@@ -590,7 +597,9 @@ router.post("/analyze-stream", async (req, res) => {
     }
 
     // Unknown input type
+    stage = "ai_unknown";
     const aiResult = await analyzeUnknown(trimmed, network);
+    stage = "save_unknown";
     const [saved] = await db
       .insert(analysesTable)
       .values({
@@ -611,7 +620,7 @@ router.post("/analyze-stream", async (req, res) => {
     res.end();
   } catch (err) {
     req.log.error({ err }, "Streaming analysis failed");
-    send({ type: "error", message: "Failed to analyze input — please try again." });
+    send({ type: "error", message: `Failed to analyze input — please try again. (${stage})` });
     res.end();
   }
 });

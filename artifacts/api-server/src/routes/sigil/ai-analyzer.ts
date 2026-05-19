@@ -369,46 +369,67 @@ export async function runStreamingAnalysis(
 
   onEvent({ type: "step", step: 2, label: "Generating security verdict…" });
 
-  // Step 2 — STREAMING
-  const stream = await openai.chat.completions.create({
-    model: chatModel(),
-    max_completion_tokens: 2048,
-    stream: true,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: step1UserContent },
-      { role: "assistant", content: step1Content },
-      { role: "user", content: buildStep2StreamingPrompt(step1Content) },
-    ],
-  });
+  const step2Messages = [
+    { role: "system" as const, content: SYSTEM_PROMPT },
+    { role: "user" as const, content: step1UserContent },
+    { role: "assistant" as const, content: step1Content },
+    { role: "user" as const, content: buildStep2StreamingPrompt(step1Content) },
+  ];
 
   let summaryBuffer = "";
   let jsonBuffer = "";
   let inJson = false;
   const SEP = "---JSON---";
 
-  for await (const chunk of stream) {
-    const text = chunk.choices[0]?.delta?.content ?? "";
-    if (!text) continue;
+  try {
+    // Step 2 — STREAMING
+    const stream = await openai.chat.completions.create({
+      model: chatModel(),
+      max_completion_tokens: 2048,
+      stream: true,
+      messages: step2Messages,
+    });
 
-    if (!inJson) {
-      const combined = summaryBuffer + text;
-      const sepIdx = combined.indexOf(SEP);
-      if (sepIdx !== -1) {
-        // Emit the tail of the summary text up to the separator
-        const newSummaryTail = combined.slice(summaryBuffer.length, sepIdx);
-        if (newSummaryTail) onEvent({ type: "token", text: newSummaryTail });
-        summaryBuffer = combined.slice(0, sepIdx).trim();
-        jsonBuffer = combined.slice(sepIdx + SEP.length);
-        inJson = true;
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content ?? "";
+      if (!text) continue;
+
+      if (!inJson) {
+        const combined = summaryBuffer + text;
+        const sepIdx = combined.indexOf(SEP);
+        if (sepIdx !== -1) {
+          // Emit the tail of the summary text up to the separator
+          const newSummaryTail = combined.slice(summaryBuffer.length, sepIdx);
+          if (newSummaryTail) onEvent({ type: "token", text: newSummaryTail });
+          summaryBuffer = combined.slice(0, sepIdx).trim();
+          jsonBuffer = combined.slice(sepIdx + SEP.length);
+          inJson = true;
+        } else {
+          // Stream summary tokens live
+          onEvent({ type: "token", text });
+          summaryBuffer += text;
+        }
       } else {
-        // Stream summary tokens live
-        onEvent({ type: "token", text });
-        summaryBuffer += text;
+        // Accumulate JSON silently
+        jsonBuffer += text;
       }
+    }
+  } catch {
+    const fallbackResponse = await openai.chat.completions.create({
+      model: chatModel(),
+      max_completion_tokens: 2048,
+      messages: step2Messages,
+    });
+
+    const fallbackContent = fallbackResponse.choices[0]?.message?.content ?? "{}";
+    const sepIdx = fallbackContent.indexOf(SEP);
+    if (sepIdx !== -1) {
+      const fallbackSummary = fallbackContent.slice(0, sepIdx).trim();
+      if (!summaryBuffer.trim() && fallbackSummary) onEvent({ type: "token", text: fallbackSummary });
+      summaryBuffer = summaryBuffer.trim() || fallbackSummary;
+      jsonBuffer = fallbackContent.slice(sepIdx + SEP.length);
     } else {
-      // Accumulate JSON silently
-      jsonBuffer += text;
+      jsonBuffer = fallbackContent;
     }
   }
 
