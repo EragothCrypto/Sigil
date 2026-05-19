@@ -672,6 +672,23 @@ router.get("/hall-of-shame", async (_req, res) => {
 router.get("/history", async (req, res) => {
   await ensureAnalysesSchema();
 
+  const requestedId = typeof req.query.id === "string" ? parseInt(req.query.id) : NaN;
+  if (!isNaN(requestedId)) {
+    const [record] = await db
+      .select()
+      .from(analysesTable)
+      .where(eq(analysesTable.id, requestedId))
+      .limit(1);
+
+    if (!record) {
+      res.status(404).json({ error: "not_found", message: "Analysis not found" });
+      return;
+    }
+
+    res.json(formatAnalysisRecord(record));
+    return;
+  }
+
   const limit = Math.min(parseInt(String(req.query.limit ?? "20")), 100);
   const records = await db
     .select()
@@ -718,7 +735,13 @@ router.get("/history/:id", async (req, res) => {
     return;
   }
 
-  res.json({
+  res.json(formatAnalysisRecord(record));
+});
+
+export default router;
+
+function formatAnalysisRecord(record: typeof analysesTable.$inferSelect) {
+  return {
     id: String(record.id),
     input: record.input,
     inputType: record.inputType,
@@ -732,7 +755,5 @@ router.get("/history/:id", async (req, res) => {
     positives: record.positives as string[],
     details: record.details as Record<string, unknown>,
     createdAt: record.createdAt.toISOString(),
-  });
-});
-
-export default router;
+  };
+}

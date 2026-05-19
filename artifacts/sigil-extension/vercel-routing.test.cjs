@@ -94,6 +94,11 @@ test("api-server repairs Replit-created database schema on first use", () => {
   assert.match(read("artifacts/api-server/src/routes/health.ts"), /database\.status === "ready"/);
 });
 
+test("analysis detail fetch uses query route to avoid Vercel dynamic param stripping", () => {
+  assert.match(read("lib/api-client-react/src/generated/api.ts"), /history\?id=/);
+  assert.match(read("artifacts/api-server/src/routes/sigil/index.ts"), /req\.query\.id/);
+});
+
 test("extension production origin matches the deployed Sigil subdomain", () => {
   assert.match(read("artifacts/sigil-extension/core.js"), /https:\/\/sigil\.s3ntrylabs\.com/);
   assert.match(read("artifacts/sigil-extension/manifest.json"), /https:\/\/sigil\.s3ntrylabs\.com\/\*/);

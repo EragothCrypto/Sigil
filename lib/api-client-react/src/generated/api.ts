@@ -385,7 +385,7 @@ export function useGetAnalysisHistory<
  * @summary Get a specific analysis by ID
  */
 export const getGetAnalysisByIdUrl = (id: string) => {
-  return `/api/sigil/history/${id}`;
+  return `/api/sigil/history?id=${encodeURIComponent(id)}`;
 };
 
 export const getAnalysisById = async (
@@ -399,7 +399,7 @@ export const getAnalysisById = async (
 };
 
 export const getGetAnalysisByIdQueryKey = (id: string) => {
-  return [`/api/sigil/history/${id}`] as const;
+  return [`/api/sigil/history`, id] as const;
 };
 
 export const getGetAnalysisByIdQueryOptions = <
