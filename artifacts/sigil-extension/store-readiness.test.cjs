@@ -31,10 +31,18 @@ test("manifest uses minimum permissions for store submission", () => {
   const manifest = JSON.parse(read("manifest.json"));
   assert.deepEqual(manifest.permissions, ["storage"]);
   assert.deepEqual(manifest.host_permissions, ["https://sigil.s3ntrylabs.com/*"]);
+  assert.equal(manifest.web_accessible_resources, undefined);
 });
 
-test("popup does not load remote resources", () => {
+test("extension package does not load remote executable code", () => {
   const popup = read("popup.html");
+  const files = ["popup.html", "popup.js", "content.js", "core.js", "inject.js", "background.js"];
+  for (const file of files) {
+    const source = read(file);
+    assert.doesNotMatch(source, /<script[^>]+src=["']https?:\/\//i, `${file} must not load remote scripts`);
+    assert.doesNotMatch(source, /\beval\s*\(/, `${file} must not use eval`);
+    assert.doesNotMatch(source, /new Function\s*\(/, `${file} must not compile dynamic code`);
+  }
   assert.doesNotMatch(popup, /https:\/\/fonts\.googleapis\.com/);
   assert.doesNotMatch(popup, /https:\/\/fonts\.gstatic\.com/);
 });
