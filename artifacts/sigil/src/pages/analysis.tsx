@@ -20,10 +20,16 @@ export default function AnalysisPage() {
     }
   });
 
+  const hasAnalysisData = Boolean(
+    data &&
+    !Array.isArray(data) &&
+    typeof (data as { input?: unknown }).input === 'string',
+  );
+
   const handleReanalyze = () => {
-    if (!data) return;
+    if (!hasAnalysisData) return;
     reanalyzeMutation.mutate({
-      data: { input: data.input, network: data.network, fresh: true }
+      data: { input: (data as any).input, network: (data as any).network, fresh: true }
     });
   };
 
@@ -71,7 +77,7 @@ export default function AnalysisPage() {
         </div>
       )}
 
-      {!isLoading && (isError || !data) && (
+      {!isLoading && (isError || !hasAnalysisData) && (
         <motion.div
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -89,7 +95,7 @@ export default function AnalysisPage() {
         </motion.div>
       )}
 
-      {!isLoading && !isError && data && (
+      {!isLoading && !isError && hasAnalysisData && (
         <AnalysisResultView data={data as any} />
       )}
     </div>

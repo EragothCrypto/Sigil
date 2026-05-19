@@ -48,6 +48,8 @@ test("root Vercel API functions import the built Express app", () => {
     assert.match(read(route[0]), /api-server\/dist\/app\.mjs/);
     assert.match(read(route[0]), new RegExp(route[1].replaceAll("/", "\\/")));
   }
+  assert.match(read("api/sigil/history/[id].js"), /extractHistoryId/);
+  assert.match(read("api/sigil/history/[id].js"), /__missing__/);
   assert.match(read("api/index.js"), /artifacts\/api-server\/dist\/app\.mjs/);
   assert.match(read("api/[...path].js"), /artifacts\/api-server\/dist\/app\.mjs/);
   assert.match(read("api/[...path].js"), /req\.url\.startsWith\("\/api"\)/);
@@ -74,6 +76,8 @@ test("artifact-root Vercel config exists for Vercel projects rooted at artifacts
     assert.match(read(route[0]), /api-server\/dist\/app\.mjs/);
     assert.match(read(route[0]), new RegExp(route[1].replaceAll("/", "\\/")));
   }
+  assert.match(read("artifacts/sigil/api/sigil/history/[id].js"), /extractHistoryId/);
+  assert.match(read("artifacts/sigil/api/sigil/history/[id].js"), /__missing__/);
   assert.match(read("artifacts/sigil/api/index.js"), /api-server\/dist\/app\.mjs/);
   assert.match(read("artifacts/sigil/api/[...path].js"), /api-server\/dist\/app\.mjs/);
   assert.match(read("artifacts/sigil/api/[...path].js"), /req\.url\.startsWith\("\/api"\)/);
