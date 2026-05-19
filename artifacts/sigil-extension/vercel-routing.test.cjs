@@ -83,6 +83,12 @@ test("api-server build emits an app bundle for Vercel functions", () => {
   assert.match(read("artifacts/api-server/build.mjs"), /src\/app\.ts/);
 });
 
+test("api-server repairs Replit-created database schema on first use", () => {
+  assert.match(read("artifacts/api-server/src/routes/sigil/analysis-schema.ts"), /CREATE TABLE IF NOT EXISTS analyses/);
+  assert.match(read("artifacts/api-server/src/routes/sigil/analysis-schema.ts"), /ADD COLUMN IF NOT EXISTS hall_of_shame/);
+  assert.match(read("artifacts/api-server/src/routes/sigil/index.ts"), /ensureAnalysesSchema/);
+});
+
 test("extension production origin matches the deployed Sigil subdomain", () => {
   assert.match(read("artifacts/sigil-extension/core.js"), /https:\/\/sigil\.s3ntrylabs\.com/);
   assert.match(read("artifacts/sigil-extension/manifest.json"), /https:\/\/sigil\.s3ntrylabs\.com\/\*/);

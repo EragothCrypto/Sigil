@@ -34,6 +34,8 @@ SIGIL_AI_MODEL=deepseek/deepseek-v4-flash:free
 
 `DATABASE_URL` must point at a hosted Postgres database. Vercel Postgres, Neon, Supabase, Railway, or another managed Postgres provider can work as long as the URL is valid from Vercel Functions.
 
+Sigil creates or updates its small `analyses` table on first API use. For manual database management, the same schema can also be pushed from the repo with `pnpm --filter @workspace/db push`.
+
 ## Local Setup
 
 Copy the template and fill in real values:

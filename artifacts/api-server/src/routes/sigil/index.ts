@@ -26,6 +26,7 @@ import { computeContractDiff } from "./contract-diff.js";
 import { computeScoreFactors } from "./score-factors.js";
 import { fetchTokenPrice, computeApprovalUsdValue } from "./token-price.js";
 import { analysisCache, cacheKey } from "./analysis-cache.js";
+import { ensureAnalysesSchema } from "./analysis-schema.js";
 
 const router: IRouter = Router();
 
@@ -51,6 +52,8 @@ router.post("/analyze", async (req, res) => {
   }
 
   try {
+    await ensureAnalysesSchema();
+
     let aiResult;
     let details: Record<string, unknown> = {};
 
@@ -308,6 +311,14 @@ router.post("/analyze-stream", async (req, res) => {
   const trimmed = input.trim();
   const inputType = detectInputType(trimmed);
   const key = cacheKey(trimmed, network);
+
+  try {
+    await ensureAnalysesSchema();
+  } catch (err) {
+    req.log.error({ err }, "Analysis schema check failed");
+    res.status(500).json({ error: "database_not_ready", message: "Analysis storage is not ready" });
+    return;
+  }
 
   // SSE setup
   res.setHeader("Content-Type", "text/event-stream");
@@ -618,6 +629,8 @@ router.post("/contract-diff", async (req, res) => {
 });
 
 router.get("/hall-of-shame", async (_req, res) => {
+  await ensureAnalysesSchema();
+
   const records = await db
     .select()
     .from(analysesTable)
@@ -645,6 +658,8 @@ router.get("/hall-of-shame", async (_req, res) => {
 });
 
 router.get("/history", async (req, res) => {
+  await ensureAnalysesSchema();
+
   const limit = Math.min(parseInt(String(req.query.limit ?? "20")), 100);
   const records = await db
     .select()
@@ -672,6 +687,8 @@ router.get("/history", async (req, res) => {
 });
 
 router.get("/history/:id", async (req, res) => {
+  await ensureAnalysesSchema();
+
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(404).json({ error: "not_found", message: "Analysis not found" });

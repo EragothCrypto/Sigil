@@ -7,6 +7,7 @@
 import { db } from "@workspace/db";
 import { analysesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import { ensureAnalysesSchema } from "./analysis-schema.js";
 import { logger } from "../../lib/logger.js";
 
 interface SeedEntry {
@@ -207,6 +208,8 @@ const SEED_ENTRIES: SeedEntry[] = [
 
 export async function seedHallOfShame(): Promise<void> {
   try {
+    await ensureAnalysesSchema();
+
     const existing = await db
       .select({ id: analysesTable.id })
       .from(analysesTable)
