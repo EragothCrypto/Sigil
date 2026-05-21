@@ -207,9 +207,9 @@ Existing verification:
 
 ## Open Questions
 
-- Which revoke destination should be used first: explorer token approval pages, Revoke.cash, or a neutral explorer link?
-- Should zero/revoke approval events be shown as historical context or excluded from active risk in v1?
-- Should the scan default to Ethereum mainnet or remember the last selected network?
+- Revoke destination: use Revoke.cash first, with chain-specific `chainId` query params and explorer links for spender inspection.
+- Zero/revoke approvals: exclude them from active risk in v1 after using the latest approval event per token/spender pair.
+- Default network: Ethereum mainnet for v1, matching the rest of Sigil's default analysis flow.
 
 ## Acceptance Criteria
 
