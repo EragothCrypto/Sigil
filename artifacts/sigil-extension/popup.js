@@ -17,6 +17,9 @@ const elements = {
   trustedSiteInput: document.getElementById("trustedSiteInput"),
   trustedSites: document.getElementById("trustedSites"),
   addSiteBtn: document.getElementById("addSiteBtn"),
+  siteCheckInput: document.getElementById("siteCheckInput"),
+  siteResult: document.getElementById("siteResult"),
+  checkSiteBtn: document.getElementById("checkSiteBtn"),
   trustedContractInput: document.getElementById("trustedContractInput"),
   trustedContracts: document.getElementById("trustedContracts"),
   addContractBtn: document.getElementById("addContractBtn"),
@@ -124,6 +127,28 @@ function renderHistory() {
   });
 }
 
+function renderSiteResult(value) {
+  const input = String(value || "").trim();
+  if (!input) {
+    elements.siteResult.innerHTML = `<div class="empty">Enter a domain to check</div>`;
+    return;
+  }
+
+  const result = core.evaluateSiteReputation(input);
+  const verdict = result.verdict || "caution";
+  elements.siteResult.innerHTML = `
+    <div class="site-result">
+      <div class="site-result-top">
+        <div class="site-host"></div>
+        <div class="pill ${verdict}">${verdict}</div>
+      </div>
+      <div class="site-summary"></div>
+    </div>
+  `;
+  elements.siteResult.querySelector(".site-host").textContent = result.host || input;
+  elements.siteResult.querySelector(".site-summary").textContent = result.summary;
+}
+
 function render() {
   elements.enabledToggle.checked = settings.enabled;
   elements.apiUrlInput.value = settings.apiUrl;
@@ -145,6 +170,7 @@ function render() {
   });
 
   renderHistory();
+  renderSiteResult(elements.siteCheckInput.value);
 }
 
 async function saveSettings(message) {
@@ -199,6 +225,10 @@ elements.addSiteBtn.addEventListener("click", async () => {
   settings.trustedSites = Array.from(new Set([...settings.trustedSites, value]));
   elements.trustedSiteInput.value = "";
   await saveSettings("Site trusted");
+});
+
+elements.checkSiteBtn.addEventListener("click", () => {
+  renderSiteResult(elements.siteCheckInput.value);
 });
 
 elements.addContractBtn.addEventListener("click", async () => {

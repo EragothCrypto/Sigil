@@ -744,16 +744,16 @@ The browser extension is the primary product surface. The web app remains the de
 
 Goal: make Sigil useful every time a user touches a wallet, without feeling heavy, slow, or intrusive.
 
-- [ ] Harden the browser extension interception layer for MetaMask, Rabby, Coinbase Wallet, Trust Wallet, Frame, and other EIP-1193 providers
-- [ ] Add a fast local pre-screen before API calls so obvious safe/unsafe prompts render immediately
-- [ ] Support `eth_sendTransaction`, `eth_signTransaction`, `eth_sign`, `personal_sign`, and `eth_signTypedData_*` with method-specific explanations
-- [ ] Improve the extension overlay into a compact decision surface: verdict, risk score, asset changes, permissions, and one clear next action
-- [ ] Add configurable protection modes: Quiet, Standard, and Strict
-- [ ] Add trusted-site and trusted-contract allowlists with clear expiry controls
-- [ ] Add dangerous-action friction: require an explicit second confirmation for critical verdicts
-- [ ] Store lightweight local history in the extension so users can review recent prompts without creating an account
-- [ ] Add a one-click "Open full analysis" handoff from extension overlay to the web app
-- [ ] Package the extension for Chrome Web Store review, with a documented manual install path kept for power users
+- [x] Harden the browser extension interception layer for MetaMask, Rabby, Coinbase Wallet, Trust Wallet, Frame, and other EIP-1193 providers
+- [x] Add a fast local pre-screen before API calls so obvious safe/unsafe prompts render immediately
+- [x] Support `eth_sendTransaction`, `eth_signTransaction`, `eth_sign`, `personal_sign`, and `eth_signTypedData_*` with method-specific explanations
+- [x] Improve the extension overlay into a compact decision surface: verdict, risk score, asset changes, permissions, and one clear next action
+- [x] Add configurable protection modes: Quiet, Standard, and Strict
+- [x] Add trusted-site and trusted-contract allowlists with clear expiry controls
+- [x] Add dangerous-action friction: require an explicit second confirmation for critical verdicts
+- [x] Store lightweight local history in the extension so users can review recent prompts without creating an account
+- [x] Add a one-click "Open full analysis" handoff from extension overlay to the web app
+- [x] Package the extension for Chrome Web Store review, with a documented manual install path kept for power users
 
 ### Phase 3 — Lightweight Daily Workflows
 
@@ -762,7 +762,7 @@ Goal: make Sigil fit natural crypto habits instead of asking users to visit anot
 - [x] Approval Health Check: show outstanding unlimited approvals and revoke recommendations
 - [x] Address Watchlist: let users monitor important wallets, vaults, and multisigs without custody or wallet connection
 - [ ] dApp Session Summary: after a user interacts with a site, summarize approvals, signatures, and risks from that session
-- [ ] Site Reputation Layer: flag known phishing domains, suspicious clones, and recently created dApp frontends
+- [x] Site Reputation Layer: flag known phishing domains, suspicious clones, and recently created dApp frontends
 - [ ] Copy/Paste Analyzer: detect addresses, tx hashes, and calldata copied in the browser and offer a lightweight scan
 - [ ] Notification policy: notify only for critical findings, watched-wallet risks, or unusual approval changes
 - [ ] Sync optional settings across browsers while keeping analysis history local by default

@@ -295,6 +295,35 @@
     .caution { color: #fde68a; background: rgba(245,158,11,0.13); }
     .dangerous { color: #fca5a5; background: rgba(239,68,68,0.14); }
 
+    .site-result {
+      margin-top: 8px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 9px;
+      background: rgba(255,255,255,0.035);
+      padding: 9px;
+    }
+
+    .site-result-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+
+    .site-host {
+      color: rgba(255,255,255,0.78);
+      font: 700 11px 'JetBrains Mono', monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .site-summary {
+      color: rgba(255,255,255,0.5);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
     .history-meta {
       color: rgba(255,255,255,0.38);
       font: 600 10px 'JetBrains Mono', monospace;
@@ -393,6 +422,15 @@
       <div class="section-label">API Endpoint</div>
       <input class="field" type="text" id="apiUrlInput" placeholder="https://your-sigil-api.example" />
       <button class="save-btn" id="saveBtn" type="button">Save Settings</button>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <div class="section-label">Site Reputation</div>
+        <button class="ghost-btn" id="checkSiteBtn" type="button">Check</button>
+      </div>
+      <input class="field" type="text" id="siteCheckInput" placeholder="app.example.xyz" />
+      <div id="siteResult"></div>
     </div>
 
     <div class="section">

@@ -31,6 +31,39 @@
     eth_signTypedData_v4: "Typed Data Signature",
   };
 
+  const TRUSTED_BRANDS = [
+    { brand: "Uniswap", domains: ["app.uniswap.org", "uniswap.org"] },
+    { brand: "Aave", domains: ["app.aave.com", "aave.com"] },
+    { brand: "OpenSea", domains: ["opensea.io"] },
+    { brand: "Curve", domains: ["curve.fi"] },
+    { brand: "1inch", domains: ["app.1inch.io", "1inch.io"] },
+    { brand: "Safe", domains: ["app.safe.global", "safe.global"] },
+    { brand: "Lido", domains: ["stake.lido.fi", "lido.fi"] },
+    { brand: "Balancer", domains: ["app.balancer.fi", "balancer.fi"] },
+    { brand: "Sushi", domains: ["www.sushi.com", "sushi.com"] },
+    { brand: "Sigil", domains: ["sigil.s3ntrylabs.com", "s3ntrylabs.com"] },
+  ];
+
+  const KNOWN_DANGEROUS_DOMAINS = [
+    "metamask-security-alert.example",
+    "walletconnect-verify.example",
+    "opensea-login.example",
+    "uniswap-airdrop-claim.example",
+  ];
+
+  const SUSPICIOUS_TOKENS = [
+    "airdrop",
+    "claim",
+    "verify",
+    "validation",
+    "security",
+    "support",
+    "bonus",
+    "reward",
+    "free",
+    "urgent",
+  ];
+
   function normalizeArray(value) {
     if (!Array.isArray(value)) return [];
     return value.map((item) => String(item).trim()).filter(Boolean);
@@ -104,6 +137,138 @@
     }
   }
 
+  function normalizeHost(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^https?:\/\//i, "")
+      .replace(/^www\./i, "")
+      .split("/")[0]
+      .split(":")[0]
+      .toLowerCase();
+  }
+
+  function hostMatches(host, domain) {
+    const normalizedHost = normalizeHost(host);
+    const normalizedDomain = normalizeHost(domain);
+    return normalizedHost === normalizedDomain || normalizedHost.endsWith(`.${normalizedDomain}`);
+  }
+
+  function getHostFromUrl(value) {
+    try {
+      return normalizeHost(new URL(value).hostname);
+    } catch {
+      return normalizeHost(value);
+    }
+  }
+
+  function compactHost(value) {
+    return normalizeHost(value).replace(/[^a-z0-9]/g, "");
+  }
+
+  function brandForTrustedHost(host) {
+    for (const entry of TRUSTED_BRANDS) {
+      if (entry.domains.some((domain) => hostMatches(host, domain))) return entry;
+    }
+    return null;
+  }
+
+  function brandForCloneLikeHost(host) {
+    const compact = compactHost(host);
+    for (const entry of TRUSTED_BRANDS) {
+      const brand = entry.brand.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const isOfficial = entry.domains.some((domain) => hostMatches(host, domain));
+      if (!isOfficial && brand.length >= 4 && compact.includes(brand)) return entry;
+    }
+    return null;
+  }
+
+  function evaluateSiteReputation(url) {
+    const host = getHostFromUrl(url);
+    const warnings = [];
+
+    if (!host) {
+      return {
+        verdict: "caution",
+        riskScore: 35,
+        riskLevel: "medium",
+        brand: "",
+        host: "",
+        summary: "Sigil could not read this site's domain.",
+        warnings: ["Review the site URL manually before signing."],
+        requiresApi: false,
+      };
+    }
+
+    if (KNOWN_DANGEROUS_DOMAINS.some((domain) => hostMatches(host, domain))) {
+      return {
+        verdict: "dangerous",
+        riskScore: 94,
+        riskLevel: "critical",
+        brand: "",
+        host,
+        summary: "This domain matches Sigil's local phishing blocklist.",
+        warnings: ["Cancel this request unless you can independently verify the site."],
+        requiresApi: false,
+      };
+    }
+
+    if (host.startsWith("xn--")) {
+      warnings.push("This domain uses punycode, which can hide lookalike characters.");
+    }
+
+    const trustedBrand = brandForTrustedHost(host);
+    if (trustedBrand && warnings.length === 0) {
+      return {
+        verdict: "safe",
+        riskScore: 8,
+        riskLevel: "low",
+        brand: trustedBrand.brand,
+        host,
+        summary: `${trustedBrand.brand} official domain recognized.`,
+        warnings: [],
+        requiresApi: false,
+      };
+    }
+
+    const cloneBrand = brandForCloneLikeHost(host);
+    if (cloneBrand) {
+      warnings.push(`This domain references ${cloneBrand.brand} but is not on Sigil's official-domain list.`);
+    }
+
+    const tokenHits = SUSPICIOUS_TOKENS.filter((token) => host.includes(token));
+    if (tokenHits.length) {
+      warnings.push(`Domain contains risky campaign wording: ${tokenHits.slice(0, 3).join(", ")}.`);
+    }
+
+    if ((host.match(/-/g) || []).length >= 2) {
+      warnings.push("Domain uses multiple hyphens, a common pattern in short-lived phishing pages.");
+    }
+
+    if (warnings.length) {
+      return {
+        verdict: "caution",
+        riskScore: cloneBrand ? 72 : 58,
+        riskLevel: cloneBrand ? "high" : "medium",
+        brand: cloneBrand?.brand || trustedBrand?.brand || "",
+        host,
+        summary: "This site has reputation signals worth reviewing before signing.",
+        warnings,
+        requiresApi: false,
+      };
+    }
+
+    return {
+      verdict: "caution",
+      riskScore: 28,
+      riskLevel: "medium",
+      brand: "",
+      host,
+      summary: "This site is not in Sigil's local trusted or dangerous domain lists.",
+      warnings: ["Unknown sites are not automatically unsafe, but verify the URL before signing."],
+      requiresApi: false,
+    };
+  }
+
   function isTrustedSite(url, trustedSites) {
     const host = getHostname(url);
     if (!host) return false;
@@ -156,6 +321,22 @@
       };
     }
 
+    const siteReputation = evaluateSiteReputation(url);
+
+    if (siteReputation.verdict === "dangerous") {
+      return {
+        action: "show",
+        reason: "site_reputation",
+        verdict: "dangerous",
+        riskScore: siteReputation.riskScore,
+        riskLevel: siteReputation.riskLevel,
+        summary: siteReputation.summary,
+        warnings: siteReputation.warnings,
+        siteReputation,
+        requiresApi: false,
+      };
+    }
+
     if (isTrustedSite(url, normalized.trustedSites)) {
       return {
         action: "proceed",
@@ -191,9 +372,11 @@
         riskLevel: "critical",
         summary: "This transaction appears to grant unlimited token spending permission.",
         warnings: [
+          ...siteReputation.warnings,
           "Unlimited approvals let the spender move this token later without another wallet prompt.",
           "Only continue if you fully trust the site and spender contract.",
         ],
+        siteReputation,
         requiresApi: true,
       };
     }
@@ -215,12 +398,16 @@
     if (target && target.type === "typed_data") {
       return {
         action: "show",
-        reason: "typed_data",
+        reason: siteReputation.riskScore >= 58 ? "site_reputation" : "typed_data",
         verdict: "caution",
-        riskScore: normalized.protectionMode === "strict" ? 55 : 42,
+        riskScore: Math.max(siteReputation.riskScore, normalized.protectionMode === "strict" ? 55 : 42),
         riskLevel: normalized.protectionMode === "strict" ? "high" : "medium",
         summary: "This is a typed-data signature request. Review the domain and message carefully.",
-        warnings: ["Typed-data signatures can authorize orders, permits, or account actions without sending a transaction."],
+        warnings: [
+          ...siteReputation.warnings,
+          "Typed-data signatures can authorize orders, permits, or account actions without sending a transaction.",
+        ],
+        siteReputation,
         requiresApi: true,
       };
     }
@@ -229,10 +416,11 @@
       action: "show",
       reason: "needs_analysis",
       verdict: "caution",
-      riskScore: normalized.protectionMode === "strict" ? 45 : 30,
+      riskScore: Math.max(siteReputation.riskScore, normalized.protectionMode === "strict" ? 45 : 30),
       riskLevel: normalized.protectionMode === "strict" ? "medium" : "medium",
       summary: "Sigil should analyze this request before you sign.",
-      warnings: [],
+      warnings: siteReputation.warnings,
+      siteReputation,
       requiresApi: true,
     };
   }
@@ -273,6 +461,7 @@
     normalizeSettings,
     extractAnalysisTarget,
     getAnalysisInput,
+    evaluateSiteReputation,
     localPreScreen,
     requiresSecondConfirm,
     trimHistory,

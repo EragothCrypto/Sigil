@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'wouter';
-import { Puzzle, ScanLine, History, Zap, ShieldCheck, ListChecks } from 'lucide-react';
+import { Puzzle, ScanLine, History, Zap, ShieldCheck, ListChecks, Globe2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Scanner', icon: ScanLine },
   { href: '/approvals', label: 'Approvals', icon: ShieldCheck },
   { href: '/watchlist', label: 'Watchlist', icon: ListChecks },
+  { href: '/sites', label: 'Sites', icon: Globe2 },
   { href: '/simulate', label: 'Simulate', icon: Zap, pulse: true },
   { href: '/history', label: 'Feed', icon: History },
   { href: '/extension', label: 'Extension', icon: Puzzle },

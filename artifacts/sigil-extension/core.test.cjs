@@ -113,6 +113,35 @@ test("trusted sites bypass analysis", () => {
   assert.equal(result.reason, "trusted_site");
 });
 
+test("site reputation blocks known phishing domains locally", () => {
+  const reputation = core.evaluateSiteReputation("https://metamask-security-alert.example/connect");
+  assert.equal(reputation.verdict, "dangerous");
+  assert.equal(reputation.riskLevel, "critical");
+  assert.equal(reputation.requiresApi, false);
+
+  const result = core.localPreScreen({
+    method: "personal_sign",
+    target: { type: "personal_sign", data: "hello" },
+    url: "https://metamask-security-alert.example/connect",
+    settings: core.normalizeSettings({}),
+  });
+
+  assert.equal(result.reason, "site_reputation");
+  assert.equal(result.verdict, "dangerous");
+  assert.equal(result.action, "show");
+});
+
+test("site reputation identifies trusted and clone-like domains", () => {
+  const trusted = core.evaluateSiteReputation("https://app.uniswap.org/swap");
+  assert.equal(trusted.verdict, "safe");
+  assert.equal(trusted.brand, "Uniswap");
+
+  const clone = core.evaluateSiteReputation("https://uniswap-airdrop.example");
+  assert.equal(clone.verdict, "caution");
+  assert.equal(clone.riskLevel, "high");
+  assert.match(clone.warnings.join(" "), /Uniswap/);
+});
+
 test("history is trimmed to newest entries", () => {
   const entries = Array.from({ length: 25 }, (_, index) => ({ id: index }));
   const trimmed = core.trimHistory(entries, 20);
