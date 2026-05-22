@@ -719,9 +719,55 @@ The Hall of Shame is accessible directly from the homepage CTA and from the navi
 
 ### Product North Star
 
-Sigil should become the lightweight security layer that follows a crypto user through ordinary daily activity: browsing dApps, approving swaps, signing messages, checking token contracts, reviewing past approvals, and reacting to suspicious prompts before funds are at risk.
+Sigil should become the lightweight security layer that follows a crypto user through ordinary daily activity: browsing dApps, approving swaps, signing messages, checking token contracts, reviewing past approvals, monitoring wallet exposure, and reacting to suspicious prompts before funds are at risk.
 
-The browser extension is the primary product surface. The web app remains the deeper analysis console, history feed, and public education layer. API and SDK work should support that daily-use loop first, not turn Sigil into a heavy enterprise platform before the consumer workflow is excellent.
+Core positioning:
+
+> Understand wallet and transaction risk before you sign.
+
+Sigil should stay centered on before-you-sign safety and wallet-risk awareness. The product should not become a broad Web3 chatbot, portfolio tracker, tax tool, trading assistant, or generic crypto education app.
+
+The browser extension is the primary product surface. The web app remains the deeper analysis console, wallet-risk dashboard, history feed, and public education layer. API and SDK work should support that daily-use loop first, not turn Sigil into a heavy enterprise platform before the consumer workflow is excellent.
+
+### Product Pillars
+
+Use these pillars to decide whether a new feature belongs in Sigil:
+
+| Pillar | Purpose | Included surfaces |
+| --- | --- | --- |
+| Scan | Inspect one risky object before action | Transaction scanner, contract risk scanner, copy/paste analyzer |
+| Inspect | Explain current exposure and recent activity | Approval inspector, site reputation, dApp session summaries |
+| Monitor | Watch wallet risk over time | Wallet Risk Monitor, watched addresses, alerts, hygiene score |
+| Decide | Help users make a security decision | Security Decision Assistant inside transaction, approval, contract, and wallet-risk results |
+
+Features that do not improve one of these pillars should be deferred.
+
+### Monetization Direction
+
+Sigil Wallet Monitor is the natural premium upgrade inside Sigil. It should not become a separate app.
+
+Target pricing hypothesis:
+
+| Tier | Price | Intended value |
+| --- | ---: | --- |
+| Free | EUR 0 | Limited daily scans, extension protection, basic approval checks |
+| Sigil Plus | EUR 9/month | Saved Wallet Monitor, higher scan limits, hygiene score, fix-first checklist |
+| Sigil Pro | EUR 29/month | Multiple monitored wallets, advanced alerts, deeper history, exportable reports |
+| API | From EUR 99/month later | Team and dApp integrations after consumer pull is proven |
+
+Premium value should come from persistent monitoring, prioritization, and decision support, not from hiding basic safety warnings behind a paywall.
+
+### Assistant Boundaries
+
+The Web3 Decision Assistant should exist only as a security decision assistant inside Sigil. It should answer questions such as:
+
+- "Should I sign this transaction?"
+- "Is this approval risky?"
+- "What does this contract do?"
+- "Is this wallet exposed?"
+- "What should I revoke first?"
+
+It should not answer investment, trading, tax, token-picking, or broad Web3 research questions. Sigil can explain risk signals and recommended safety steps, but it must avoid guarantees such as "100% safe" or "certified secure."
 
 ### Phase 1 — Foundation (Delivered)
 - [x] Streaming AI analysis with two-step chain-of-thought
@@ -768,9 +814,31 @@ Goal: make Sigil fit natural crypto habits instead of asking users to visit anot
 - [ ] Sync optional settings across browsers while keeping analysis history local by default
 - [ ] Add a small onboarding flow that teaches approval risk, signatures, and sanctions in under two minutes
 
-### Phase 4 — Integration Surface
+### Phase 4 — Premium Wallet Monitor
 
-Goal: let wallets and dApps adopt Sigil signals without forcing end users into a separate platform.
+Goal: turn one-off scans into ongoing wallet-risk awareness without custody, seed phrases, or mandatory wallet connection.
+
+- [ ] Sigil Wallet Monitor: let users paste or optionally connect a public wallet address and save it for ongoing risk review
+- [ ] Show active risky approvals, suspicious contract exposure, scam interaction history, and wallet hygiene score
+- [ ] Add a prioritized "fix this first" checklist for revokes, risky approvals, suspicious sites, and exposed contracts
+- [ ] Add ongoing alerts for new critical exposure, watched-wallet risk changes, and unusual approval changes
+- [ ] Add premium limits and account gates without blocking basic safety checks for free users
+- [ ] Support multiple monitored wallets for Sigil Pro users
+
+### Phase 5 — Security Decision Assistant
+
+Goal: make Sigil's AI useful at the exact moment a user needs a security decision, without becoming a generic Web3 chatbot.
+
+- [ ] Add a scoped Security Decision Assistant to transaction, approval, contract, pasted-payload, and wallet-monitor results
+- [ ] Ground assistant answers in the current Sigil analysis, risk signals, wallet exposure, and known threat context
+- [ ] Add preset questions: "Should I sign?", "What does this approval allow?", "What are the red flags?", "What should I fix first?"
+- [ ] Add refusal boundaries for trading, investment, tax, legal, and general Web3 questions outside Sigil's safety scope
+- [ ] Add answer quality tests using known exploit, approval-drainer, phishing, safe-protocol, and ambiguous-risk scenarios
+- [ ] Make premium assistant usage part of Sigil Plus and Sigil Pro after the free safety flow is polished
+
+### Phase 6 — Integration Surface
+
+Goal: let wallets, dApps, and teams adopt Sigil signals after the consumer app and extension prove daily utility.
 
 - [ ] Public read-only analysis endpoint with strict rate limits and stable response schemas
 - [ ] Lightweight JavaScript SDK for dApps that want to show Sigil verdicts inline before wallet prompts
@@ -779,7 +847,7 @@ Goal: let wallets and dApps adopt Sigil signals without forcing end users into a
 - [ ] Partner mode for wallets: embed Sigil risk summaries directly into wallet confirmation screens
 - [ ] Exportable analysis receipts for users who want to share a security explanation with a team or community
 
-### Phase 5 — Intelligence Expansion
+### Phase 7 — Intelligence Expansion
 
 Goal: improve detection quality without bloating the user experience.
 
@@ -794,7 +862,6 @@ Goal: improve detection quality without bloating the user experience.
 
 These ideas remain valuable, but they should wait until the extension has strong retention and daily usage:
 
-- Paid enterprise API
 - Native mobile app
 - Hardware wallet plugins
 - DAO-governed threat intelligence
