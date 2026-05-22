@@ -305,6 +305,115 @@
     return /^f{64}$/i.test(amountSlot) || BigInt(`0x${amountSlot}`) > BigInt("1000000000000000000000000000000");
   }
 
+  function looksLikeUrl(value) {
+    const text = String(value || "").trim();
+    if (/^https?:\/\//i.test(text)) return true;
+    return /^[a-z0-9-]+(\.[a-z0-9-]+)+([/?#].*)?$/i.test(text) && !/^0x/i.test(text);
+  }
+
+  function looksLikeTypedData(value) {
+    try {
+      const parsed = JSON.parse(value);
+      return Boolean(parsed && typeof parsed === "object" && (parsed.domain || parsed.message || parsed.types));
+    } catch {
+      return false;
+    }
+  }
+
+  function classifyPastedInput(value) {
+    const raw = String(value || "").trim();
+    const compact = raw.replace(/\s+/g, "");
+    const lower = compact.toLowerCase();
+
+    if (!raw) {
+      return {
+        kind: "empty",
+        scanMode: "none",
+        label: "Nothing pasted",
+        summary: "Paste an address, transaction hash, calldata, URL, or typed data to inspect it.",
+        warnings: [],
+        riskHint: "low",
+      };
+    }
+
+    if (/^0x[a-f0-9]{40}$/i.test(compact)) {
+      return {
+        kind: "address",
+        scanMode: "analyze",
+        label: "EVM address",
+        value: compact,
+        summary: "This looks like a wallet or contract address.",
+        warnings: ["Verify the network and source before sending funds or approving permissions."],
+        riskHint: "medium",
+      };
+    }
+
+    if (/^0x[a-f0-9]{64}$/i.test(compact)) {
+      return {
+        kind: "hash",
+        scanMode: "analyze",
+        label: "Transaction hash",
+        value: compact,
+        summary: "This looks like a transaction hash.",
+        warnings: [],
+        riskHint: "low",
+      };
+    }
+
+    if (/^0x[a-f0-9]{8,}$/i.test(compact)) {
+      const isApproval = lower.startsWith("0x095ea7b3") || lower.startsWith("0x39509351");
+      return {
+        kind: isApproval ? "approval_calldata" : "calldata",
+        scanMode: "simulate",
+        label: isApproval ? "Token approval calldata" : "Calldata",
+        value: compact,
+        summary: isApproval
+          ? "This calldata appears to grant or increase token spending permission."
+          : "This looks like raw contract calldata.",
+        warnings: isApproval
+          ? ["Approval calldata can grant token spending rights without an immediate transfer."]
+          : ["Raw calldata can hide contract calls that are hard to read in wallets."],
+        riskHint: isApproval ? "high" : "medium",
+      };
+    }
+
+    if (looksLikeUrl(raw)) {
+      const reputation = evaluateSiteReputation(raw);
+      return {
+        kind: "url",
+        scanMode: "local",
+        label: "Site or URL",
+        value: raw,
+        summary: reputation.summary,
+        warnings: reputation.warnings,
+        riskHint: reputation.riskLevel,
+        siteReputation: reputation,
+      };
+    }
+
+    if (looksLikeTypedData(raw)) {
+      return {
+        kind: "typed_data",
+        scanMode: "simulate",
+        label: "Typed data",
+        value: raw,
+        summary: "This looks like structured signing data.",
+        warnings: ["Typed data can authorize permits, orders, or account actions without sending a transaction."],
+        riskHint: "medium",
+      };
+    }
+
+    return {
+      kind: "unknown",
+      scanMode: "simulate",
+      label: "Unknown payload",
+      value: raw,
+      summary: "Sigil can still inspect this as raw signing or transaction context.",
+      warnings: ["Only analyze text you intentionally paste into Sigil."],
+      riskHint: "medium",
+    };
+  }
+
   function isApprovalRequest(target) {
     if (!target || target.type !== "transaction") return false;
     const data = String((target.data || {}).data || (target.data || {}).input || "").toLowerCase();
@@ -565,5 +674,6 @@
     createSessionEvent,
     summarizeSessionEvents,
     recordSessionEvent,
+    classifyPastedInput,
   };
 });

@@ -354,6 +354,42 @@
       line-height: 1.4;
     }
 
+    .paste-result {
+      margin-top: 8px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 9px;
+      background: rgba(255,255,255,0.035);
+      padding: 9px;
+    }
+
+    .paste-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+
+    .paste-kind {
+      color: rgba(255,255,255,0.82);
+      font: 800 11px 'JetBrains Mono', monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .paste-summary {
+      color: rgba(255,255,255,0.52);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .paste-output {
+      margin-top: 7px;
+      color: rgba(255,255,255,0.6);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
     .history-meta {
       color: rgba(255,255,255,0.38);
       font: 600 10px 'JetBrains Mono', monospace;
@@ -490,6 +526,15 @@
       </div>
       <input class="field" type="text" id="siteCheckInput" placeholder="app.example.xyz" />
       <div id="siteResult"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <div class="section-label">Copy/Paste Analyzer</div>
+        <button class="ghost-btn" id="pasteAnalyzeBtn" type="button">Analyze</button>
+      </div>
+      <textarea class="textarea" id="pasteInput" placeholder="Paste an address, tx hash, calldata, URL, or typed data"></textarea>
+      <div id="pasteResult"></div>
     </div>
 
     <div class="section">

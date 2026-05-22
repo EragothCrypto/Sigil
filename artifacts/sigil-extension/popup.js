@@ -20,6 +20,9 @@ const elements = {
   siteCheckInput: document.getElementById("siteCheckInput"),
   siteResult: document.getElementById("siteResult"),
   checkSiteBtn: document.getElementById("checkSiteBtn"),
+  pasteInput: document.getElementById("pasteInput"),
+  pasteResult: document.getElementById("pasteResult"),
+  pasteAnalyzeBtn: document.getElementById("pasteAnalyzeBtn"),
   trustedContractInput: document.getElementById("trustedContractInput"),
   trustedContracts: document.getElementById("trustedContracts"),
   addContractBtn: document.getElementById("addContractBtn"),
@@ -75,6 +78,25 @@ function formatDate(timestamp) {
   } catch {
     return "";
   }
+}
+
+function verdictClass(value) {
+  const normalized = String(value || "").toLowerCase();
+  if (normalized === "dangerous" || normalized === "critical" || normalized === "high") return "dangerous";
+  if (normalized === "caution" || normalized === "warning" || normalized === "medium") return "caution";
+  return "safe";
+}
+
+function extractApiSummary(payload) {
+  const result = payload?.result || payload || {};
+  const verdict = result.verdict || result.riskLevel || result.status || "review";
+  const score = Number.isFinite(Number(result.riskScore)) ? Number(result.riskScore) : null;
+  const summary = result.summary || result.verdictReason || result.explanation || result.reason || "Sigil returned an analysis.";
+  return {
+    verdict,
+    score,
+    summary,
+  };
 }
 
 function renderChips(container, values, remove) {
@@ -187,6 +209,47 @@ function renderSiteResult(value) {
   elements.siteResult.querySelector(".site-summary").textContent = result.summary;
 }
 
+function renderPasteResult(value, output) {
+  const classification = core.classifyPastedInput(value);
+  if (classification.kind === "empty") {
+    elements.pasteResult.innerHTML = `<div class="empty"></div>`;
+    elements.pasteResult.querySelector(".empty").textContent = classification.summary;
+    return classification;
+  }
+
+  const pillClass = verdictClass(output?.verdict || classification.riskHint);
+  elements.pasteResult.innerHTML = `
+    <div class="paste-result">
+      <div class="paste-top">
+        <div class="paste-kind"></div>
+        <div class="pill ${pillClass}"></div>
+      </div>
+      <div class="paste-summary"></div>
+      <div class="paste-output"></div>
+    </div>
+  `;
+
+  elements.pasteResult.querySelector(".paste-kind").textContent = classification.label;
+  elements.pasteResult.querySelector(".pill").textContent = output?.verdict || classification.riskHint || "review";
+  elements.pasteResult.querySelector(".paste-summary").textContent = classification.summary;
+
+  const outputNode = elements.pasteResult.querySelector(".paste-output");
+  if (output?.type === "local" && classification.siteReputation) {
+    outputNode.textContent =
+      `Local site verdict: ${classification.siteReputation.verdict} - Risk ${classification.siteReputation.riskScore}/100`;
+  } else if (output?.type === "api") {
+    const summary = extractApiSummary(output.payload);
+    const scoreText = summary.score === null ? "" : ` - Risk ${summary.score}/100`;
+    outputNode.textContent = `Sigil verdict: ${summary.verdict}${scoreText}. ${summary.summary}`;
+  } else if (output?.type === "error") {
+    outputNode.textContent = output.message || "Sigil API scan failed. Please try again.";
+  } else {
+    outputNode.textContent = (classification.warnings || [])[0] || "Press Analyze for a Sigil API scan.";
+  }
+
+  return classification;
+}
+
 function render() {
   elements.enabledToggle.checked = settings.enabled;
   elements.apiUrlInput.value = settings.apiUrl;
@@ -210,6 +273,7 @@ function render() {
   renderHistory();
   renderSessions();
   renderSiteResult(elements.siteCheckInput.value);
+  renderPasteResult(elements.pasteInput.value);
 }
 
 async function saveSettings(message) {
@@ -270,6 +334,56 @@ elements.addSiteBtn.addEventListener("click", async () => {
 
 elements.checkSiteBtn.addEventListener("click", () => {
   renderSiteResult(elements.siteCheckInput.value);
+});
+
+elements.pasteInput.addEventListener("input", () => {
+  renderPasteResult(elements.pasteInput.value);
+});
+
+elements.pasteAnalyzeBtn.addEventListener("click", async () => {
+  const classification = renderPasteResult(elements.pasteInput.value);
+  if (classification.scanMode === "none") {
+    showToast("Paste something first");
+    return;
+  }
+
+  if (classification.scanMode === "local") {
+    renderPasteResult(elements.pasteInput.value, { type: "local", verdict: classification.siteReputation?.verdict });
+    showToast("Checked locally");
+    return;
+  }
+
+  const endpoint = classification.scanMode === "analyze" ? "/api/sigil/analyze" : "/api/sigil/simulate";
+  const body = classification.scanMode === "analyze"
+    ? { input: classification.value, network: "mainnet" }
+    : { rawData: classification.value, network: "mainnet" };
+
+  elements.pasteAnalyzeBtn.disabled = true;
+  elements.pasteAnalyzeBtn.textContent = "Scanning...";
+  try {
+    const response = await fetch(`${settings.apiUrl}${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload) throw new Error(`Sigil API returned ${response.status}`);
+    const summary = extractApiSummary(payload);
+    renderPasteResult(elements.pasteInput.value, {
+      type: "api",
+      payload,
+      verdict: summary.verdict,
+    });
+  } catch (error) {
+    renderPasteResult(elements.pasteInput.value, {
+      type: "error",
+      verdict: "caution",
+      message: error?.message || "Sigil API scan failed. Please try again.",
+    });
+  } finally {
+    elements.pasteAnalyzeBtn.disabled = false;
+    elements.pasteAnalyzeBtn.textContent = "Analyze";
+  }
 });
 
 elements.addContractBtn.addEventListener("click", async () => {

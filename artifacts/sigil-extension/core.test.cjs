@@ -220,3 +220,23 @@ test("records and summarizes dapp session events", () => {
   assert.equal(sessions[0].summary.maxRiskScore, 88);
   assert.equal(sessions[0].summary.highestVerdict, "dangerous");
 });
+
+test("classifies pasted addresses, hashes, calldata, URLs, and typed data", () => {
+  assert.equal(core.classifyPastedInput("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48").kind, "address");
+  assert.equal(
+    core.classifyPastedInput("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").kind,
+    "hash",
+  );
+  assert.equal(
+    core.classifyPastedInput(
+      "0x095ea7b3" +
+        "000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25ef" +
+        "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    ).kind,
+    "approval_calldata",
+  );
+  assert.equal(core.classifyPastedInput("0xa9059cbb0000000000000000000000000000000000000000000000000000000000000001").kind, "calldata");
+  assert.equal(core.classifyPastedInput("https://uniswap-airdrop.example").kind, "url");
+  assert.equal(core.classifyPastedInput('{"domain":{"name":"Permit2"},"message":{"spender":"0x1"}}').kind, "typed_data");
+  assert.equal(core.classifyPastedInput("hello world").kind, "unknown");
+});

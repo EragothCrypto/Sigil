@@ -763,7 +763,7 @@ Goal: make Sigil fit natural crypto habits instead of asking users to visit anot
 - [x] Address Watchlist: let users monitor important wallets, vaults, and multisigs without custody or wallet connection
 - [x] dApp Session Summary: after a user interacts with a site, summarize approvals, signatures, and risks from that session
 - [x] Site Reputation Layer: flag known phishing domains, suspicious clones, and recently created dApp frontends
-- [ ] Copy/Paste Analyzer: detect addresses, tx hashes, and calldata copied in the browser and offer a lightweight scan
+- [x] Copy/Paste Analyzer: detect addresses, tx hashes, calldata, URLs, and typed data intentionally pasted by the user and offer a lightweight scan
 - [ ] Notification policy: notify only for critical findings, watched-wallet risks, or unusual approval changes
 - [ ] Sync optional settings across browsers while keeping analysis history local by default
 - [ ] Add a small onboarding flow that teaches approval risk, signatures, and sanctions in under two minutes
