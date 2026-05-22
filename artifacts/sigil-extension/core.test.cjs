@@ -161,3 +161,62 @@ test("history entries expose timestamp for popup rendering", () => {
   assert.equal(typeof entry.timestamp, "number");
   assert.equal(entry.createdAt, new Date(entry.timestamp).toISOString());
 });
+
+test("classifies session events by wallet request type", () => {
+  const approvalTarget = {
+    type: "transaction",
+    data: {
+      to: "0x0000000000000000000000000000000000000001",
+      data:
+        "0x095ea7b3" +
+        "000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25ef" +
+        "0000000000000000000000000000000000000000000000000000000000000001",
+    },
+  };
+
+  assert.equal(core.classifySessionCategory("eth_sendTransaction", approvalTarget), "approval");
+  assert.equal(core.classifySessionCategory("personal_sign", { type: "personal_sign", data: "hello" }), "signature");
+  assert.equal(core.classifySessionCategory("eth_sendTransaction", { type: "transaction", data: { to: "0x1", data: "0x" } }), "transaction");
+});
+
+test("records and summarizes dapp session events", () => {
+  const approvalEvent = core.createSessionEvent({
+    sessionId: "session-1",
+    method: "eth_sendTransaction",
+    url: "https://app.example",
+    target: {
+      type: "transaction",
+      data: {
+        to: "0x0000000000000000000000000000000000000001",
+        data:
+          "0x095ea7b3" +
+          "000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25ef" +
+          "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      },
+    },
+    input: { kind: "simulation", value: "approve" },
+    result: { verdict: "dangerous", riskScore: 88, riskLevel: "critical", summary: "Unlimited approval", warnings: ["Unlimited approval"] },
+    decision: "cancel",
+  });
+
+  const signEvent = core.createSessionEvent({
+    sessionId: "session-1",
+    method: "personal_sign",
+    url: "https://app.example",
+    target: { type: "personal_sign", data: "hello" },
+    input: { kind: "simulation", value: "hello" },
+    result: { verdict: "caution", riskScore: 42, riskLevel: "medium", summary: "Message signature", warnings: [] },
+    decision: "proceed",
+  });
+
+  const sessions = core.recordSessionEvent(core.recordSessionEvent([], approvalEvent, 8), signEvent, 8);
+
+  assert.equal(sessions.length, 1);
+  assert.equal(sessions[0].summary.eventCount, 2);
+  assert.equal(sessions[0].summary.approvals, 1);
+  assert.equal(sessions[0].summary.signatures, 1);
+  assert.equal(sessions[0].summary.cancelled, 1);
+  assert.equal(sessions[0].summary.proceeded, 1);
+  assert.equal(sessions[0].summary.maxRiskScore, 88);
+  assert.equal(sessions[0].summary.highestVerdict, "dangerous");
+});

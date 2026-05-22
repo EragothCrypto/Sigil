@@ -260,11 +260,25 @@
       overflow: auto;
     }
 
+    .sessions {
+      display: grid;
+      gap: 7px;
+      max-height: 170px;
+      overflow: auto;
+    }
+
     .history-item {
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 9px;
       background: rgba(255,255,255,0.035);
       padding: 8px 9px;
+    }
+
+    .session-item {
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 9px;
+      background: rgba(255,255,255,0.035);
+      padding: 9px;
     }
 
     .history-top {
@@ -274,10 +288,26 @@
       margin-bottom: 4px;
     }
 
+    .session-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
     .history-site {
       color: rgba(255,255,255,0.8);
       font-size: 11.5px;
       font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .session-site {
+      color: rgba(255,255,255,0.82);
+      font-size: 11.5px;
+      font-weight: 800;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -330,6 +360,35 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .session-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 5px;
+      margin-top: 7px;
+    }
+
+    .session-stat {
+      border-radius: 7px;
+      background: rgba(255,255,255,0.045);
+      padding: 5px 4px;
+      text-align: center;
+    }
+
+    .session-stat strong {
+      display: block;
+      color: rgba(255,255,255,0.86);
+      font: 800 12px 'JetBrains Mono', monospace;
+    }
+
+    .session-stat span {
+      display: block;
+      margin-top: 1px;
+      color: rgba(255,255,255,0.36);
+      font-size: 8.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .empty {
@@ -459,6 +518,13 @@
         <button class="ghost-btn" id="clearHistoryBtn" type="button">Clear</button>
       </div>
       <div class="history" id="historyList"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <div class="section-label">dApp Sessions</div>
+      </div>
+      <div class="sessions" id="sessionList"></div>
     </div>
 
     <a class="open-app-btn" id="openAppBtn" href="#" target="_blank" rel="noopener">Open Sigil Scanner</a>

@@ -305,6 +305,21 @@
     return /^f{64}$/i.test(amountSlot) || BigInt(`0x${amountSlot}`) > BigInt("1000000000000000000000000000000");
   }
 
+  function isApprovalRequest(target) {
+    if (!target || target.type !== "transaction") return false;
+    const data = String((target.data || {}).data || (target.data || {}).input || "").toLowerCase();
+    return data.startsWith("0x095ea7b3") || data.startsWith("0x39509351");
+  }
+
+  function classifySessionCategory(method, target) {
+    if (isApprovalRequest(target)) return "approval";
+    if (method === "eth_sendTransaction" || method === "eth_signTransaction") return "transaction";
+    if (method === "eth_sign" || method === "personal_sign" || String(method || "").indexOf("eth_signTypedData") === 0) {
+      return "signature";
+    }
+    return "other";
+  }
+
   function localPreScreen({ method, target, url, settings }) {
     const normalized = normalizeSettings(settings);
 
@@ -454,6 +469,86 @@
     };
   }
 
+  function normalizeDecision(value) {
+    return value === "cancel" ? "cancel" : "proceed";
+  }
+
+  function verdictRank(verdict) {
+    if (verdict === "dangerous") return 3;
+    if (verdict === "caution") return 2;
+    if (verdict === "safe") return 1;
+    return 0;
+  }
+
+  function createSessionEvent({ sessionId, method, url, target, input, result, decision }) {
+    const timestamp = Date.now();
+    const warnings = Array.isArray(result?.warnings) ? result.warnings.slice(0, 6).map(String) : [];
+    return {
+      id: `${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
+      sessionId: String(sessionId || `${getHostname(url)}-${timestamp}`),
+      site: getHostname(url),
+      method,
+      methodLabel: METHOD_LABELS[method] || "Wallet Request",
+      category: classifySessionCategory(method, target),
+      inputKind: input ? input.kind : "unknown",
+      decision: normalizeDecision(decision),
+      verdict: result?.verdict || "caution",
+      riskScore: Number(result?.riskScore || 0),
+      riskLevel: result?.riskLevel || "medium",
+      summary: result?.summary || result?.verdictReason || "Wallet request reviewed",
+      warnings,
+      timestamp,
+      createdAt: new Date(timestamp).toISOString(),
+    };
+  }
+
+  function summarizeSessionEvents(events) {
+    const safeEvents = Array.isArray(events) ? events : [];
+    const warnings = [];
+    let highestVerdict = "safe";
+    let maxRiskScore = 0;
+
+    for (const event of safeEvents) {
+      if (verdictRank(event.verdict) > verdictRank(highestVerdict)) highestVerdict = event.verdict;
+      maxRiskScore = Math.max(maxRiskScore, Number(event.riskScore || 0));
+      for (const warning of event.warnings || []) {
+        if (warnings.length < 5 && !warnings.includes(warning)) warnings.push(warning);
+      }
+    }
+
+    return {
+      eventCount: safeEvents.length,
+      approvals: safeEvents.filter((event) => event.category === "approval").length,
+      signatures: safeEvents.filter((event) => event.category === "signature").length,
+      transactions: safeEvents.filter((event) => event.category === "transaction").length,
+      proceeded: safeEvents.filter((event) => event.decision === "proceed").length,
+      cancelled: safeEvents.filter((event) => event.decision === "cancel").length,
+      maxRiskScore,
+      highestVerdict,
+      warnings,
+    };
+  }
+
+  function recordSessionEvent(sessions, event, limit) {
+    const existing = Array.isArray(sessions) ? sessions : [];
+    const current = existing.find((session) => session.id === event.sessionId);
+    const other = existing.filter((session) => session.id !== event.sessionId);
+    const events = [...(current?.events || []), event].slice(-40);
+    const timestamp = event.timestamp || Date.now();
+    const session = {
+      id: event.sessionId,
+      site: event.site,
+      startedAt: current?.startedAt || event.createdAt || new Date(timestamp).toISOString(),
+      updatedAt: new Date(timestamp).toISOString(),
+      events,
+      summary: summarizeSessionEvents(events),
+    };
+
+    return [session, ...other]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, limit || 12);
+  }
+
   return {
     DEFAULT_API_URL,
     METHOD_LABELS,
@@ -466,5 +561,9 @@
     requiresSecondConfirm,
     trimHistory,
     createHistoryEntry,
+    classifySessionCategory,
+    createSessionEvent,
+    summarizeSessionEvents,
+    recordSessionEvent,
   };
 });

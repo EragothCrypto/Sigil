@@ -7,6 +7,16 @@
   let currentRiskConfirmed = false;
   const requestQueue = [];
   let activeRequest = null;
+  const sessionId = (() => {
+    const host = (() => {
+      try {
+        return new URL(window.location.href).hostname;
+      } catch {
+        return "unknown";
+      }
+    })();
+    return `${host}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  })();
 
   function storageGet(area, defaults) {
     return new Promise((resolve) => chrome.storage[area].get(defaults, resolve));
@@ -32,6 +42,14 @@
     const stored = await storageGet("local", { history: [] });
     const history = core.trimHistory([entry, ...(stored.history || [])], settings.historyLimit);
     await storageSet("local", { history });
+  }
+
+  async function saveSessionEvent(payload, decision) {
+    if (!payload) return;
+    const stored = await storageGet("local", { sessions: [] });
+    const event = core.createSessionEvent({ ...payload, sessionId, decision });
+    const sessions = core.recordSessionEvent(stored.sessions || [], event, 12);
+    await storageSet("local", { sessions });
   }
 
   function escHtml(value) {
@@ -121,6 +139,10 @@
   }
 
   function finish(action, requestId = activeRequest?.requestId) {
+    const sessionPayload = activeRequest?.sessionPayload;
+    if (sessionPayload) {
+      saveSessionEvent(sessionPayload, action).catch(() => {});
+    }
     window.dispatchEvent(new CustomEvent("sigil:decision", { detail: { requestId, action } }));
     hidePanel();
     activeRequest = null;
@@ -219,11 +241,13 @@
 
     if (localResult.action === "proceed" && !localResult.requiresApi) {
       await saveHistory(core.createHistoryEntry({ method, url, input, result: localResult }), settings);
+      await saveSessionEvent({ method, url, target, input, result: localResult }, "proceed");
       finish("proceed", requestId);
       return;
     }
 
     render({ method, url, result: localResult, input, loading: localResult.requiresApi }, settings);
+    activeRequest.sessionPayload = { method, url, target, input, result: localResult };
 
     if (!localResult.requiresApi) {
       await saveHistory(core.createHistoryEntry({ method, url, input, result: localResult }), settings);
@@ -232,12 +256,15 @@
 
     try {
       const apiResult = await callSigilApi(settings, input);
+      if (activeRequest?.requestId !== requestId) return;
       const analysisPath = apiResult.id ? `/analysis/${encodeURIComponent(apiResult.id)}` : `/?q=${encodeURIComponent(input?.value || "")}`;
       const fullUrl = `${settings.apiUrl}${analysisPath}`;
       const result = { ...localResult, ...apiResult };
       render({ method, url, result, input, fullUrl }, settings);
+      activeRequest.sessionPayload = { method, url, target, input, result };
       await saveHistory(core.createHistoryEntry({ method, url, input, result }), settings);
     } catch (error) {
+      if (activeRequest?.requestId !== requestId) return;
       const fallback = {
         ...localResult,
         verdict: localResult.verdict === "safe" ? "caution" : localResult.verdict,
@@ -247,6 +274,7 @@
         warnings: [...(localResult.warnings || []), "Network or API error prevented a full analysis."],
       };
       render({ method, url, result: fallback, input, error: true }, settings);
+      activeRequest.sessionPayload = { method, url, target, input, result: fallback };
       await saveHistory(core.createHistoryEntry({ method, url, input, result: fallback }), settings);
     }
   }

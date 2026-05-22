@@ -1,1 +1,1 @@
-efe36bc7203bb4433b813175548f6d401f7d02c338809e572eea635699bbb63c  sigil-chrome-extension-v1.0.0.zip
+4a8d45e37cc2bc99610f1e79a5a9e85ab6a2a3eb9873528e6fe6261ec6035993  sigil-chrome-extension-v1.0.0.zip

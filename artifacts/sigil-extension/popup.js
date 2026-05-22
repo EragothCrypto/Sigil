@@ -25,10 +25,12 @@ const elements = {
   addContractBtn: document.getElementById("addContractBtn"),
   historyList: document.getElementById("historyList"),
   clearHistoryBtn: document.getElementById("clearHistoryBtn"),
+  sessionList: document.getElementById("sessionList"),
 };
 
 let settings = core.normalizeSettings({});
 let history = [];
+let sessions = [];
 
 function syncGet(defaults) {
   return new Promise((resolve) => chrome.storage.sync.get(defaults, resolve));
@@ -127,6 +129,42 @@ function renderHistory() {
   });
 }
 
+function renderSessions() {
+  elements.sessionList.innerHTML = "";
+  const items = sessions.slice(0, 5);
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "No dApp sessions yet";
+    elements.sessionList.appendChild(empty);
+    return;
+  }
+
+  items.forEach((session) => {
+    const summary = session.summary || {};
+    const verdict = summary.highestVerdict || "safe";
+    const card = document.createElement("div");
+    card.className = "session-item";
+    card.innerHTML = `
+      <div class="session-top">
+        <div class="session-site"></div>
+        <div class="pill ${verdict}">${verdict}</div>
+      </div>
+      <div class="history-meta"></div>
+      <div class="session-grid">
+        <div class="session-stat"><strong>${summary.approvals || 0}</strong><span>Appr</span></div>
+        <div class="session-stat"><strong>${summary.signatures || 0}</strong><span>Sign</span></div>
+        <div class="session-stat"><strong>${summary.transactions || 0}</strong><span>Tx</span></div>
+        <div class="session-stat"><strong>${summary.maxRiskScore || 0}</strong><span>Risk</span></div>
+      </div>
+    `;
+    card.querySelector(".session-site").textContent = session.site || "Unknown site";
+    card.querySelector(".history-meta").textContent =
+      `${summary.eventCount || 0} requests - ${summary.proceeded || 0} proceeded - ${summary.cancelled || 0} cancelled`;
+    elements.sessionList.appendChild(card);
+  });
+}
+
 function renderSiteResult(value) {
   const input = String(value || "").trim();
   if (!input) {
@@ -170,6 +208,7 @@ function render() {
   });
 
   renderHistory();
+  renderSessions();
   renderSiteResult(elements.siteCheckInput.value);
 }
 
@@ -197,8 +236,10 @@ async function load() {
     historyLimit: 20,
   });
   const storedHistory = await localGet({ history: [] });
+  const storedSessions = await localGet({ sessions: [] });
   settings = core.normalizeSettings(storedSettings);
   history = core.trimHistory(storedHistory.history || [], settings.historyLimit);
+  sessions = Array.isArray(storedSessions.sessions) ? storedSessions.sessions.slice(0, 12) : [];
   render();
 }
 
@@ -241,8 +282,10 @@ elements.addContractBtn.addEventListener("click", async () => {
 
 elements.clearHistoryBtn.addEventListener("click", async () => {
   history = [];
-  await localSet({ history });
+  sessions = [];
+  await localSet({ history, sessions });
   renderHistory();
+  renderSessions();
   showToast("History cleared");
 });
 
