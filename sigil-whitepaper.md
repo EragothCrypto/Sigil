@@ -801,7 +801,7 @@ Goal: make Sigil useful every time a user touches a wallet, without feeling heav
 - [x] Add a one-click "Open full analysis" handoff from extension overlay to the web app
 - [x] Package the extension for Chrome Web Store review, with a documented manual install path kept for power users
 
-### Phase 3 — Lightweight Daily Workflows
+### Phase 3 — Lightweight Daily Workflows (Delivered)
 
 Goal: make Sigil fit natural crypto habits instead of asking users to visit another dashboard.
 
@@ -810,9 +810,17 @@ Goal: make Sigil fit natural crypto habits instead of asking users to visit anot
 - [x] dApp Session Summary: after a user interacts with a site, summarize approvals, signatures, and risks from that session
 - [x] Site Reputation Layer: flag known phishing domains, suspicious clones, and recently created dApp frontends
 - [x] Copy/Paste Analyzer: detect addresses, tx hashes, calldata, URLs, and typed data intentionally pasted by the user and offer a lightweight scan
-- [ ] Notification policy: notify only for critical findings, watched-wallet risks, or unusual approval changes
-- [ ] Sync optional settings across browsers while keeping analysis history local by default
-- [ ] Add a small onboarding flow that teaches approval risk, signatures, and sanctions in under two minutes
+
+### Release Follow-Through Before Phase 4
+
+Goal: finish the standalone web app and Chrome extension quality pass before starting premium wallet monitoring.
+
+- [ ] Chrome Store Review Follow-Through: respond to review feedback, permission questions, screenshot requests, and listing updates
+- [ ] Notification Policy: notify only for critical findings, watched-wallet risks, unusual approval changes, or very high-risk signing prompts
+- [ ] Optional Settings Sync: sync preferences across browsers while keeping sensitive analysis history local by default
+- [ ] Short Onboarding Flow: teach approval risk, signatures, sanctions/risk verdicts, and extension usage in under two minutes
+- [ ] Standalone Web App Polish Pass: tighten navigation, empty states, scan flows, and extension handoff CTAs
+- [ ] Production QA Matrix: test browsers, extension install states, supported EVM networks, API outage behavior, Vercel routes, mobile web, and legal pages
 
 ### Phase 4 — Premium Wallet Monitor
 
