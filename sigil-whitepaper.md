@@ -759,8 +759,8 @@ Goal: make Sigil useful every time a user touches a wallet, without feeling heav
 
 Goal: make Sigil fit natural crypto habits instead of asking users to visit another dashboard.
 
-- [ ] Approval Health Check: show outstanding unlimited approvals and revoke recommendations
-- [ ] Address Watchlist: let users monitor important wallets, vaults, and multisigs without custody or wallet connection
+- [x] Approval Health Check: show outstanding unlimited approvals and revoke recommendations
+- [x] Address Watchlist: let users monitor important wallets, vaults, and multisigs without custody or wallet connection
 - [ ] dApp Session Summary: after a user interacts with a site, summarize approvals, signatures, and risks from that session
 - [ ] Site Reputation Layer: flag known phishing domains, suspicious clones, and recently created dApp frontends
 - [ ] Copy/Paste Analyzer: detect addresses, tx hashes, and calldata copied in the browser and offer a lightweight scan

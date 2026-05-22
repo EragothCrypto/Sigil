@@ -10,6 +10,7 @@ import AnalysisPage from "@/pages/analysis";
 import SimulatePage from "@/pages/simulate";
 import ExtensionPage from "@/pages/extension";
 import ApprovalsPage from "@/pages/approvals";
+import WatchlistPage from "@/pages/watchlist";
 import { CookiePage, ImpressumPage, PrivacyPage, TermsPage } from "@/pages/legal";
 import NotFound from "@/pages/not-found";
 
@@ -27,6 +28,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/approvals" component={ApprovalsPage} />
+      <Route path="/watchlist" component={WatchlistPage} />
       <Route path="/simulate" component={SimulatePage} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/analysis/:id" component={AnalysisPage} />

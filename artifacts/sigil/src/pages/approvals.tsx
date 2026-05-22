@@ -178,8 +178,12 @@ function ApprovalRow({ approval }: { approval: ApprovalHealthItem }) {
 }
 
 export default function ApprovalsPage() {
-  const [address, setAddress] = useState('');
-  const [network, setNetwork] = useState('mainnet');
+  const initialParams = new URLSearchParams(window.location.search);
+  const initialNetwork = initialParams.get('network');
+  const [address, setAddress] = useState(initialParams.get('address') ?? '');
+  const [network, setNetwork] = useState(
+    NETWORKS.some((item) => item.value === initialNetwork) ? initialNetwork as string : 'mainnet',
+  );
   const [result, setResult] = useState<ApprovalHealthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
