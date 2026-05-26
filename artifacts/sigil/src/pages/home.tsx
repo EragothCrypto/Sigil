@@ -3,7 +3,7 @@ import { useLocation, Link } from 'wouter';
 import {
   Shield, ChevronDown, ArrowRight, Zap, Globe, ShieldCheck,
   Bug, Unlock, Star, Ban, Flame, ClipboardList, CheckCircle2,
-  ScanSearch, AlertTriangle,
+  ScanSearch, AlertTriangle, Chrome, WalletCards, ListChecks,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +28,37 @@ const STATS = [
   { value: '$10B+',  label: 'in on-chain risk analyzed' },
   { value: '50+',   label: 'risk signals checked per scan' },
   { value: '10',    label: 'EVM chains supported' },
+];
+
+const START_PATHS = [
+  {
+    href: '/extension',
+    icon: Chrome,
+    title: 'Install the extension',
+    desc: 'Protect wallet prompts directly in Chrome before you sign.',
+    tone: 'primary',
+  },
+  {
+    href: '/monitor',
+    icon: WalletCards,
+    title: 'Monitor a wallet',
+    desc: 'Track approval exposure, hygiene score, and what to fix first.',
+    tone: 'emerald',
+  },
+  {
+    href: '/approvals',
+    icon: ShieldCheck,
+    title: 'Check approvals',
+    desc: 'Find unlimited token approvals and unknown spenders.',
+    tone: 'amber',
+  },
+  {
+    href: '/watchlist',
+    icon: ListChecks,
+    title: 'Save a watchlist',
+    desc: 'Keep important wallets and vaults ready for quick review.',
+    tone: 'blue',
+  },
 ];
 
 const HOW_IT_WORKS = [
@@ -298,7 +329,7 @@ export default function Home() {
               </h1>
 
               <p className="mt-5 text-lg text-white/45 max-w-xl mx-auto leading-relaxed font-sans">
-                Paste any transaction hash or contract address. Understand exactly what you're signing — before your wallet confirms it.
+                Scan contracts, monitor wallet exposure, and install the browser extension that explains risky prompts before you sign.
               </p>
 
               {/* Stats row */}
@@ -400,6 +431,38 @@ export default function Home() {
                   {phase.message || 'Failed to analyze. Please verify the hash and network.'}
                 </motion.div>
               )}
+            </div>
+
+            <div className="w-full max-w-5xl mt-12 grid gap-3 md:grid-cols-4">
+              {START_PATHS.map((item) => {
+                const Icon = item.icon;
+                const tone =
+                  item.tone === 'emerald'
+                    ? 'border-emerald-500/15 bg-emerald-500/[0.06] text-emerald-200'
+                    : item.tone === 'amber'
+                      ? 'border-amber-500/15 bg-amber-500/[0.06] text-amber-200'
+                      : item.tone === 'blue'
+                        ? 'border-sky-500/15 bg-sky-500/[0.06] text-sky-200'
+                        : 'border-primary/20 bg-primary/10 text-primary';
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="group rounded-2xl border border-white/8 bg-white/[0.025] p-4 text-left transition-all hover:border-primary/25 hover:bg-white/[0.045]"
+                  >
+                    <div className={`mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border ${tone}`}>
+                      <Icon className="h-5 w-5" strokeWidth={1.7} />
+                    </div>
+                    <h2 className="text-sm font-display font-bold text-white">{item.title}</h2>
+                    <p className="mt-2 text-xs leading-relaxed text-white/42">{item.desc}</p>
+                    <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary/70 transition-colors group-hover:text-primary">
+                      Open
+                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
 
             {/* ── How it works ──────────────────────────────────────────────── */}

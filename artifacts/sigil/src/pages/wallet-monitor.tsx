@@ -3,8 +3,10 @@ import type { FormEvent } from "react";
 import {
   AlertTriangle,
   ArrowRight,
+  Chrome,
   CheckCircle2,
   Crown,
+  ListChecks as ListIcon,
   Loader2,
   Plus,
   RefreshCw,
@@ -278,6 +280,37 @@ export default function WalletMonitorPage() {
               </div>
             )}
           </form>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link
+              href="/extension"
+              className="rounded-2xl border border-primary/15 bg-primary/[0.06] p-4 transition-colors hover:border-primary/30"
+            >
+              <div className="flex items-start gap-3">
+                <Chrome className="mt-0.5 h-5 w-5 text-primary" />
+                <div>
+                  <h2 className="text-sm font-bold text-white">Protect the next signing prompt</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-white/48">
+                    Wallet Monitor shows exposure after the fact; the extension helps before you sign.
+                  </p>
+                </div>
+              </div>
+            </Link>
+            <Link
+              href="/watchlist"
+              className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition-colors hover:border-primary/25"
+            >
+              <div className="flex items-start gap-3">
+                <ListIcon className="mt-0.5 h-5 w-5 text-white/65" />
+                <div>
+                  <h2 className="text-sm font-bold text-white">Manage saved addresses</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-white/48">
+                    Import, export, and organize wallets, vaults, multisigs, and contracts.
+                  </p>
+                </div>
+              </div>
+            </Link>
+          </div>
         </div>
 
         <aside className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">

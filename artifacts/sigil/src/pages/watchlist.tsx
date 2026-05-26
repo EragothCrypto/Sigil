@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import {
   AlertTriangle,
+  Chrome,
   CheckCircle2,
   Download,
   ExternalLink,
@@ -12,6 +13,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Trash2,
+  WalletCards,
 } from 'lucide-react';
 import { Link } from 'wouter';
 import {
@@ -233,7 +235,7 @@ export default function WatchlistPage() {
               Keep important addresses in one calm security view.
             </h1>
             <p className="max-w-2xl text-base leading-relaxed text-white/58">
-              Track wallets, vaults, multisigs, and contracts locally. Refresh approval-health status when you want a quick review without connecting a wallet.
+              Track wallets, vaults, multisigs, and contracts locally. Use Wallet Monitor for the higher-level hygiene score and fix-first checklist.
             </p>
           </div>
 
@@ -308,6 +310,37 @@ export default function WatchlistPage() {
               </div>
             )}
           </form>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link
+              href="/monitor"
+              className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.06] p-4 transition-colors hover:border-emerald-500/30"
+            >
+              <div className="flex items-start gap-3">
+                <WalletCards className="mt-0.5 h-5 w-5 text-emerald-200" />
+                <div>
+                  <h2 className="text-sm font-bold text-white">Open Wallet Monitor</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-white/48">
+                    Turn saved wallets into a hygiene score and prioritized cleanup list.
+                  </p>
+                </div>
+              </div>
+            </Link>
+            <Link
+              href="/extension"
+              className="rounded-2xl border border-primary/15 bg-primary/[0.06] p-4 transition-colors hover:border-primary/30"
+            >
+              <div className="flex items-start gap-3">
+                <Chrome className="mt-0.5 h-5 w-5 text-primary" />
+                <div>
+                  <h2 className="text-sm font-bold text-white">Install live protection</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-white/48">
+                    Keep Sigil beside your wallet for transaction and signature prompts.
+                  </p>
+                </div>
+              </div>
+            </Link>
+          </div>
         </div>
 
         <aside className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
@@ -378,8 +411,15 @@ export default function WatchlistPage() {
             <ShieldCheck className="mx-auto h-9 w-9 text-primary" />
             <h2 className="mt-4 text-lg font-bold text-white">No addresses yet</h2>
             <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-white/55">
-              Add the wallets, vaults, multisigs, or contracts you check most often. Everything stays in this browser unless you export it.
+              Add the wallets, vaults, multisigs, or contracts you check most often. Everything stays in this browser unless you export it; Wallet Monitor can turn the same saved addresses into a cleanup dashboard.
             </p>
+            <Link
+              href="/monitor"
+              className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:border-primary/50"
+            >
+              Open Wallet Monitor
+              <WalletCards className="h-4 w-4" />
+            </Link>
           </div>
         ) : (
           entries.map((entry) => {

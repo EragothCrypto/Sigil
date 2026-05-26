@@ -819,7 +819,7 @@ Goal: finish the standalone web app and Chrome extension quality pass before sta
 - [x] Notification Policy: define Critical only, Critical + high risk, and Off settings without adding new Chrome permissions
 - [ ] Optional Settings Sync: sync preferences across browsers while keeping sensitive analysis history local by default
 - [ ] Short Onboarding Flow: teach approval risk, signatures, sanctions/risk verdicts, and extension usage in under two minutes
-- [ ] Standalone Web App Polish Pass: tighten navigation, empty states, scan flows, and extension handoff CTAs
+- [x] Standalone Web App Polish Pass: tighten navigation, empty states, scan flows, and extension handoff CTAs
 - [x] Production QA Matrix: document verified live checks, installed-Store-build manual QA, and production API route findings
 
 ### Phase 4 — Premium Wallet Monitor

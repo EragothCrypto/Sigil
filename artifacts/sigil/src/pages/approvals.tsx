@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
+  Chrome,
   CheckCircle2,
   ExternalLink,
   Infinity,
@@ -11,8 +12,10 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  WalletCards,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Link } from 'wouter';
 
 type RiskLevel = 'critical' | 'high' | 'medium' | 'low';
 type CoverageStatus = 'limited' | 'unavailable';
@@ -301,6 +304,37 @@ export default function ApprovalsPage() {
               </div>
             )}
           </form>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link
+              href="/monitor"
+              className="group rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.06] p-4 transition-colors hover:border-emerald-500/30"
+            >
+              <div className="flex items-start gap-3">
+                <WalletCards className="mt-0.5 h-5 w-5 text-emerald-200" />
+                <div>
+                  <h2 className="text-sm font-bold text-white">Monitor this wallet over time</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-white/48">
+                    Save important wallets and keep a hygiene score plus fix-first checklist.
+                  </p>
+                </div>
+              </div>
+            </Link>
+            <Link
+              href="/extension"
+              className="group rounded-2xl border border-primary/15 bg-primary/[0.06] p-4 transition-colors hover:border-primary/30"
+            >
+              <div className="flex items-start gap-3">
+                <Chrome className="mt-0.5 h-5 w-5 text-primary" />
+                <div>
+                  <h2 className="text-sm font-bold text-white">Catch risky approvals before signing</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-white/48">
+                    Install the Chrome extension so Sigil reviews approval prompts in the wallet flow.
+                  </p>
+                </div>
+              </div>
+            </Link>
+          </div>
         </motion.div>
 
         <motion.aside
