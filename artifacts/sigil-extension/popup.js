@@ -6,9 +6,17 @@ const MODE_COPY = {
   strict: "Reviews every signing request and adds extra confirmation for risk.",
 };
 
+const NOTIFICATION_COPY = {
+  critical: "Only surface critical or dangerous findings.",
+  important: "Surface critical findings and high-risk wallet activity.",
+  off: "Do not surface notification-style alerts.",
+};
+
 const elements = {
   enabledToggle: document.getElementById("enabledToggle"),
   apiUrlInput: document.getElementById("apiUrlInput"),
+  notificationPolicyInput: document.getElementById("notificationPolicyInput"),
+  notificationPolicyDescription: document.getElementById("notificationPolicyDescription"),
   saveBtn: document.getElementById("saveBtn"),
   openAppBtn: document.getElementById("openAppBtn"),
   toast: document.getElementById("toast"),
@@ -253,6 +261,8 @@ function renderPasteResult(value, output) {
 function render() {
   elements.enabledToggle.checked = settings.enabled;
   elements.apiUrlInput.value = settings.apiUrl;
+  elements.notificationPolicyInput.value = settings.notificationPolicy;
+  elements.notificationPolicyDescription.textContent = NOTIFICATION_COPY[settings.notificationPolicy] || NOTIFICATION_COPY.critical;
   elements.openAppBtn.href = settings.apiUrl;
   elements.modeDescription.textContent = MODE_COPY[settings.protectionMode] || MODE_COPY.standard;
 
@@ -282,6 +292,7 @@ async function saveSettings(message) {
     apiUrl: settings.apiUrl,
     enabled: settings.enabled,
     protectionMode: settings.protectionMode,
+    notificationPolicy: settings.notificationPolicy,
     trustedSites: settings.trustedSites,
     trustedContracts: settings.trustedContracts,
     historyLimit: settings.historyLimit,
@@ -295,6 +306,7 @@ async function load() {
     apiUrl: core.DEFAULT_API_URL,
     enabled: true,
     protectionMode: "standard",
+    notificationPolicy: "critical",
     trustedSites: [],
     trustedContracts: [],
     historyLimit: 20,
@@ -309,7 +321,13 @@ async function load() {
 
 elements.saveBtn.addEventListener("click", async () => {
   settings.apiUrl = elements.apiUrlInput.value.trim() || core.DEFAULT_API_URL;
+  settings.notificationPolicy = elements.notificationPolicyInput.value;
   await saveSettings("Settings saved");
+});
+
+elements.notificationPolicyInput.addEventListener("change", async () => {
+  settings.notificationPolicy = elements.notificationPolicyInput.value;
+  await saveSettings("Notification policy updated");
 });
 
 elements.enabledToggle.addEventListener("change", async () => {

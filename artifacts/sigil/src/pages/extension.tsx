@@ -1,18 +1,46 @@
-import { Download, Chrome, Puzzle, Zap, ShieldCheck, Code2, AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Download, Chrome, Puzzle, Zap, ShieldCheck, Code2, AlertTriangle, ArrowRight, CheckCircle2, Store } from 'lucide-react';
 import { motion } from 'framer-motion';
+import type { ReactNode } from 'react';
 
 const EXTENSION_ZIP = `${import.meta.env.BASE_URL}sigil-extension.zip`;
+const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/sigil-web3-trust-layer/klogkofhnlifhakklkjmoofhfopnhnkg';
 
-const STEPS = [
+const STEPS: Array<{ num: string; title: string; desc: string; action?: ReactNode; code?: string }> = [
   {
     num: "01",
-    title: "Download the Extension",
-    desc: "Download the Sigil extension ZIP file to your computer.",
+    title: "Install from Chrome Web Store",
+    desc: "Install the live Sigil extension directly from the official Chrome Web Store listing.",
+    action: (
+      <a
+        href={CHROME_STORE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-primary border border-primary/25 bg-primary/8 hover:bg-primary/15 transition-all"
+      >
+        <Store className="w-4 h-4" />
+        Chrome Web Store
+      </a>
+    ),
+  },
+  {
+    num: "02",
+    title: "Pin Sigil",
+    desc: "Pin Sigil in Chrome so the protection settings, paste analyzer, and recent checks are easy to reach.",
+  },
+  {
+    num: "03",
+    title: "Keep Standard Mode On",
+    desc: "Standard mode is the recommended daily setting for wallet requests, approvals, typed data, and site reputation checks.",
+  },
+  {
+    num: "04",
+    title: "Optional Manual Install",
+    desc: "Power users can still download the ZIP and load it unpacked for local review.",
     action: (
       <a
         href={EXTENSION_ZIP}
         download="sigil-extension.zip"
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-primary border border-primary/25 bg-primary/8 hover:bg-primary/15 transition-all"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-white/70 border border-white/12 bg-white/[0.04] hover:border-primary/25 hover:text-primary transition-all"
       >
         <Download className="w-4 h-4" />
         sigil-extension.zip
@@ -20,25 +48,9 @@ const STEPS = [
     ),
   },
   {
-    num: "02",
-    title: "Unzip the File",
-    desc: "Extract to a permanent folder (e.g. ~/sigil-extension). Don't delete it after installing.",
-  },
-  {
-    num: "03",
-    title: "Open Chrome Extensions",
-    desc: "Navigate to the Chrome Extensions management page.",
-    code: "chrome://extensions",
-  },
-  {
-    num: "04",
-    title: "Enable Developer Mode",
-    desc: 'Toggle "Developer mode" in the top-right corner of the Extensions page.',
-  },
-  {
     num: "05",
-    title: "Load the Extension",
-    desc: 'Click "Load unpacked" and select the folder you extracted in step 2.',
+    title: "Review Before Signing",
+    desc: "When a dApp asks for a transaction or signature, read Sigil's verdict before you continue.",
   },
 ];
 
@@ -118,14 +130,15 @@ export default function ExtensionPage() {
 
         <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
           <a
-            href={EXTENSION_ZIP}
-            download="sigil-extension.zip"
+            href={CHROME_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="relative inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl font-display font-bold text-sm text-white uppercase tracking-wider overflow-hidden group"
             style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)' }}
           >
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)' }} />
-            <Download className="relative z-10 w-4 h-4" />
-            <span className="relative z-10">Download Extension</span>
+            <Store className="relative z-10 w-4 h-4" />
+            <span className="relative z-10">Install from Chrome Web Store</span>
           </a>
           <div className="flex items-center gap-2 text-sm text-white/30">
             <Chrome className="w-4 h-4" />
@@ -206,7 +219,7 @@ export default function ExtensionPage() {
                 <h3 className="font-display font-semibold text-white/90 text-sm mb-1">{step.title}</h3>
                 <p className="text-sm text-white/35 leading-relaxed mb-2">{step.desc}</p>
                 {step.action}
-                {step.code && (
+                {'code' in step && step.code && (
                   <div className="inline-flex items-center gap-2 bg-white/4 border border-white/8 rounded-lg px-3 py-1.5 font-mono text-xs text-primary/70 mt-1">
                     <Code2 className="w-3 h-3 shrink-0" />
                     {step.code}

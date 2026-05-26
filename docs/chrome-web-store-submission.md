@@ -1,6 +1,12 @@
 # Sigil Chrome Web Store Submission Pack
 
-Last updated: May 19, 2026
+Last updated: May 26, 2026
+
+Status: Live in the Chrome Web Store.
+
+Live listing:
+
+https://chromewebstore.google.com/detail/sigil-web3-trust-layer/klogkofhnlifhakklkjmoofhfopnhnkg
 
 ## Store Listing
 
@@ -60,7 +66,7 @@ Final ZIP:
 
 SHA-256:
 
-`90FFA7EF04D4703B72130B43831091F49258F09B58A8750C60B81A6A761815FC`
+`9816BE49A54D515D5EE9FE68A278A8C8C7A71DA152CEE5B2709DD7918582EDF8`
 
 Packaged files:
 
@@ -137,17 +143,16 @@ Submitted analysis requests may be processed by the Sigil backend and configured
 
 ## Final Submission Checklist
 
-- [ ] Confirm the production app health endpoint is ready: https://sigil.s3ntrylabs.com/api/readyz
-- [ ] Confirm Privacy Policy, Impressum, Terms, and Cookie pages are live.
-- [ ] Load the final ZIP as an unpacked extension and test the popup.
+- [x] Confirm the production app health endpoint is ready: https://sigil.s3ntrylabs.com/api/readyz
+- [x] Confirm Privacy Policy, Impressum, Terms, and Cookie pages are live.
+- [x] Prepare Chrome Web Store listing copy and privacy disclosure.
+- [x] Upload the final ZIP.
+- [x] Submit for review.
+- [x] Chrome Web Store listing is live.
+- [ ] Run installed Store-build wallet signing QA from a real Chrome profile.
 - [ ] Test a safe transfer flow.
 - [ ] Test an unlimited approval flow.
 - [ ] Test a typed-data signing flow.
 - [ ] Test trusted site bypass.
 - [ ] Test trusted contract bypass.
 - [ ] Test API outage fallback behavior.
-- [ ] Prepare 1280x800 or 640x400 screenshots for the Chrome Web Store listing.
-- [ ] Prepare a 440x280 small promo tile if requested by the store dashboard.
-- [ ] Confirm the Chrome Web Store privacy questionnaire matches the disclosure draft above.
-- [ ] Upload the final ZIP.
-- [ ] Submit for review.

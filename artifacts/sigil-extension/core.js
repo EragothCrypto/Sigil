@@ -9,6 +9,7 @@
 
   const DEFAULT_API_URL = "https://sigil.s3ntrylabs.com";
   const PROTECTION_MODES = new Set(["quiet", "standard", "strict"]);
+  const NOTIFICATION_POLICIES = new Set(["off", "critical", "important"]);
   const SIGN_METHODS = new Set([
     "eth_sendTransaction",
     "eth_signTransaction",
@@ -72,11 +73,13 @@
   function normalizeSettings(value) {
     const settings = value && typeof value === "object" ? value : {};
     const mode = String(settings.protectionMode || "standard").toLowerCase();
+    const notificationPolicy = String(settings.notificationPolicy || "critical").toLowerCase();
 
     return {
       apiUrl: String(settings.apiUrl || DEFAULT_API_URL).replace(/\/+$/, ""),
       enabled: settings.enabled !== false,
       protectionMode: PROTECTION_MODES.has(mode) ? mode : "standard",
+      notificationPolicy: NOTIFICATION_POLICIES.has(notificationPolicy) ? notificationPolicy : "critical",
       trustedSites: normalizeArray(settings.trustedSites),
       trustedContracts: normalizeArray(settings.trustedContracts).map((item) => item.toLowerCase()),
       historyLimit: Number.isFinite(Number(settings.historyLimit)) ? Number(settings.historyLimit) : 20,
@@ -557,6 +560,20 @@
     return normalized.protectionMode === "strict" && Number(result.riskScore || 0) >= 50;
   }
 
+  function shouldNotify(result, settings) {
+    const normalized = normalizeSettings(settings);
+    if (!result || normalized.notificationPolicy === "off") return false;
+    const riskScore = Number(result.riskScore || 0);
+    const riskLevel = String(result.riskLevel || "").toLowerCase();
+    const verdict = String(result.verdict || "").toLowerCase();
+
+    if (verdict === "dangerous" || riskLevel === "critical" || riskScore >= 85) return true;
+    if (normalized.notificationPolicy === "important") {
+      return riskLevel === "high" || riskScore >= 70;
+    }
+    return false;
+  }
+
   function trimHistory(entries, limit) {
     return (Array.isArray(entries) ? entries : []).slice(0, limit || 20);
   }
@@ -668,6 +685,7 @@
     evaluateSiteReputation,
     localPreScreen,
     requiresSecondConfirm,
+    shouldNotify,
     trimHistory,
     createHistoryEntry,
     classifySessionCategory,

@@ -15,6 +15,7 @@ test("normalizes settings with safe defaults", () => {
   const settings = core.normalizeSettings({});
   assert.equal(settings.enabled, true);
   assert.equal(settings.protectionMode, "standard");
+  assert.equal(settings.notificationPolicy, "critical");
   assert.equal(settings.apiUrl, "https://sigil.s3ntrylabs.com");
   assert.deepEqual(settings.trustedSites, []);
   assert.deepEqual(settings.trustedContracts, []);
@@ -160,6 +161,18 @@ test("history entries expose timestamp for popup rendering", () => {
 
   assert.equal(typeof entry.timestamp, "number");
   assert.equal(entry.createdAt, new Date(entry.timestamp).toISOString());
+});
+
+test("notification policy only interrupts for configured risk thresholds", () => {
+  const critical = { verdict: "dangerous", riskScore: 88, riskLevel: "critical" };
+  const high = { verdict: "caution", riskScore: 76, riskLevel: "high" };
+  const medium = { verdict: "caution", riskScore: 48, riskLevel: "medium" };
+
+  assert.equal(core.shouldNotify(critical, core.normalizeSettings({ notificationPolicy: "critical" })), true);
+  assert.equal(core.shouldNotify(high, core.normalizeSettings({ notificationPolicy: "critical" })), false);
+  assert.equal(core.shouldNotify(high, core.normalizeSettings({ notificationPolicy: "important" })), true);
+  assert.equal(core.shouldNotify(medium, core.normalizeSettings({ notificationPolicy: "important" })), false);
+  assert.equal(core.shouldNotify(medium, core.normalizeSettings({ notificationPolicy: "off" })), false);
 });
 
 test("classifies session events by wallet request type", () => {

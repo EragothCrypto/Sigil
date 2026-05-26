@@ -514,6 +514,16 @@
     </div>
 
     <div class="section">
+      <div class="section-label">Notification Policy</div>
+      <select class="field" id="notificationPolicyInput">
+        <option value="critical">Critical only</option>
+        <option value="important">Critical + high risk</option>
+        <option value="off">Off</option>
+      </select>
+      <div class="sub" id="notificationPolicyDescription"></div>
+    </div>
+
+    <div class="section">
       <div class="section-label">API Endpoint</div>
       <input class="field" type="text" id="apiUrlInput" placeholder="https://your-sigil-api.example" />
       <button class="save-btn" id="saveBtn" type="button">Save Settings</button>
