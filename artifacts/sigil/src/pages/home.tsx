@@ -1,9 +1,10 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useLocation, Link } from 'wouter';
 import {
   Shield, ChevronDown, ArrowRight, Zap, Globe, ShieldCheck,
   Bug, Unlock, Star, Ban, Flame, ClipboardList, CheckCircle2,
   ScanSearch, AlertTriangle, Chrome, WalletCards, ListChecks,
+  GraduationCap, X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
@@ -137,9 +138,14 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [network, setNetwork] = useState('mainnet');
   const [phase, setPhase] = useState<StreamPhase>({ kind: 'idle' });
+  const [showOnboardingPrompt, setShowOnboardingPrompt] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    setShowOnboardingPrompt(localStorage.getItem('sigil:onboarding-complete') !== 'true');
+  }, []);
 
   const handleCancel = useCallback(() => {
     abortRef.current?.abort();
@@ -350,6 +356,46 @@ export default function Home() {
 
             {/* ── Scanner input ─────────────────────────────────────────────── */}
             <div className="w-full max-w-3xl px-0 space-y-3">
+              {showOnboardingPrompt && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col gap-3 rounded-2xl border border-primary/18 bg-primary/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
+                      <GraduationCap className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-display font-semibold text-white">New to Sigil?</p>
+                      <p className="mt-1 text-sm leading-relaxed text-white/45">
+                        Take the two-minute safety tour before your next approval, signature, or wallet scan.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Link
+                      href="/onboarding"
+                      className="inline-flex items-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
+                    >
+                      Start onboarding
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        localStorage.setItem('sigil:onboarding-complete', 'true');
+                        setShowOnboardingPrompt(false);
+                      }}
+                      aria-label="Dismiss onboarding"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white/35 transition-colors hover:text-white/70"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
               <div
                 className="relative rounded-2xl overflow-hidden transition-all duration-300"
                 style={{

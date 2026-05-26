@@ -13,6 +13,7 @@ import ApprovalsPage from "@/pages/approvals";
 import WatchlistPage from "@/pages/watchlist";
 import WalletMonitorPage from "@/pages/wallet-monitor";
 import SitesPage from "@/pages/sites";
+import OnboardingPage from "@/pages/onboarding";
 import { CookiePage, ImpressumPage, PrivacyPage, TermsPage } from "@/pages/legal";
 import NotFound from "@/pages/not-found";
 
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/history" component={HistoryPage} />
       <Route path="/analysis/:id" component={AnalysisPage} />
       <Route path="/extension" component={ExtensionPage} />
+      <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/impressum" component={ImpressumPage} />
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/terms" component={TermsPage} />

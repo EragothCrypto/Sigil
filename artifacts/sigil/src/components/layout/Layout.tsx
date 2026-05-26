@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { Puzzle, ScanLine, History, Zap, ShieldCheck, ListChecks, Globe2, WalletCards } from 'lucide-react';
+import { Puzzle, ScanLine, History, Zap, ShieldCheck, ListChecks, Globe2, WalletCards, GraduationCap } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 const NAV_ITEMS = [
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/simulate', label: 'Simulate', icon: Zap, pulse: true },
   { href: '/history', label: 'Feed', icon: History },
   { href: '/extension', label: 'Extension', icon: Puzzle },
+  { href: '/onboarding', label: 'Start', icon: GraduationCap },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
