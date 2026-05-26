@@ -826,9 +826,11 @@ Goal: finish the standalone web app and Chrome extension quality pass before sta
 
 Goal: turn one-off scans into ongoing wallet-risk awareness without custody, seed phrases, or mandatory wallet connection.
 
-- [ ] Sigil Wallet Monitor: let users paste or optionally connect a public wallet address and save it for ongoing risk review
-- [ ] Show active risky approvals, suspicious contract exposure, scam interaction history, and wallet hygiene score
-- [ ] Add a prioritized "fix this first" checklist for revokes, risky approvals, suspicious sites, and exposed contracts
+- [x] Sigil Wallet Monitor v1: let users paste public wallet addresses, save them locally, and refresh approval exposure
+- [x] Show active risky approvals, approval-derived suspicious exposure, and wallet hygiene score
+- [x] Add a prioritized "fix this first" checklist for high-risk approvals, unlimited approvals, unchecked wallets, and coverage issues
+- [ ] Optional wallet connection for faster public-address selection without custody or signing permissions
+- [ ] Add scam interaction history and suspicious contract exposure beyond approval-health data
 - [ ] Add ongoing alerts for new critical exposure, watched-wallet risk changes, and unusual approval changes
 - [ ] Add premium limits and account gates without blocking basic safety checks for free users
 - [ ] Support multiple monitored wallets for Sigil Pro users
