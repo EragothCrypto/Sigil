@@ -17,7 +17,7 @@ https://chromewebstore.google.com/detail/sigil-web3-trust-layer/klogkofhnlifhakk
 | Extension ZIP | `/sigil-extension.zip` returns ZIP | Pass | `Content-Type: application/zip`, `Content-Length: 26541` |
 | API readiness | `/api/readyz` returns ready JSON | Pass | `status=ready`, `missingEnv=[]`, database ready |
 | Simulate API validation | Empty simulate POST rejects invalid body | Pass | `400 validation_error` |
-| Approval Health API | `/api/sigil/approvals/health` live route | Fix prepared | Live route returned SPA HTML before this fix; explicit Vercel functions added |
+| Approval Health API | `/api/sigil/approvals/health` live route | Pass | Post-deploy check returned `200 OK` JSON from Express with approval summary data |
 
 ## Cannot Verify From This Environment
 
