@@ -17,6 +17,8 @@ const elements = {
   apiUrlInput: document.getElementById("apiUrlInput"),
   notificationPolicyInput: document.getElementById("notificationPolicyInput"),
   notificationPolicyDescription: document.getElementById("notificationPolicyDescription"),
+  syncEnabledToggle: document.getElementById("syncEnabledToggle"),
+  syncDescription: document.getElementById("syncDescription"),
   saveBtn: document.getElementById("saveBtn"),
   openAppBtn: document.getElementById("openAppBtn"),
   toast: document.getElementById("toast"),
@@ -53,6 +55,10 @@ function localGet(defaults) {
 
 function syncSet(value) {
   return new Promise((resolve) => chrome.storage.sync.set(value, resolve));
+}
+
+function syncRemove(keys) {
+  return new Promise((resolve) => chrome.storage.sync.remove(keys, resolve));
 }
 
 function localSet(value) {
@@ -263,6 +269,10 @@ function render() {
   elements.apiUrlInput.value = settings.apiUrl;
   elements.notificationPolicyInput.value = settings.notificationPolicy;
   elements.notificationPolicyDescription.textContent = NOTIFICATION_COPY[settings.notificationPolicy] || NOTIFICATION_COPY.critical;
+  elements.syncEnabledToggle.checked = settings.syncEnabled;
+  elements.syncDescription.textContent = settings.syncEnabled
+    ? "Preferences and trusted lists sync through Chrome. Analysis history stays on this device."
+    : "Preferences stay on this device. Analysis history is always local.";
   elements.openAppBtn.href = settings.apiUrl;
   elements.modeDescription.textContent = MODE_COPY[settings.protectionMode] || MODE_COPY.standard;
 
@@ -288,32 +298,46 @@ function render() {
 
 async function saveSettings(message) {
   settings = core.normalizeSettings(settings);
-  await syncSet({
+  await localSet({
     apiUrl: settings.apiUrl,
     enabled: settings.enabled,
     protectionMode: settings.protectionMode,
     notificationPolicy: settings.notificationPolicy,
+    syncEnabled: settings.syncEnabled,
     trustedSites: settings.trustedSites,
     trustedContracts: settings.trustedContracts,
     historyLimit: settings.historyLimit,
   });
+  if (settings.syncEnabled) {
+    await syncSet(core.createSyncSettingsPayload(settings));
+  } else {
+    await syncSet({ syncEnabled: false });
+    await syncRemove(["apiUrl", "enabled", "protectionMode", "notificationPolicy", "trustedSites", "trustedContracts", "historyLimit"]);
+  }
   render();
   if (message) showToast(message);
 }
 
 async function load() {
-  const storedSettings = await syncGet({
+  const defaultSettings = {
     apiUrl: core.DEFAULT_API_URL,
     enabled: true,
     protectionMode: "standard",
     notificationPolicy: "critical",
+    syncEnabled: false,
     trustedSites: [],
     trustedContracts: [],
     historyLimit: 20,
-  });
+  };
+  const localSettings = await localGet(defaultSettings);
+  const syncedSettings = await syncGet({ ...defaultSettings, syncEnabled: false });
   const storedHistory = await localGet({ history: [] });
   const storedSessions = await localGet({ sessions: [] });
-  settings = core.normalizeSettings(storedSettings);
+  settings = core.normalizeSettings(
+    syncedSettings.syncEnabled === true || localSettings.syncEnabled === true
+      ? { ...localSettings, ...syncedSettings, syncEnabled: true }
+      : localSettings,
+  );
   history = core.trimHistory(storedHistory.history || [], settings.historyLimit);
   sessions = Array.isArray(storedSessions.sessions) ? storedSessions.sessions.slice(0, 12) : [];
   render();
@@ -333,6 +357,11 @@ elements.notificationPolicyInput.addEventListener("change", async () => {
 elements.enabledToggle.addEventListener("change", async () => {
   settings.enabled = elements.enabledToggle.checked;
   await saveSettings(settings.enabled ? "Guard enabled" : "Guard paused");
+});
+
+elements.syncEnabledToggle.addEventListener("change", async () => {
+  settings.syncEnabled = elements.syncEnabledToggle.checked;
+  await saveSettings(settings.syncEnabled ? "Settings sync enabled" : "Settings sync disabled");
 });
 
 elements.modeGrid.addEventListener("click", async (event) => {

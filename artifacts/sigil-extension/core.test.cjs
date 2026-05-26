@@ -16,9 +16,40 @@ test("normalizes settings with safe defaults", () => {
   assert.equal(settings.enabled, true);
   assert.equal(settings.protectionMode, "standard");
   assert.equal(settings.notificationPolicy, "critical");
+  assert.equal(settings.syncEnabled, false);
   assert.equal(settings.apiUrl, "https://sigil.s3ntrylabs.com");
   assert.deepEqual(settings.trustedSites, []);
   assert.deepEqual(settings.trustedContracts, []);
+});
+
+test("keeps settings sync opt-in and excludes analysis history", () => {
+  const settings = core.normalizeSettings({
+    syncEnabled: true,
+    protectionMode: "strict",
+    notificationPolicy: "important",
+    trustedSites: ["app.uniswap.org"],
+    trustedContracts: ["0xA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48"],
+    history: [{ id: "must-stay-local" }],
+    sessions: [{ id: "must-stay-local" }],
+  });
+
+  assert.equal(settings.syncEnabled, true);
+  const syncPayload = core.createSyncSettingsPayload(settings);
+  assert.deepEqual(Object.keys(syncPayload).sort(), [
+    "apiUrl",
+    "enabled",
+    "historyLimit",
+    "notificationPolicy",
+    "protectionMode",
+    "syncEnabled",
+    "trustedContracts",
+    "trustedSites",
+  ]);
+  assert.equal(syncPayload.syncEnabled, true);
+  assert.equal(syncPayload.protectionMode, "strict");
+  assert.deepEqual(syncPayload.trustedContracts, ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"]);
+  assert.equal("history" in syncPayload, false);
+  assert.equal("sessions" in syncPayload, false);
 });
 
 test("extracts transaction address target when there is no calldata", () => {

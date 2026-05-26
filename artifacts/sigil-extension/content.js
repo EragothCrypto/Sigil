@@ -27,15 +27,31 @@
   }
 
   async function loadSettings() {
-    const stored = await storageGet("sync", {
+    const defaults = {
       apiUrl: core.DEFAULT_API_URL,
       enabled: true,
       protectionMode: "standard",
+      notificationPolicy: "critical",
+      syncEnabled: false,
       trustedSites: [],
       trustedContracts: [],
       historyLimit: 20,
-    });
-    return core.normalizeSettings(stored);
+    };
+    const localSettings = await storageGet("local", defaults);
+    const syncSettings = await storageGet("sync", { ...defaults, syncEnabled: false });
+    if (syncSettings.syncEnabled === true || localSettings.syncEnabled === true) {
+      return core.normalizeSettings({ ...localSettings, ...syncSettings, syncEnabled: true });
+    }
+    return core.normalizeSettings(localSettings);
+  }
+
+  async function saveSettings(settings) {
+    const normalized = core.normalizeSettings(settings);
+    await storageSet("local", normalized);
+    if (normalized.syncEnabled) {
+      await storageSet("sync", core.createSyncSettingsPayload(normalized));
+    }
+    return normalized;
   }
 
   async function saveHistory(entry, settings) {
@@ -206,7 +222,7 @@
         return;
       }
       const trustedSites = Array.from(new Set([...(settings.trustedSites || []), host]));
-      await storageSet("sync", { trustedSites });
+      await saveSettings({ ...settings, trustedSites });
       finish("proceed");
     });
 

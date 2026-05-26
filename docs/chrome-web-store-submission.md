@@ -37,7 +37,7 @@ Core features:
 - Reviews typed-data signatures, transaction calldata, contract addresses, and transaction hashes.
 - Provides Safe, Caution, or Dangerous verdicts with 0-100 risk scoring.
 - Offers Quiet, Standard, and Strict protection modes for different daily-use preferences.
-- Lets users manage trusted sites, trusted contracts, and local recent-check history.
+- Lets users manage trusted sites, trusted contracts, optional settings sync, and local recent-check history.
 - Connects to the Sigil backend at https://sigil.s3ntrylabs.com for deeper analysis.
 
 Sigil is a security assistant, not a wallet, broker, exchange, custodian, or investment adviser. It provides technical risk analysis and educational context. You remain responsible for every transaction you sign.
@@ -60,13 +60,13 @@ https://sigil.s3ntrylabs.com/terms
 
 ## Release Package
 
-Final ZIP:
+Latest ZIP:
 
-`artifacts/release/sigil-chrome-extension-v1.0.0.zip`
+`artifacts/release/sigil-chrome-extension-v1.0.1.zip`
 
 SHA-256:
 
-`9816BE49A54D515D5EE9FE68A278A8C8C7A71DA152CEE5B2709DD7918582EDF8`
+`3415E42AB1EEF2D1011514457222E70EDDED028E692644E5854DDDE06D74AE58`
 
 Packaged files:
 
@@ -86,7 +86,7 @@ Packaged files:
 
 ### `storage`
 
-Required to save user-controlled extension settings, protection mode, trusted sites, trusted contracts, and recent local check history.
+Required to save user-controlled extension settings, protection mode, notification policy, trusted sites, trusted contracts, optional Chrome settings sync state, and recent local check history.
 
 ### Content scripts on `<all_urls>`
 
@@ -116,7 +116,7 @@ When deeper analysis is required, Sigil sends the relevant signing request, tran
 
 ### Local storage
 
-The extension stores settings, trusted sites, trusted contracts, and recent check history locally in Chrome extension storage. Users can clear recent history from the extension popup.
+The extension stores settings, trusted sites, trusted contracts, and recent check history locally in Chrome extension storage by default. If the user enables Settings Sync, protection mode, notification policy, trusted sites, trusted contracts, API endpoint, and history limit may sync through Chrome extension sync storage. Analysis history and dApp session history remain local by default and are not synced. Users can clear recent history from the extension popup.
 
 ### Data sale
 

@@ -817,7 +817,7 @@ Goal: finish the standalone web app and Chrome extension quality pass before sta
 
 - [x] Chrome Store Review Follow-Through: Sigil is live in the Chrome Web Store and the live listing URL is documented
 - [x] Notification Policy: define Critical only, Critical + high risk, and Off settings without adding new Chrome permissions
-- [ ] Optional Settings Sync: sync preferences across browsers while keeping sensitive analysis history local by default
+- [x] Optional Settings Sync: sync preferences across browsers while keeping sensitive analysis history local by default
 - [x] Short Onboarding Flow: teach approval risk, signatures, sanctions/risk verdicts, extension usage, and wallet monitoring in under two minutes
 - [x] Standalone Web App Polish Pass: tighten navigation, empty states, scan flows, and extension handoff CTAs
 - [x] Production QA Matrix: document verified live checks, installed-Store-build manual QA, and production API route findings

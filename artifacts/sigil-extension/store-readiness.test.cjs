@@ -34,6 +34,18 @@ test("manifest uses minimum permissions for store submission", () => {
   assert.equal(manifest.web_accessible_resources, undefined);
 });
 
+test("settings sync is optional and history remains local", () => {
+  const popup = read("popup.js");
+  const popupHtml = read("popup.html");
+
+  assert.match(popupHtml, /id="syncEnabledToggle"/);
+  assert.match(popup, /syncEnabled/);
+  assert.match(popup, /createSyncSettingsPayload/);
+  assert.match(popup, /localSet\(\{ history, sessions \}\)/);
+  assert.doesNotMatch(popup, /syncSet\(\{ history/);
+  assert.doesNotMatch(popup, /syncSet\(\{ sessions/);
+});
+
 test("extension package does not load remote executable code", () => {
   const popup = read("popup.html");
   const files = ["popup.html", "popup.js", "content.js", "core.js", "inject.js", "background.js"];

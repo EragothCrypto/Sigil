@@ -6,15 +6,17 @@
 const DEFAULT_API_URL = "https://sigil.s3ntrylabs.com";
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.sync.get({
+  chrome.storage.local.get({
     apiUrl: DEFAULT_API_URL,
     enabled: true,
     protectionMode: "standard",
+    notificationPolicy: "critical",
+    syncEnabled: false,
     trustedSites: [],
     trustedContracts: [],
     historyLimit: 20,
   }, (settings) => {
-    chrome.storage.sync.set(settings);
+    chrome.storage.local.set(settings);
   });
 
   chrome.action.setBadgeBackgroundColor({ color: "#00f5d4" });

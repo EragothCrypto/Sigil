@@ -139,8 +139,10 @@ export function PrivacyPage() {
           payloads, risk analysis results, browser request metadata, IP address, timestamps, and technical server logs.
         </p>
         <p>
-          The browser extension stores local settings, trusted sites, trusted contracts, and recent check history in your
-          browser storage. This data is intended to stay on your device unless you submit a signing request for analysis.
+          The browser extension stores settings, trusted sites, trusted contracts, and recent check history in your
+          browser storage by default. If you enable optional Settings Sync, preferences and trusted lists may sync through
+          Chrome extension sync storage. Analysis history and dApp session history remain local by default unless you
+          submit a signing request for analysis.
         </p>
       </Section>
 
@@ -252,7 +254,8 @@ export function CookiePage() {
       <Section title="Current Status">
         <p>
           Sigil does not currently use advertising cookies or third-party tracking cookies in the main web app. The
-          browser extension uses Chrome extension storage for settings, trusted entries, and recent checks.
+          browser extension uses Chrome extension storage for settings, trusted entries, optional settings sync, and
+          recent checks.
         </p>
       </Section>
 

@@ -80,9 +80,24 @@
       enabled: settings.enabled !== false,
       protectionMode: PROTECTION_MODES.has(mode) ? mode : "standard",
       notificationPolicy: NOTIFICATION_POLICIES.has(notificationPolicy) ? notificationPolicy : "critical",
+      syncEnabled: settings.syncEnabled === true,
       trustedSites: normalizeArray(settings.trustedSites),
       trustedContracts: normalizeArray(settings.trustedContracts).map((item) => item.toLowerCase()),
       historyLimit: Number.isFinite(Number(settings.historyLimit)) ? Number(settings.historyLimit) : 20,
+    };
+  }
+
+  function createSyncSettingsPayload(value) {
+    const settings = normalizeSettings(value);
+    return {
+      syncEnabled: true,
+      apiUrl: settings.apiUrl,
+      enabled: settings.enabled,
+      protectionMode: settings.protectionMode,
+      notificationPolicy: settings.notificationPolicy,
+      trustedSites: settings.trustedSites,
+      trustedContracts: settings.trustedContracts,
+      historyLimit: settings.historyLimit,
     };
   }
 
@@ -680,6 +695,7 @@
     METHOD_LABELS,
     SIGN_METHODS,
     normalizeSettings,
+    createSyncSettingsPayload,
     extractAnalysisTarget,
     getAnalysisInput,
     evaluateSiteReputation,
