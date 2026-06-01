@@ -12,6 +12,7 @@ Set these in Vercel Project Settings -> Environment Variables for Production, Pr
 
 ```text
 DATABASE_URL
+DATABASE_URL_UNPOOLED
 AI_INTEGRATIONS_OPENAI_BASE_URL
 AI_INTEGRATIONS_OPENAI_API_KEY
 SIGIL_AI_MODEL
@@ -32,11 +33,27 @@ AI_INTEGRATIONS_OPENAI_API_KEY=<your OpenRouter API key>
 SIGIL_AI_MODEL=deepseek/deepseek-v4-flash:free
 ```
 
-`DATABASE_URL` must point at a hosted Postgres database. Vercel Postgres, Neon, Supabase, Railway, or another managed Postgres provider can work as long as the URL is valid from Vercel Functions.
+`DATABASE_URL` must point at a hosted Postgres database. For Sigil production, use Neon Postgres with the pooled connection string as `DATABASE_URL`. The pooled Neon host usually contains `-pooler`.
+
+`DATABASE_URL_UNPOOLED` is recommended for schema pushes and migrations. Use the direct Neon connection string without `-pooler`.
 
 Sigil creates or updates its small `analyses` table on first API use. For manual database management, the same schema can also be pushed from the repo with `pnpm --filter @workspace/db push`.
 
 Use the exact uppercase variable name `DATABASE_URL` in Vercel. `Database_Url`, `database_url`, and other casing variants will not be read by Node.js. Do not use Replit's internal/provisioned database URL in Vercel; use a database that accepts external connections from Vercel Functions.
+
+## Neon Production Database
+
+Recommended setup:
+
+```text
+Neon region: AWS Europe (Frankfurt), aws-eu-central-1
+Runtime URL: DATABASE_URL=<pooled Neon URL>
+Migration URL: DATABASE_URL_UNPOOLED=<direct Neon URL>
+```
+
+Use the same Neon production database for Vercel Production. Use a separate Neon branch or database for Vercel Preview if previews should not write into production analysis history.
+
+After changing `DATABASE_URL` in Vercel, redeploy the project so all serverless functions pick up the new database connection.
 
 ## Local Setup
 
