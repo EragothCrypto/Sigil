@@ -76,6 +76,23 @@
       .replace(/"/g, "&quot;");
   }
 
+  function safeVerdictClass(value) {
+    const normalized = String(value || "").toLowerCase();
+    if (normalized === "dangerous" || normalized === "critical" || normalized === "high") return "dangerous";
+    if (normalized === "caution" || normalized === "warning" || normalized === "medium") return "caution";
+    if (normalized === "loading") return "loading";
+    return "safe";
+  }
+
+  function safeAnalysisUrl(value) {
+    try {
+      const parsed = new URL(String(value || ""));
+      return parsed.protocol === "https:" ? parsed.href : "";
+    } catch {
+      return "";
+    }
+  }
+
   function buildOverlay() {
     if (overlayRoot) return;
 
@@ -168,9 +185,12 @@
   function render({ method, url, result, input, loading = false, error = false, fullUrl = "" }, settings) {
     buildOverlay();
     const verdict = loading ? "loading" : error ? "caution" : result.verdict || "caution";
-    const emoji = loading ? '<span class="spinner"></span>' : verdict === "safe" ? "OK" : verdict === "dangerous" ? "!!" : "!";
+    const verdictClass = safeVerdictClass(verdict);
+    const fullAnalysisUrl = safeAnalysisUrl(fullUrl);
+    const emoji = loading ? '<span class="spinner"></span>' : verdictClass === "safe" ? "OK" : verdictClass === "dangerous" ? "!!" : "!";
     const title = loading ? "Sigil is checking this request" : result.verdictReason || result.summary || "Review this wallet request";
-    const risk = Number(result.riskScore || 0);
+    const numericRisk = Number(result.riskScore);
+    const risk = Number.isFinite(numericRisk) ? numericRisk : 0;
     const warnings = Array.isArray(result.warnings) ? result.warnings : [];
     const needsSecond = !loading && !error && core.requiresSecondConfirm(result, settings) && !currentRiskConfirmed;
     const site = (() => { try { return new URL(url).hostname; } catch { return "current site"; } })();
@@ -184,7 +204,7 @@
         </div>
         <div class="meta">${escHtml(site)}</div>
       </div>
-      <div class="body ${verdict}">
+      <div class="body ${verdictClass}">
         <div class="verdict">
           <div class="icon">${emoji}</div>
           <div>
@@ -196,8 +216,8 @@
         ${loading ? "" : `<div class="score"><div class="track"><div class="fill" style="width:${Math.max(0, Math.min(100, risk))}%"></div></div><strong>${risk}</strong></div>`}
         ${warnings.length ? `<div class="warnings"><p>Warnings</p><ul>${warnings.slice(0, 4).map((item) => `<li>${escHtml(item)}</li>`).join("")}</ul></div>` : ""}
         <div class="actions">
-          ${fullUrl ? `<a class="btn primary" href="${escHtml(fullUrl)}" target="_blank" rel="noopener">Full analysis</a>` : `<button class="ghost" id="detailsBtn">Input: ${escHtml(input?.kind || "request")}</button>`}
-          <button class="${needsSecond || verdict === "dangerous" ? "danger" : "primary"}" id="proceedBtn">${needsSecond ? "I understand risk" : "Proceed"}</button>
+          ${fullAnalysisUrl ? `<a class="btn primary" href="${escHtml(fullAnalysisUrl)}" target="_blank" rel="noopener">Full analysis</a>` : `<button class="ghost" id="detailsBtn">Input: ${escHtml(input?.kind || "request")}</button>`}
+          <button class="${needsSecond || verdictClass === "dangerous" ? "danger" : "primary"}" id="proceedBtn">${needsSecond ? "I understand risk" : "Proceed"}</button>
           <button class="ghost" id="cancelBtn">Cancel request</button>
           <button class="ghost" id="trustSiteBtn">Trust this site</button>
         </div>

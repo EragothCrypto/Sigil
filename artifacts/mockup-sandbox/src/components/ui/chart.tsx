@@ -4,6 +4,8 @@ import * as RechartsPrimitive from "recharts"
 import { cn } from "@/lib/utils"
 
 const THEMES = { light: "", dark: ".dark" } as const
+const SAFE_CSS_COLOR =
+  /^(#[0-9a-f]{3,8}|(?:rgb|rgba|hsl|hsla)\([0-9%.,\s-]+\)|(?:oklch|oklab|lab|lch)\([0-9%.,\s/-]+\)|var\(--[a-zA-Z0-9_-]+\)|[a-zA-Z]+)$/i
 
 export type ChartConfig = {
   [k in string]: {
@@ -41,7 +43,7 @@ const ChartContainer = React.forwardRef<
   }
 >(({ id, className, children, config, ...props }, ref) => {
   const uniqueId = React.useId()
-  const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
+  const chartId = sanitizeCssIdent(`chart-${id || uniqueId.replace(/:/g, "")}`)
 
   return (
     <ChartContext.Provider value={{ config }}>
@@ -85,8 +87,10 @@ ${colorConfig
     const color =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
       itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
+    const safeColor = sanitizeCssColor(color)
+    return safeColor ? `  --color-${sanitizeCssIdent(key)}: ${safeColor};` : null
   })
+  .filter(Boolean)
   .join("\n")}
 }
 `
@@ -94,7 +98,17 @@ ${colorConfig
           .join("\n"),
       }}
     />
-  )
+)
+}
+
+function sanitizeCssIdent(value: string) {
+  const sanitized = String(value || "").replace(/[^a-zA-Z0-9_-]/g, "_")
+  return sanitized || "chart"
+}
+
+function sanitizeCssColor(value: string | undefined) {
+  const color = String(value || "").trim()
+  return SAFE_CSS_COLOR.test(color) ? color : ""
 }
 
 const ChartTooltip = RechartsPrimitive.Tooltip

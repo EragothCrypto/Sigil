@@ -46,6 +46,43 @@ test("settings sync is optional and history remains local", () => {
   assert.doesNotMatch(popup, /syncSet\(\{ sessions/);
 });
 
+test("popup constrains dynamic html classes before rendering", () => {
+  const popup = read("popup.js");
+
+  assert.match(popup, /function safeVerdictClass/);
+  assert.doesNotMatch(popup, /class="pill \$\{verdict\}"/);
+  assert.doesNotMatch(popup, /class="pill \$\{pillClass\}"/);
+  assert.doesNotMatch(popup, /<strong>\$\{summary\.approvals \|\| 0\}<\/strong>/);
+  assert.doesNotMatch(popup, /card\.innerHTML\s*=\s*`/);
+  assert.doesNotMatch(popup, /pasteResult\.innerHTML\s*=\s*`/);
+  assert.doesNotMatch(popup, /siteResult\.innerHTML\s*=\s*`/);
+});
+
+test("content overlay constrains dynamic html classes and urls", () => {
+  const content = read("content.js");
+
+  assert.match(content, /function safeVerdictClass/);
+  assert.match(content, /function safeAnalysisUrl/);
+  assert.match(content, /Number\.isFinite\(numericRisk\)/);
+  assert.doesNotMatch(content, /<div class="body \$\{verdict\}">/);
+  assert.doesNotMatch(content, /href="\$\{escHtml\(fullUrl\)\}"/);
+});
+
+test("chart style injection is constrained to sanitized css identifiers and colors", () => {
+  for (const file of [
+    "../sigil/src/components/ui/chart.tsx",
+    "../mockup-sandbox/src/components/ui/chart.tsx",
+  ]) {
+    const chart = read(file);
+    assert.match(chart, /const SAFE_CSS_COLOR/);
+    assert.match(chart, /function sanitizeCssIdent/);
+    assert.match(chart, /function sanitizeCssColor/);
+    assert.match(chart, /data-chart=\$\{id\}/);
+    assert.match(chart, /const chartId = sanitizeCssIdent/);
+    assert.doesNotMatch(chart, /--color-\$\{key\}: \$\{color\}/);
+  }
+});
+
 test("extension package does not load remote executable code", () => {
   const popup = read("popup.html");
   const files = ["popup.html", "popup.js", "content.js", "core.js", "inject.js", "background.js"];

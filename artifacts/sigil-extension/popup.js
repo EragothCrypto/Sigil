@@ -94,11 +94,39 @@ function formatDate(timestamp) {
   }
 }
 
-function verdictClass(value) {
+function safeVerdictClass(value) {
   const normalized = String(value || "").toLowerCase();
   if (normalized === "dangerous" || normalized === "critical" || normalized === "high") return "dangerous";
   if (normalized === "caution" || normalized === "warning" || normalized === "medium") return "caution";
   return "safe";
+}
+
+function safeVerdictLabel(value) {
+  const normalized = String(value || "").toLowerCase();
+  if (normalized === "dangerous" || normalized === "critical") return "dangerous";
+  if (normalized === "high") return "high";
+  if (normalized === "caution" || normalized === "warning" || normalized === "medium") return "caution";
+  if (normalized === "safe" || normalized === "low") return "safe";
+  return "review";
+}
+
+function safeNumber(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function createPill(value) {
+  const pill = document.createElement("div");
+  pill.className = `pill ${safeVerdictClass(value)}`;
+  pill.textContent = safeVerdictLabel(value);
+  return pill;
+}
+
+function createEmpty(message) {
+  const empty = document.createElement("div");
+  empty.className = "empty";
+  empty.textContent = message;
+  return empty;
 }
 
 function extractApiSummary(payload) {
@@ -116,10 +144,7 @@ function extractApiSummary(payload) {
 function renderChips(container, values, remove) {
   container.innerHTML = "";
   if (!values.length) {
-    const empty = document.createElement("div");
-    empty.className = "empty";
-    empty.textContent = "None yet";
-    container.appendChild(empty);
+    container.appendChild(createEmpty("None yet"));
     return;
   }
 
@@ -141,26 +166,24 @@ function renderHistory() {
   elements.historyList.innerHTML = "";
   const items = history.slice(0, 8);
   if (!items.length) {
-    const empty = document.createElement("div");
-    empty.className = "empty";
-    empty.textContent = "No recent checks yet";
-    elements.historyList.appendChild(empty);
+    elements.historyList.appendChild(createEmpty("No recent checks yet"));
     return;
   }
 
   items.forEach((item) => {
     const card = document.createElement("div");
     card.className = "history-item";
-    const verdict = item.verdict || "caution";
-    card.innerHTML = `
-      <div class="history-top">
-        <div class="history-site"></div>
-        <div class="pill ${verdict}">${verdict}</div>
-      </div>
-      <div class="history-meta"></div>
-    `;
-    card.querySelector(".history-site").textContent = item.site || "Unknown site";
-    card.querySelector(".history-meta").textContent = `${item.method || "wallet request"} - Risk ${item.riskScore || 0}/100 - ${formatDate(item.timestamp)}`;
+    const top = document.createElement("div");
+    top.className = "history-top";
+    const site = document.createElement("div");
+    site.className = "history-site";
+    site.textContent = item.site || "Unknown site";
+    top.append(site, createPill(item.verdict || "caution"));
+
+    const meta = document.createElement("div");
+    meta.className = "history-meta";
+    meta.textContent = `${item.method || "wallet request"} - Risk ${safeNumber(item.riskScore)}/100 - ${formatDate(item.timestamp)}`;
+    card.append(top, meta);
     elements.historyList.appendChild(card);
   });
 }
@@ -169,34 +192,46 @@ function renderSessions() {
   elements.sessionList.innerHTML = "";
   const items = sessions.slice(0, 5);
   if (!items.length) {
-    const empty = document.createElement("div");
-    empty.className = "empty";
-    empty.textContent = "No dApp sessions yet";
-    elements.sessionList.appendChild(empty);
+    elements.sessionList.appendChild(createEmpty("No dApp sessions yet"));
     return;
   }
 
   items.forEach((session) => {
     const summary = session.summary || {};
-    const verdict = summary.highestVerdict || "safe";
     const card = document.createElement("div");
     card.className = "session-item";
-    card.innerHTML = `
-      <div class="session-top">
-        <div class="session-site"></div>
-        <div class="pill ${verdict}">${verdict}</div>
-      </div>
-      <div class="history-meta"></div>
-      <div class="session-grid">
-        <div class="session-stat"><strong>${summary.approvals || 0}</strong><span>Appr</span></div>
-        <div class="session-stat"><strong>${summary.signatures || 0}</strong><span>Sign</span></div>
-        <div class="session-stat"><strong>${summary.transactions || 0}</strong><span>Tx</span></div>
-        <div class="session-stat"><strong>${summary.maxRiskScore || 0}</strong><span>Risk</span></div>
-      </div>
-    `;
-    card.querySelector(".session-site").textContent = session.site || "Unknown site";
-    card.querySelector(".history-meta").textContent =
-      `${summary.eventCount || 0} requests - ${summary.proceeded || 0} proceeded - ${summary.cancelled || 0} cancelled`;
+
+    const top = document.createElement("div");
+    top.className = "session-top";
+    const site = document.createElement("div");
+    site.className = "session-site";
+    site.textContent = session.site || "Unknown site";
+    top.append(site, createPill(summary.highestVerdict || "safe"));
+
+    const meta = document.createElement("div");
+    meta.className = "history-meta";
+    meta.textContent =
+      `${safeNumber(summary.eventCount)} requests - ${safeNumber(summary.proceeded)} proceeded - ${safeNumber(summary.cancelled)} cancelled`;
+
+    const grid = document.createElement("div");
+    grid.className = "session-grid";
+    [
+      ["Appr", summary.approvals],
+      ["Sign", summary.signatures],
+      ["Tx", summary.transactions],
+      ["Risk", summary.maxRiskScore],
+    ].forEach(([label, value]) => {
+      const stat = document.createElement("div");
+      stat.className = "session-stat";
+      const strong = document.createElement("strong");
+      strong.textContent = String(safeNumber(value));
+      const span = document.createElement("span");
+      span.textContent = label;
+      stat.append(strong, span);
+      grid.appendChild(stat);
+    });
+
+    card.append(top, meta, grid);
     elements.sessionList.appendChild(card);
   });
 }
@@ -204,62 +239,63 @@ function renderSessions() {
 function renderSiteResult(value) {
   const input = String(value || "").trim();
   if (!input) {
-    elements.siteResult.innerHTML = `<div class="empty">Enter a domain to check</div>`;
+    elements.siteResult.replaceChildren(createEmpty("Enter a domain to check"));
     return;
   }
 
   const result = core.evaluateSiteReputation(input);
-  const verdict = result.verdict || "caution";
-  elements.siteResult.innerHTML = `
-    <div class="site-result">
-      <div class="site-result-top">
-        <div class="site-host"></div>
-        <div class="pill ${verdict}">${verdict}</div>
-      </div>
-      <div class="site-summary"></div>
-    </div>
-  `;
-  elements.siteResult.querySelector(".site-host").textContent = result.host || input;
-  elements.siteResult.querySelector(".site-summary").textContent = result.summary;
+  const card = document.createElement("div");
+  card.className = "site-result";
+  const top = document.createElement("div");
+  top.className = "site-result-top";
+  const host = document.createElement("div");
+  host.className = "site-host";
+  host.textContent = result.host || input;
+  top.append(host, createPill(result.verdict || "caution"));
+  const summary = document.createElement("div");
+  summary.className = "site-summary";
+  summary.textContent = result.summary;
+  card.append(top, summary);
+  elements.siteResult.replaceChildren(card);
 }
 
 function renderPasteResult(value, output) {
   const classification = core.classifyPastedInput(value);
   if (classification.kind === "empty") {
-    elements.pasteResult.innerHTML = `<div class="empty"></div>`;
-    elements.pasteResult.querySelector(".empty").textContent = classification.summary;
+    elements.pasteResult.replaceChildren(createEmpty(classification.summary));
     return classification;
   }
 
-  const pillClass = verdictClass(output?.verdict || classification.riskHint);
-  elements.pasteResult.innerHTML = `
-    <div class="paste-result">
-      <div class="paste-top">
-        <div class="paste-kind"></div>
-        <div class="pill ${pillClass}"></div>
-      </div>
-      <div class="paste-summary"></div>
-      <div class="paste-output"></div>
-    </div>
-  `;
+  const card = document.createElement("div");
+  card.className = "paste-result";
+  const top = document.createElement("div");
+  top.className = "paste-top";
+  const kind = document.createElement("div");
+  kind.className = "paste-kind";
+  kind.textContent = classification.label;
+  top.append(kind, createPill(output?.verdict || classification.riskHint || "review"));
 
-  elements.pasteResult.querySelector(".paste-kind").textContent = classification.label;
-  elements.pasteResult.querySelector(".pill").textContent = output?.verdict || classification.riskHint || "review";
-  elements.pasteResult.querySelector(".paste-summary").textContent = classification.summary;
+  const summary = document.createElement("div");
+  summary.className = "paste-summary";
+  summary.textContent = classification.summary;
 
-  const outputNode = elements.pasteResult.querySelector(".paste-output");
+  const outputNode = document.createElement("div");
+  outputNode.className = "paste-output";
   if (output?.type === "local" && classification.siteReputation) {
     outputNode.textContent =
-      `Local site verdict: ${classification.siteReputation.verdict} - Risk ${classification.siteReputation.riskScore}/100`;
+      `Local site verdict: ${safeVerdictLabel(classification.siteReputation.verdict)} - Risk ${safeNumber(classification.siteReputation.riskScore)}/100`;
   } else if (output?.type === "api") {
-    const summary = extractApiSummary(output.payload);
-    const scoreText = summary.score === null ? "" : ` - Risk ${summary.score}/100`;
-    outputNode.textContent = `Sigil verdict: ${summary.verdict}${scoreText}. ${summary.summary}`;
+    const apiSummary = extractApiSummary(output.payload);
+    const scoreText = apiSummary.score === null ? "" : ` - Risk ${apiSummary.score}/100`;
+    outputNode.textContent = `Sigil verdict: ${safeVerdictLabel(apiSummary.verdict)}${scoreText}. ${apiSummary.summary}`;
   } else if (output?.type === "error") {
     outputNode.textContent = output.message || "Sigil API scan failed. Please try again.";
   } else {
     outputNode.textContent = (classification.warnings || [])[0] || "Press Analyze for a Sigil API scan.";
   }
+
+  card.append(top, summary, outputNode);
+  elements.pasteResult.replaceChildren(card);
 
   return classification;
 }

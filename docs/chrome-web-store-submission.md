@@ -62,11 +62,11 @@ https://sigil.s3ntrylabs.com/terms
 
 Latest ZIP:
 
-`artifacts/release/sigil-chrome-extension-v1.0.1.zip`
+`artifacts/release/sigil-chrome-extension-v1.0.2.zip`
 
 SHA-256:
 
-`3415E42AB1EEF2D1011514457222E70EDDED028E692644E5854DDDE06D74AE58`
+`4827DEE1AAF5A2A328A1E87290069846B54CC2BEE34DDCBF72335B2AECCC3DFF`
 
 Packaged files:
 
