@@ -22,6 +22,9 @@ Optional:
 
 ```text
 ETHERSCAN_API_KEY
+SIGIL_ALLOWED_ORIGINS
+SIGIL_RATE_LIMIT_WINDOW_MS
+SIGIL_RATE_LIMIT_MAX
 LOG_LEVEL
 ```
 
@@ -40,6 +43,12 @@ SIGIL_AI_MODEL=deepseek/deepseek-v4-flash:free
 Sigil creates or updates its small `analyses` table on first API use. For manual database management, the same schema can also be pushed from the repo with `pnpm --filter @workspace/db push`.
 
 Use the exact uppercase variable name `DATABASE_URL` in Vercel. `Database_Url`, `database_url`, and other casing variants will not be read by Node.js. Do not use Replit's internal/provisioned database URL in Vercel; use a database that accepts external connections from Vercel Functions.
+
+`ETHERSCAN_API_KEY` is required for Etherscan-backed contract and reputation lookups. Sigil no longer falls back to the shared `YourApiKeyToken` placeholder because that can cause unpredictable shared rate limits in production.
+
+`SIGIL_ALLOWED_ORIGINS` can be used to add comma-separated frontend origins beyond Sigil's production and local defaults. Chrome extension origins are accepted by pattern so the Web Store extension can call the API without opening CORS to every website.
+
+`SIGIL_RATE_LIMIT_WINDOW_MS` and `SIGIL_RATE_LIMIT_MAX` control the lightweight API rate limiter. Defaults are `60000` and `60`, meaning 60 requests per IP per minute on each warm serverless instance.
 
 ## Neon Production Database
 

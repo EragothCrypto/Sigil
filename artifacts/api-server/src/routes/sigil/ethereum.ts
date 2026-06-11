@@ -1,4 +1,5 @@
 import { logger } from "../../lib/logger.js";
+import { getEtherscanApiKey } from "./etherscan-api.js";
 
 export function isTransactionHash(input: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/.test(input);
@@ -168,7 +169,7 @@ const ETHERSCAN_CHAIN_IDS: Record<string, string> = {
 };
 
 export async function etherscanFetch(network: string, params: Record<string, string>): Promise<unknown> {
-  const apiKey = process.env.ETHERSCAN_API_KEY ?? "YourApiKeyToken";
+  const apiKey = getEtherscanApiKey();
   const chainId = ETHERSCAN_CHAIN_IDS[network] ?? "1";
 
   // Use V2 unified API endpoint

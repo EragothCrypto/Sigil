@@ -4,6 +4,7 @@
  * age, verification, transaction activity, and exploit history.
  */
 import { logger } from "../../lib/logger.js";
+import { getEtherscanApiKey } from "./etherscan-api.js";
 import type { KnownEntity } from "./known-entities.js";
 
 // ── Known Exploit Registry ────────────────────────────────────────────────────
@@ -47,7 +48,7 @@ const ETHERSCAN_CHAIN_IDS: Record<string, string> = {
 };
 
 async function etherscanFetch(network: string, params: Record<string, string>): Promise<unknown> {
-  const apiKey = process.env.ETHERSCAN_API_KEY ?? "YourApiKeyToken";
+  const apiKey = getEtherscanApiKey();
   const chainId = ETHERSCAN_CHAIN_IDS[network] ?? "1";
   const url = new URL("https://api.etherscan.io/v2/api");
   url.searchParams.set("chainid", chainId);
