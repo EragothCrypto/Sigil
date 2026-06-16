@@ -727,6 +727,8 @@ Core positioning:
 
 Sigil should stay centered on before-you-sign safety and wallet-risk awareness. The product should not become a broad Web3 chatbot, portfolio tracker, tax tool, trading assistant, or generic crypto education app.
 
+Sigil should become the main S3ntryLabs security product: a long-term, high-upside security SaaS for individual crypto users first, then power users, teams, wallets, and dApps once the consumer workflow proves retention.
+
 The browser extension is the primary product surface. The web app remains the deeper analysis console, wallet-risk dashboard, history feed, and public education layer. API and SDK work should support that daily-use loop first, not turn Sigil into a heavy enterprise platform before the consumer workflow is excellent.
 
 ### Product Pillars
@@ -744,18 +746,28 @@ Features that do not improve one of these pillars should be deferred.
 
 ### Monetization Direction
 
-Sigil Wallet Monitor is the natural premium upgrade inside Sigil. It should not become a separate app.
+Sigil's commercial direction is security SaaS, not ads, portfolio tracking, trading, or broad crypto content. Premium value should come from persistent monitoring, higher limits, better prioritization, alerts, decision support, and team/API access.
+
+The product should keep a useful free safety loop so users can trust Sigil before paying. Paid tiers should deepen the same security workflow instead of hiding basic warnings behind a paywall.
+
+Sigil Wallet Monitor is the natural premium upgrade inside Sigil. It should not become a separate app. The Security Decision Assistant is also premium-ready, but only when grounded in Sigil analysis and constrained to security decisions.
 
 Target pricing hypothesis:
 
 | Tier | Price | Intended value |
 | --- | ---: | --- |
-| Free | EUR 0 | Limited daily scans, extension protection, basic approval checks |
-| Sigil Plus | EUR 9/month | Saved Wallet Monitor, higher scan limits, hygiene score, fix-first checklist |
-| Sigil Pro | EUR 29/month | Multiple monitored wallets, advanced alerts, deeper history, exportable reports |
-| API | From EUR 99/month later | Team and dApp integrations after consumer pull is proven |
+| Free | EUR 0 | Limited daily scans, browser extension protection, basic risky approval scanner, basic wallet-risk checks |
+| Sigil Plus | EUR 9/month | Wallet Risk Monitor, saved monitored wallet, higher scan limits, wallet hygiene score, scam exposure history, fix-first checklist, security decision assistant allowance |
+| Sigil Pro | EUR 29/month | Multiple monitored wallets, advanced alerts, deeper scam exposure history, exportable reports, richer assistant usage, power-user controls |
+| API | From EUR 99/month later | Stable team/dApp access to Sigil risk signals, strict rate limits, API keys, usage reporting, and integration support after consumer pull is proven |
 
-Premium value should come from persistent monitoring, prioritization, and decision support, not from hiding basic safety warnings behind a paywall.
+Commercial roadmap principles:
+
+- Free must remain good enough for basic before-you-sign protection.
+- Plus should be the best personal plan for one active crypto user who wants ongoing wallet-risk awareness.
+- Pro should serve power users, multisig operators, creators, small funds, and users who manage multiple wallets.
+- API should wait until Sigil has proven consumer demand, stable schemas, strong rate limiting, and repeatable signal quality.
+- Paid plans should emphasize prevention: risky approvals, wallet hygiene, scam exposure history, alerts, and security decisions before signing.
 
 ### Assistant Boundaries
 
@@ -832,8 +844,10 @@ Goal: turn one-off scans into ongoing wallet-risk awareness without custody, see
 - [ ] Optional wallet connection for faster public-address selection without custody or signing permissions
 - [ ] Add scam interaction history and suspicious contract exposure beyond approval-health data
 - [ ] Add ongoing alerts for new critical exposure, watched-wallet risk changes, and unusual approval changes
-- [ ] Add premium limits and account gates without blocking basic safety checks for free users
-- [ ] Support multiple monitored wallets for Sigil Pro users
+- [ ] Add Free/Plus/Pro limits without blocking basic safety checks for free users
+- [ ] Package Sigil Plus around one saved Wallet Risk Monitor, higher scan limits, hygiene score, scam exposure history, and fix-first checklist
+- [ ] Support multiple monitored wallets, deeper history, advanced alerts, and exportable reports for Sigil Pro users
+- [ ] Add upgrade CTAs in Wallet Monitor, risky approval scanner, and hygiene-score flows without making the product feel paywalled before value is shown
 
 ### Phase 5 — Security Decision Assistant
 
@@ -845,6 +859,8 @@ Goal: make Sigil's AI useful at the exact moment a user needs a security decisio
 - [ ] Add refusal boundaries for trading, investment, tax, legal, and general Web3 questions outside Sigil's safety scope
 - [ ] Add answer quality tests using known exploit, approval-drainer, phishing, safe-protocol, and ambiguous-risk scenarios
 - [ ] Make premium assistant usage part of Sigil Plus and Sigil Pro after the free safety flow is polished
+- [ ] Keep free assistant usage limited to a small number of context-grounded security questions so users can evaluate quality before upgrading
+- [ ] Add assistant upgrade paths from transaction, contract, approval, pasted-payload, and Wallet Monitor results
 
 ### Phase 6 — Integration Surface
 
@@ -856,6 +872,8 @@ Goal: let wallets, dApps, and teams adopt Sigil signals after the consumer app a
 - [ ] Signed threat-signal feed for extension and SDK consumers
 - [ ] Partner mode for wallets: embed Sigil risk summaries directly into wallet confirmation screens
 - [ ] Exportable analysis receipts for users who want to share a security explanation with a team or community
+- [ ] API monetization package from EUR 99/month: API keys, usage tiers, clear quotas, logs/receipts, and documented abuse limits
+- [ ] Publish API only after consumer retention, pricing, schema stability, and operational rate limiting are ready
 
 ### Phase 7 — Intelligence Expansion
 
