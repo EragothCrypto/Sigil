@@ -10,7 +10,10 @@ export interface HealthStatus {
 }
 
 export interface SimulateTransactionBody {
-  /** Raw transaction data — hex calldata, JSON tx object, or wallet prompt text */
+  /**
+   * Raw transaction data — hex calldata, JSON tx object, or wallet prompt text
+   * @maxLength 5000
+   */
   rawData: string;
   network?: string;
   /** Optional wallet address doing the signing */

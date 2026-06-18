@@ -137,6 +137,7 @@ components:
       properties:
         rawData:
           type: string
+          maxLength: 5000
           description: Raw transaction data — hex calldata, JSON tx object, or wallet prompt text
         network:
           type: string

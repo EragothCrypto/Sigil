@@ -18,11 +18,14 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary Simulate a raw transaction before signing
  */
+export const simulateTransactionBodyRawDataMax = 5000;
+
 export const simulateTransactionBodyNetworkDefault = `mainnet`;
 
 export const SimulateTransactionBody = zod.object({
   rawData: zod
     .string()
+    .max(simulateTransactionBodyRawDataMax)
     .describe(
       "Raw transaction data — hex calldata, JSON tx object, or wallet prompt text",
     ),
