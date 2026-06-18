@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { GitCompare, ChevronDown, ChevronRight, Plus, Minus, Minus as Equal, ShieldAlert, AlertTriangle, Info, Loader2 } from 'lucide-react';
 
 interface AbiFunction {
@@ -50,9 +50,8 @@ function shortAddr(addr: string) {
   return `${addr.slice(0, 8)}…${addr.slice(-6)}`;
 }
 
-function FnRow({ entry, showUnchanged }: { entry: DiffEntry; showUnchanged: boolean }) {
+const FnRow = memo(function FnRow({ entry }: { entry: DiffEntry }) {
   const [open, setOpen] = useState(false);
-  if (entry.status === 'unchanged' && !showUnchanged) return null;
 
   const isAdded = entry.status === 'added';
   const isRemoved = entry.status === 'removed';
@@ -114,7 +113,7 @@ function FnRow({ entry, showUnchanged }: { entry: DiffEntry; showUnchanged: bool
       )}
     </div>
   );
-}
+});
 
 export function ContractDiffView({ address, network }: { address: string; network: string }) {
   const [expanded, setExpanded] = useState(false);
@@ -144,11 +143,21 @@ export function ContractDiffView({ address, network }: { address: string; networ
     }
   };
 
-  const addedEntries = result?.diff.filter(e => e.status === 'added') ?? [];
-  const removedEntries = result?.diff.filter(e => e.status === 'removed') ?? [];
-  const unchangedEntries = result?.diff.filter(e => e.status === 'unchanged') ?? [];
+  // Memoize arrays to prevent O(N) filtering on every render when expanding/collapsing unchanged rows
+  const addedEntries = useMemo(() => result?.diff.filter(e => e.status === 'added') ?? [], [result?.diff]);
+  const removedEntries = useMemo(() => result?.diff.filter(e => e.status === 'removed') ?? [], [result?.diff]);
+  const unchangedEntries = useMemo(() => result?.diff.filter(e => e.status === 'unchanged') ?? [], [result?.diff]);
 
-  const hasHighRisk = addedEntries.some(e => e.risk === 'critical' || e.risk === 'high');
+  const hasHighRisk = useMemo(() => addedEntries.some(e => e.risk === 'critical' || e.risk === 'high'), [addedEntries]);
+
+  // Compute visible diffs depending on showUnchanged state
+  const visibleDiffs = useMemo(() => {
+    if (!result) return [];
+    if (showUnchanged) {
+      return result.diff;
+    }
+    return result.diff.filter(e => e.status !== 'unchanged');
+  }, [result, showUnchanged]);
 
   return (
     <div className="rounded-2xl border border-white/6 overflow-hidden" style={{ background: 'rgba(139,92,246,0.03)' }}>
@@ -268,8 +277,8 @@ export function ContractDiffView({ address, network }: { address: string; networ
                 )}
 
                 <div className="space-y-1.5">
-                  {result.diff.map((entry, i) => (
-                    <FnRow key={i} entry={entry} showUnchanged={showUnchanged} />
+                  {visibleDiffs.map((entry) => (
+                    <FnRow key={`${entry.status}-${entry.fn.signature}`} entry={entry} />
                   ))}
                 </div>
               </div>
