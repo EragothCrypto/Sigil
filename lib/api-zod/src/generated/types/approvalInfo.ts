@@ -29,9 +29,9 @@ export interface ApprovalInfo {
   riskLevel: ApprovalInfoRiskLevel;
   /** Previously analyzed approvals for the same spender */
   priorApprovals: PriorApproval[];
-  /** Current USD price per token (from CoinGecko) */
+  /** Current USD price per token from CoinGecko */
   tokenPriceUsd?: number;
-  /** Human-readable USD value of the approval ("$2,400" or "unlimited") */
+  /** Human-readable USD value of the approval, or unlimited */
   approvalAmountUsd?: string;
   /** Short display label for the dollar context */
   approvalUsdLabel?: string;

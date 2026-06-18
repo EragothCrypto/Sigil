@@ -206,6 +206,18 @@ export const AnalyzeInputResponse = zod.object({
           }),
         )
         .describe("Previously analyzed approvals for the same spender"),
+      tokenPriceUsd: zod
+        .number()
+        .optional()
+        .describe("Current USD price per token from CoinGecko"),
+      approvalAmountUsd: zod
+        .string()
+        .optional()
+        .describe("Human-readable USD value of the approval, or unlimited"),
+      approvalUsdLabel: zod
+        .string()
+        .optional()
+        .describe("Short display label for the dollar context"),
     })
     .optional()
     .describe(
@@ -362,6 +374,52 @@ export const AnalyzeInputResponse = zod.object({
     .describe(
       "Contract reputation \/ trust score (only present for contract address inputs)",
     ),
+  patterns: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        type: zod.enum([
+          "drainer",
+          "honeypot",
+          "fake_approval",
+          "rug_pull",
+          "phishing",
+          "flash_loan",
+          "suspicious",
+          "unknown",
+        ]),
+        name: zod.string(),
+        confidence: zod.enum(["confirmed", "high", "medium", "low"]),
+        description: zod.string(),
+        indicators: zod.array(zod.string()),
+        historicalContext: zod.string().optional(),
+        riskDelta: zod
+          .number()
+          .describe("How much this pattern adds to the risk score"),
+      }),
+    )
+    .optional()
+    .describe("Detected scam \/ exploit patterns"),
+  scoreFactors: zod
+    .array(
+      zod.object({
+        label: zod.string(),
+        delta: zod
+          .number()
+          .describe("Positive raises risk; negative lowers risk"),
+        severity: zod.enum(["critical", "high", "medium", "positive"]),
+        category: zod.enum([
+          "approval",
+          "contract",
+          "pattern",
+          "reputation",
+          "entity",
+        ]),
+        detail: zod.string().optional(),
+      }),
+    )
+    .optional()
+    .describe("Deterministic factors that explain what drove the risk score"),
   details: zod
     .object({
       from: zod.string().optional(),
@@ -375,6 +433,10 @@ export const AnalyzeInputResponse = zod.object({
     })
     .optional(),
   createdAt: zod.string(),
+  cached: zod
+    .boolean()
+    .optional()
+    .describe("True when this result was served from the in-memory cache"),
 });
 
 /**
@@ -397,6 +459,28 @@ export const GetAnalysisHistoryResponseItem = zod.object({
   warnings: zod.array(zod.string()),
   positives: zod.array(zod.string()),
   createdAt: zod.string(),
+  details: zod
+    .object({
+      from: zod.string().optional(),
+      to: zod.string().optional(),
+      value: zod.string().optional(),
+      gasUsed: zod.string().optional(),
+      methodName: zod.string().optional(),
+      contractName: zod.string().optional(),
+      tokenSymbol: zod.string().optional(),
+      rawData: zod.object({}).passthrough().optional(),
+    })
+    .optional(),
+  hallOfShame: zod
+    .boolean()
+    .optional()
+    .describe("True when this is a pre-curated Hall of Shame entry"),
+  hallOfShameLabel: zod
+    .string()
+    .optional()
+    .describe(
+      'Display label for Hall of Shame entries e.g. \"Ronin Bridge · $625M\"',
+    ),
 });
 export const GetAnalysisHistoryResponse = zod.array(
   GetAnalysisHistoryResponseItem,
@@ -422,4 +506,26 @@ export const GetAnalysisByIdResponse = zod.object({
   warnings: zod.array(zod.string()),
   positives: zod.array(zod.string()),
   createdAt: zod.string(),
+  details: zod
+    .object({
+      from: zod.string().optional(),
+      to: zod.string().optional(),
+      value: zod.string().optional(),
+      gasUsed: zod.string().optional(),
+      methodName: zod.string().optional(),
+      contractName: zod.string().optional(),
+      tokenSymbol: zod.string().optional(),
+      rawData: zod.object({}).passthrough().optional(),
+    })
+    .optional(),
+  hallOfShame: zod
+    .boolean()
+    .optional()
+    .describe("True when this is a pre-curated Hall of Shame entry"),
+  hallOfShameLabel: zod
+    .string()
+    .optional()
+    .describe(
+      'Display label for Hall of Shame entries e.g. \"Ronin Bridge · $625M\"',
+    ),
 });

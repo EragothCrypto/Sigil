@@ -12,37 +12,9 @@ import type { AnalysisResultVerdict } from "./analysisResultVerdict";
 import type { ApprovalInfo } from "./approvalInfo";
 import type { ContractReputation } from "./contractReputation";
 import type { KnownEntity } from "./knownEntity";
+import type { PatternMatch } from "./patternMatch";
+import type { ScoreFactor } from "./scoreFactor";
 import type { TransactionBreakdown } from "./transactionBreakdown";
-
-export type PatternType =
-  | "drainer"
-  | "honeypot"
-  | "fake_approval"
-  | "rug_pull"
-  | "phishing"
-  | "flash_loan"
-  | "suspicious";
-
-export type PatternConfidence = "confirmed" | "high" | "medium" | "low";
-
-export interface PatternMatch {
-  id: string;
-  type: PatternType;
-  name: string;
-  confidence: PatternConfidence;
-  description: string;
-  indicators: string[];
-  historicalContext?: string;
-  riskDelta: number;
-}
-
-export interface ScoreFactor {
-  label: string;
-  delta: number;
-  severity: "critical" | "high" | "medium" | "positive";
-  category: "approval" | "contract" | "pattern" | "reputation" | "entity";
-  detail?: string;
-}
 
 export interface AnalysisResult {
   id: string;
@@ -74,6 +46,6 @@ export interface AnalysisResult {
   scoreFactors?: ScoreFactor[];
   details?: AnalysisDetails;
   createdAt: string;
-  /** True when this result was served from the in-memory cache (no new AI call was made) */
+  /** True when this result was served from the in-memory cache */
   cached?: boolean;
 }

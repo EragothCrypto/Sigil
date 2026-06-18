@@ -5,6 +5,7 @@
  * Sigil — Web3 Trust Layer API
  * OpenAPI spec version: 0.1.0
  */
+import type { AnalysisDetails } from "./analysisDetails";
 import type { AnalysisRecordInputType } from "./analysisRecordInputType";
 import type { AnalysisRecordRiskLevel } from "./analysisRecordRiskLevel";
 import type { AnalysisRecordVerdict } from "./analysisRecordVerdict";
@@ -22,6 +23,7 @@ export interface AnalysisRecord {
   warnings: string[];
   positives: string[];
   createdAt: string;
+  details?: AnalysisDetails;
   /** True when this is a pre-curated Hall of Shame entry */
   hallOfShame?: boolean;
   /** Display label for Hall of Shame entries e.g. "Ronin Bridge · $625M" */
