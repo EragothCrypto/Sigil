@@ -1,0 +1,3 @@
+## 2025-02-12 - Prevented O(N) array filtering and O(N) component re-renders
+**Learning:** In React, array indexes as keys break the `React.memo` optimization if elements are hidden/filtered dynamically. If unchanged entries are hidden, and array index `i` is used as a `key`, React will shift the keys causing unchanged components to re-render, effectively defeating `React.memo` for the remaining elements and causing bugs with any local state (like open/closed).
+**Action:** Use a unique, stable identifier like `key={`${entry.status}-${entry.fn.signature}`}` instead of `i`. Memoize derived arrays using `useMemo` so that the component does not perform O(N) filtering on every render.
