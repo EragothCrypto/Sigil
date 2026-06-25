@@ -1,3 +1,6 @@
 ## 2025-02-12 - Prevented O(N) array filtering and O(N) component re-renders
 **Learning:** In React, array indexes as keys break the `React.memo` optimization if elements are hidden/filtered dynamically. If unchanged entries are hidden, and array index `i` is used as a `key`, React will shift the keys causing unchanged components to re-render, effectively defeating `React.memo` for the remaining elements and causing bugs with any local state (like open/closed).
 **Action:** Use a unique, stable identifier like `key={`${entry.status}-${entry.fn.signature}`}` instead of `i`. Memoize derived arrays using `useMemo` so that the component does not perform O(N) filtering on every render.
+## 2024-06-25 - React Component Re-render Bottleneck in Text Parsing
+**Learning:** React components that parse strings recursively and dynamically create regex objects (e.g., in a loop over a large dictionary like `JARGON_GLOSSARY`) can cause severe O(N*M) performance bottlenecks during parsing, especially when not memoized, causing the expensive recursive work to trigger on every re-render.
+**Action:** Always extract sorting and RegExp instantiation for static dictionaries to the module level (precompilation), and use `memo`/`useMemo` to prevent deep recalculations when the source text does not change.

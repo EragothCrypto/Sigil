@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo, useMemo } from 'react';
 import { JARGON_GLOSSARY } from '@/lib/jargon-glossary';
 
 // ── Base tooltip component ─────────────────────────────────────────────────
@@ -80,10 +80,10 @@ export function JargonTooltip({ term, definition, children }: JargonTooltipProps
  * Parses a plain-English string and wraps any recognised glossary terms
  * with a JargonTooltip. Safe to use on AI-generated text.
  */
-export function JargonText({ text, className }: { text: string; className?: string }) {
-  const nodes = parseJargon(text);
+export const JargonText = memo(function JargonText({ text, className }: { text: string; className?: string }) {
+  const nodes = useMemo(() => parseJargon(text), [text]);
   return <span className={className}>{nodes}</span>;
-}
+});
 
 // ── Parser ─────────────────────────────────────────────────────────────────
 
@@ -91,23 +91,24 @@ function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Pre-compile the regexes to avoid recompiling them on every segment iteration
+// Sort longest-first to avoid partial matches (e.g. "gas limit" before "gas")
+const PRECOMPILED_TERMS = Object.entries(JARGON_GLOSSARY)
+  .sort(([a], [b]) => b.length - a.length)
+  .map(([term, definition]) => ({
+    term,
+    definition,
+    pattern: new RegExp(`(?<![\\w-])${escapeRegex(term)}(?![\\w-])`, 'i'),
+  }));
+
 function parseJargon(text: string): React.ReactNode[] {
   if (!text) return [];
-
-  // Sort longest-first to avoid partial matches (e.g. "gas limit" before "gas")
-  const terms = Object.entries(JARGON_GLOSSARY).sort(([a], [b]) => b.length - a.length);
 
   function parseSegment(segment: string, depth: number): React.ReactNode[] {
     if (!segment) return [];
     if (depth > 50) return [segment]; // safety limit
 
-    for (const [term, definition] of terms) {
-      // Word-boundary-aware, case-insensitive match
-      // For multi-word terms, we allow any whitespace between words
-      const pattern = new RegExp(
-        `(?<![\\w-])${escapeRegex(term)}(?![\\w-])`,
-        'i',
-      );
+    for (const { term, definition, pattern } of PRECOMPILED_TERMS) {
       const match = segment.match(pattern);
       if (match && match.index !== undefined) {
         const before = segment.slice(0, match.index);
