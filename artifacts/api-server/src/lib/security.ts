@@ -30,11 +30,7 @@ function isExtensionOrigin(origin: string): boolean {
 }
 
 function clientKey(req: Request): string {
-  const forwardedFor = String(req.headers["x-forwarded-for"] ?? "")
-    .split(",")[0]
-    .trim();
-
-  return forwardedFor || req.ip || req.socket.remoteAddress || "unknown";
+  return req.ip || req.socket.remoteAddress || "unknown";
 }
 
 function isRateLimitExempt(req: Request): boolean {
