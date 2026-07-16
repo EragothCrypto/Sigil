@@ -4,3 +4,6 @@
 ## 2024-06-25 - React Component Re-render Bottleneck in Text Parsing
 **Learning:** React components that parse strings recursively and dynamically create regex objects (e.g., in a loop over a large dictionary like `JARGON_GLOSSARY`) can cause severe O(N*M) performance bottlenecks during parsing, especially when not memoized, causing the expensive recursive work to trigger on every re-render.
 **Action:** Always extract sorting and RegExp instantiation for static dictionaries to the module level (precompilation), and use `memo`/`useMemo` to prevent deep recalculations when the source text does not change.
+## 2024-07-28 - Chained Array Operations Overhead
+**Learning:** Repeated array method chaining (e.g., `.filter().length`, `.reduce()`, `.map()`) on the same dataset in reporting functions creates O(K*N) passes over the data. In `buildWalletMonitorReport`, the dataset was traversed 16 times in succession, causing noticeable CPU overhead as the watchlist size grows.
+**Action:** Replace multiple chained array passes with a single `for` loop that accumulates all necessary counters, metrics, and conditional logic in one O(N) pass.
