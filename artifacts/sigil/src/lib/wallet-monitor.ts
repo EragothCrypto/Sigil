@@ -45,15 +45,26 @@ function riskLevelFromScore(score: number | null, highRiskWallets: number): Wall
 }
 
 function scoreEntries(entries: WatchlistEntry[]): number | null {
-  const scored = entries.filter((entry) => entry.approvalSummary);
-  if (!scored.length) return null;
+  let scoredCount = 0;
+  let totalScore = 0;
+  let uncheckedPenalty = 0;
+  let unavailablePenalty = 0;
+  let highRiskPenalty = 0;
 
-  const average =
-    scored.reduce((total, entry) => total + (entry.approvalSummary?.healthScore ?? 0), 0) / scored.length;
-  const uncheckedPenalty = entries.filter((entry) => entry.status === "unchecked").length * 3;
-  const unavailablePenalty = entries.filter((entry) => entry.status === "unavailable").length * 7;
-  const highRiskPenalty = entries.filter((entry) => entry.status === "high-risk").length * 5;
+  // ⚡ Bolt: Use a single O(N) pass to compute scores and penalties instead of multiple filter/reduce calls.
+  for (const entry of entries) {
+    if (entry.approvalSummary) {
+      scoredCount++;
+      totalScore += entry.approvalSummary.healthScore ?? 0;
+    }
+    if (entry.status === "unchecked") uncheckedPenalty += 3;
+    else if (entry.status === "unavailable") unavailablePenalty += 7;
+    else if (entry.status === "high-risk") highRiskPenalty += 5;
+  }
 
+  if (scoredCount === 0) return null;
+
+  const average = totalScore / scoredCount;
   return clampScore(average - uncheckedPenalty - unavailablePenalty - highRiskPenalty);
 }
 
@@ -113,24 +124,42 @@ function sortFixes(fixes: WalletMonitorFix[]): WalletMonitorFix[] {
 }
 
 export function buildWalletMonitorReport(entries: WatchlistEntry[]): WalletMonitorReport {
-  const networks = new Set(entries.map((entry) => entry.network));
-  const checkedWallets = entries.filter((entry) => Boolean(entry.lastCheckedAt)).length;
-  const uncheckedWallets = entries.filter((entry) => entry.status === "unchecked").length;
-  const unavailableWallets = entries.filter((entry) => entry.status === "unavailable").length;
-  const highRiskWallets = entries.filter((entry) => entry.status === "high-risk").length;
-  const reviewWallets = entries.filter((entry) => entry.status === "review").length;
-  const cleanWallets = entries.filter((entry) => entry.status === "clean").length;
+  const networks = new Set<string>();
+  let checkedWallets = 0;
+  let uncheckedWallets = 0;
+  let unavailableWallets = 0;
+  let highRiskWallets = 0;
+  let reviewWallets = 0;
+  let cleanWallets = 0;
 
-  const activeApprovals = entries.reduce((total, entry) => total + (entry.approvalSummary?.totalActive ?? 0), 0);
-  const unlimitedApprovals = entries.reduce((total, entry) => total + (entry.approvalSummary?.unlimited ?? 0), 0);
-  const criticalOrHighApprovals = entries.reduce(
-    (total, entry) => total + (entry.approvalSummary?.critical ?? 0) + (entry.approvalSummary?.high ?? 0),
-    0,
-  );
-  const hygieneScore = scoreEntries(entries);
+  let activeApprovals = 0;
+  let unlimitedApprovals = 0;
+  let criticalOrHighApprovals = 0;
+
   const fixes: WalletMonitorFix[] = [];
 
-  entries.forEach((entry) => addFixesForEntry(entry, fixes));
+  // ⚡ Bolt: Use a single O(N) pass to gather all metrics and fixes instead of 11 consecutive array traversals.
+  for (const entry of entries) {
+    networks.add(entry.network);
+
+    if (entry.lastCheckedAt) checkedWallets++;
+
+    if (entry.status === "unchecked") uncheckedWallets++;
+    else if (entry.status === "unavailable") unavailableWallets++;
+    else if (entry.status === "high-risk") highRiskWallets++;
+    else if (entry.status === "review") reviewWallets++;
+    else if (entry.status === "clean") cleanWallets++;
+
+    if (entry.approvalSummary) {
+      activeApprovals += entry.approvalSummary.totalActive ?? 0;
+      unlimitedApprovals += entry.approvalSummary.unlimited ?? 0;
+      criticalOrHighApprovals += (entry.approvalSummary.critical ?? 0) + (entry.approvalSummary.high ?? 0);
+    }
+
+    addFixesForEntry(entry, fixes);
+  }
+
+  const hygieneScore = scoreEntries(entries);
 
   if (!fixes.length) {
     fixes.push({
