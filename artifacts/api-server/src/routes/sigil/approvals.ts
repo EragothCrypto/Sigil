@@ -59,10 +59,19 @@ router.get("/approvals/health", async (req, res) => {
       .map(scoreApproval)
       .sort((a, b) => b.riskScore - a.riskScore);
 
-    const critical = approvals.filter((approval) => approval.riskLevel === "critical").length;
-    const high = approvals.filter((approval) => approval.riskLevel === "high").length;
-    const unlimited = approvals.filter((approval) => approval.isUnlimited).length;
-    const maxRisk = approvals.reduce((max, approval) => Math.max(max, approval.riskScore), 0);
+    // ⚡ Bolt Optimization: Replace 4x O(N) array passes (.filter, .reduce) with a single O(N) loop
+    let critical = 0;
+    let high = 0;
+    let unlimited = 0;
+    let maxRisk = 0;
+
+    for (let i = 0; i < approvals.length; i++) {
+      const approval = approvals[i];
+      if (approval.riskLevel === "critical") critical++;
+      if (approval.riskLevel === "high") high++;
+      if (approval.isUnlimited) unlimited++;
+      if (approval.riskScore > maxRisk) maxRisk = approval.riskScore;
+    }
 
     return res.json({
       wallet,

@@ -7,3 +7,6 @@
 ## 2024-07-28 - Chained Array Operations Overhead
 **Learning:** Repeated array method chaining (e.g., `.filter().length`, `.reduce()`, `.map()`) on the same dataset in reporting functions creates O(K*N) passes over the data. In `buildWalletMonitorReport`, the dataset was traversed 16 times in succession, causing noticeable CPU overhead as the watchlist size grows.
 **Action:** Replace multiple chained array passes with a single `for` loop that accumulates all necessary counters, metrics, and conditional logic in one O(N) pass.
+## 2025-02-12 - Reaffirmed Pattern of Chained Array Overheads
+**Learning:** The anti-pattern of using multiple `.filter(..).length` and `.reduce(..)` chaining was identified again in `approval-health.ts`/`approvals.ts`, leading to 4x O(N) passes over potentially large arrays of logs/approvals. This confirms that this API-tier overhead remains a common risk throughout this codebase.
+**Action:** Always replace multiple chained array passes over the same list with a single accumulator loop `for (let i = 0; i < approvals.length; i++) { ... }` when deriving multiple aggregate metrics from an array.
