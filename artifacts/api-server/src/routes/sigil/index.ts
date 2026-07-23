@@ -39,6 +39,11 @@ router.post("/analyze", async (req, res) => {
 
   const { input, network = "mainnet", fresh } = parseResult.data as { input: string; network?: string; fresh?: boolean };
   const trimmed = input.trim();
+
+  if (trimmed.length > 150) {
+    res.status(400).json({ error: "validation_error", message: "Input is too long (max 150 characters)" });
+    return;
+  }
   const inputType = detectInputType(trimmed);
   const key = cacheKey(trimmed, network);
 
@@ -309,6 +314,11 @@ router.post("/analyze-stream", async (req, res) => {
 
   const { input, network = "mainnet", fresh } = parseResult.data as { input: string; network?: string; fresh?: boolean };
   const trimmed = input.trim();
+
+  if (trimmed.length > 150) {
+    res.status(400).json({ error: "validation_error", message: "Input is too long (max 150 characters)" });
+    return;
+  }
   const inputType = detectInputType(trimmed);
   const key = cacheKey(trimmed, network);
 
@@ -689,7 +699,9 @@ router.get("/history", async (req, res) => {
     return;
   }
 
-  const limit = Math.min(parseInt(String(req.query.limit ?? "20")), 100);
+  let parsedLimit = parseInt(String(req.query.limit ?? "20"), 10);
+  if (isNaN(parsedLimit)) parsedLimit = 20;
+  const limit = Math.max(1, Math.min(parsedLimit, 100));
   const records = await db
     .select()
     .from(analysesTable)
