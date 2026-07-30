@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { analysesTable } from "@workspace/db/schema";
-import { desc, eq, ne } from "drizzle-orm";
+import { desc, eq, ne, and, sql } from "drizzle-orm";
 import { AnalyzeInputBody } from "@workspace/api-zod";
 import {
   detectInputType,
@@ -90,28 +90,28 @@ router.post("/analyze", async (req, res) => {
         else approvalRisk = "medium";
 
         // Look up prior approvals to the same spender in our DB history
-        const allHistory = await db
+        const priorRecords = await db
           .select()
           .from(analysesTable)
+          .where(
+            and(
+              sql`${analysesTable.details}->>'spender' = ${approval.spender}`,
+              ne(analysesTable.input, trimmed)
+            )
+          )
           .orderBy(desc(analysesTable.createdAt))
-          .limit(200);
+          .limit(5);
 
-        const prior = allHistory
-          .filter((r) => {
-            const d = r.details as Record<string, unknown> | null;
-            return d?.spender === approval.spender && r.input !== trimmed;
-          })
-          .slice(0, 5)
-          .map((r) => {
-            const d = r.details as Record<string, unknown>;
-            return {
-              id: String(r.id),
-              analyzedAt: r.createdAt.toISOString(),
-              amountFormatted: String(d.approvalAmount ?? "unknown"),
-              isUnlimited: Boolean(d.approvalIsUnlimited),
-              network: r.network,
-            };
-          });
+        const prior = priorRecords.map((r) => {
+          const d = (r.details as Record<string, unknown>) || {};
+          return {
+            id: String(r.id),
+            analyzedAt: r.createdAt.toISOString(),
+            amountFormatted: String(d.approvalAmount ?? "unknown"),
+            isUnlimited: Boolean(d.approvalIsUnlimited),
+            network: r.network,
+          };
+        });
 
         approvalInfo = {
           isApproval: true,

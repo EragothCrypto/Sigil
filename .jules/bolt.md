@@ -10,3 +10,6 @@
 ## 2025-02-12 - Reaffirmed Pattern of Chained Array Overheads
 **Learning:** The anti-pattern of using multiple `.filter(..).length` and `.reduce(..)` chaining was identified again in `approval-health.ts`/`approvals.ts`, leading to 4x O(N) passes over potentially large arrays of logs/approvals. This confirms that this API-tier overhead remains a common risk throughout this codebase.
 **Action:** Always replace multiple chained array passes over the same list with a single accumulator loop `for (let i = 0; i < approvals.length; i++) { ... }` when deriving multiple aggregate metrics from an array.
+## 2024-06-25 - Push JSONB Filtering to PostgreSQL
+**Learning:** Found a case where 200 records were queried from the database and filtered in-memory via JavaScript arrays to retrieve 5 matching records from a JSONB field.
+**Action:** When filtering by properties inside a JSONB column (like `details` in `analysesTable`), use Drizzle's `sql` operator to execute the filter directly in Postgres (e.g. `sql\`${analysesTable.details}->>'spender' = ${approval.spender}\``). This avoids unbounded memory growth and unnecessary network transfer between the DB and API server.
