@@ -117,35 +117,23 @@ async function fetchReputationData(address: string, network: string): Promise<{
   }
 
   try {
-    // 2. Transaction count estimation — fetch page 1 with 100 results, then page 2
-    const [page1, page2] = await Promise.allSettled([
-      etherscanFetch(network, {
-        module: "account",
-        action: "txlist",
-        address: addr,
-        startblock: "0",
-        endblock: "99999999",
-        page: "1",
-        offset: "100",
-        sort: "desc",
-      }) as Promise<{ status: string; result?: unknown[] }>,
-      etherscanFetch(network, {
-        module: "account",
-        action: "txlist",
-        address: addr,
-        startblock: "0",
-        endblock: "99999999",
-        page: "2",
-        offset: "100",
-        sort: "desc",
-      }) as Promise<{ status: string; result?: unknown[] }>,
-    ]);
+    // ⚡ Bolt Optimization: Batch Etherscan txlist request into a single call.
+    // Etherscan limits to 5 req/sec on the free tier. Fetching 200 items in one page
+    // cuts our API consumption in half compared to making 2 concurrent page requests.
+    const page1 = await etherscanFetch(network, {
+      module: "account",
+      action: "txlist",
+      address: addr,
+      startblock: "0",
+      endblock: "99999999",
+      page: "1",
+      offset: "200",
+      sort: "desc",
+    }).catch(() => ({})) as { status?: string; result?: unknown[] };
 
-    const p1Results = page1.status === "fulfilled" ? (page1.value?.result ?? []) : [];
-    const p2Results = page2.status === "fulfilled" ? (page2.value?.result ?? []) : [];
-
-    const totalFetched = p1Results.length + p2Results.length;
-    result.txCountEstimate = totalFetched >= 200 ? 200 : totalFetched;
+    const p1Results = Array.isArray(page1.result) ? page1.result : [];
+    const totalFetched = p1Results.length;
+    result.txCountEstimate = totalFetched;
 
     // Check if any tx in page 1 (most recent) is within 30 days
     if (p1Results.length > 0) {
