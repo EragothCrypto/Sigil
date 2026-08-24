@@ -63,6 +63,7 @@ test("content overlay constrains dynamic html classes and urls", () => {
 
   assert.match(content, /function safeVerdictClass/);
   assert.match(content, /function safeAnalysisUrl/);
+  assert.match(content, /\.replace\(\/'\/g, "&#39;"\)/);
   assert.match(content, /Number\.isFinite\(numericRisk\)/);
   assert.doesNotMatch(content, /<div class="body \$\{verdict\}">/);
   assert.doesNotMatch(content, /href="\$\{escHtml\(fullUrl\)\}"/);
