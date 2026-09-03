@@ -13,3 +13,6 @@
 ## 2024-03-24 - Batch Etherscan API calls for contract reputation
 **Learning:** Etherscan limits to 5 req/sec on the free tier. Making concurrent API calls per item using `Promise.allSettled` uses more network overhead and quota than necessary when we can retrieve up to 200 items in a single paginated Etherscan API call using offset 200.
 **Action:** When querying Etherscan, always max out the offset limit (up to 200) instead of concurrently firing requests when trying to get a large number of items. Also gracefully handle rejection/error conditions using `.catch(() => ({}))` to maintain fault tolerance instead of just directly awaiting.
+## 2025-02-12 - Drizzle JSONB Filtering in API tier vs DB
+**Learning:** In the API server, Drizzle ORM was used to fetch a large number of records (`limit(200)`), after which an in-memory `.filter()` was used to check values inside a JSONB column (`details`). This is highly inefficient because it fetches unnecessary rows from PostgreSQL, creates heavy memory pressure on the Node process, and risks missing data if the target record sits at position 201.
+**Action:** Push filtering logic down to PostgreSQL. Use Drizzle's `sql` tagged template literal (e.g. `sql\`${table.details}->>'key' = ${value}\``) to filter on JSONB keys directly inside the `where` clause, avoiding full table scans and memory bloat.

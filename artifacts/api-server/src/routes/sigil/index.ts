@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { analysesTable } from "@workspace/db/schema";
-import { desc, eq, ne } from "drizzle-orm";
+import { desc, eq, ne, and, sql } from "drizzle-orm";
 import { AnalyzeInputBody } from "@workspace/api-zod";
 import {
   detectInputType,
@@ -89,19 +89,22 @@ router.post("/analyze", async (req, res) => {
         else if (approval.isUnlimited) approvalRisk = "high";
         else approvalRisk = "medium";
 
-        // Look up prior approvals to the same spender in our DB history
-        const allHistory = await db
+        // Optimization: Push filtering down to the database using JSONB queries
+        // instead of fetching 200 records and filtering in memory. This avoids
+        // inefficient in-memory filtering and full table scans.
+        const priorHistory = await db
           .select()
           .from(analysesTable)
+          .where(
+            and(
+              sql`${analysesTable.details}->>'spender' = ${approval.spender}`,
+              ne(analysesTable.input, trimmed)
+            )
+          )
           .orderBy(desc(analysesTable.createdAt))
-          .limit(200);
+          .limit(5);
 
-        const prior = allHistory
-          .filter((r) => {
-            const d = r.details as Record<string, unknown> | null;
-            return d?.spender === approval.spender && r.input !== trimmed;
-          })
-          .slice(0, 5)
+        const prior = priorHistory
           .map((r) => {
             const d = r.details as Record<string, unknown>;
             return {
