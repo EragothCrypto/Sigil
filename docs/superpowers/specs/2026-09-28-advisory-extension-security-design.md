@@ -24,12 +24,16 @@ A hostile page may emit, suppress, replay, or alter DOM events. None of those ac
 
 For an analyzable request it:
 
-1. creates an observation identifier and a fully detached, bounded snapshot of the method and analysis target,
-2. invokes the captured original provider request immediately and exactly once,
-3. emits one advisory observation that contains only the detached snapshot and no reference reachable from the provider arguments, and
-4. returns the original provider's result or error unchanged.
+1. invokes the captured original provider request immediately and exactly once without first reading, destructuring, cloning, validating, or serializing the page-supplied arguments,
+2. captures and returns the original provider's exact return value immediately,
+3. schedules all observation work as a separate best-effort task after the wrapper has returned, and
+4. in that task, creates an observation identifier and a fully detached, bounded snapshot before emitting one advisory observation.
 
-The snapshot must be created with captured platform intrinsics or explicit primitive-field copying. Passing a transaction, typed-data object, params array, or any nested object from the provider arguments directly into `CustomEvent.detail` is forbidden. Dispatching the advisory event must occur only after the original provider function has been invoked so synchronous page event listeners cannot gain an extension-created re-entrancy point before that invocation.
+If the original provider throws synchronously, the wrapper rethrows the identical error without attempting observation. If it returns a promise or thenable, the wrapper returns that same object without awaiting, wrapping, or attaching handlers.
+
+Observation is scheduled through an intrinsic captured when the extension script initializes. Scheduler failure, hostile getters/proxies, snapshot failure, event construction failure, and event dispatch failure are all contained inside the advisory path and are silently abandoned. None may replace, delay, resolve, reject, or otherwise alter the provider return.
+
+The snapshot must be created with captured platform intrinsics or explicit primitive-field copying. Passing a transaction, typed-data object, params array, or any nested object from the provider arguments directly into `CustomEvent.detail` is forbidden. Page-controlled getters and proxy traps may run only in the later advisory task, never before the provider invocation or wrapper return.
 
 It does not subscribe to a decision event, wait for analysis, apply a timeout, or expose any `proceed`/`cancel` state.
 
@@ -96,6 +100,8 @@ Analysis history remains local by default and continues to exclude session histo
 
 - Provider calls do not depend on storage, network, rendering, or analysis success.
 - Synchronous and asynchronous provider errors pass through unchanged.
+- Argument inspection and snapshot creation occur only after the provider wrapper has returned.
+- Every scheduler, snapshot, event-construction, and event-dispatch failure is contained and drops the observation.
 - Overlay/API failures cannot reject or resolve the provider request.
 - Closing or navigating the page cancels only advisory work.
 - Queue cleanup, duplicate-ID expiry, and rate-window cleanup are bounded.
@@ -135,9 +141,11 @@ A focused executable test loads the main-world observer with a provider stub and
 2. a forged `sigil:decision` before or after the observation has no effect,
 3. the original return value and rejection are preserved,
 4. an observation listener cannot mutate provider arguments through `CustomEvent.detail`,
-5. the original provider is invoked before the advisory event is dispatched,
-6. one advisory observation is emitted for a supported method, and
-7. unsupported methods pass through without an advisory event.
+5. hostile getters or proxies are not touched until after the provider invocation and wrapper return,
+6. throwing scheduler, snapshot, event-construction, or dispatch APIs cannot alter the provider return or error,
+7. the original provider is invoked before any advisory event is dispatched,
+8. one advisory observation is emitted for a supported method, and
+9. unsupported methods pass through without an advisory event.
 
 The test must fail against the current implementation for the expected reason before production code changes.
 
