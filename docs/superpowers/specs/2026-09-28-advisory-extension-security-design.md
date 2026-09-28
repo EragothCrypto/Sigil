@@ -16,6 +16,8 @@ Page-authored data must never control whether the original wallet provider reque
 
 A hostile page may emit, suppress, replay, or alter DOM events. None of those actions may change the provider call's arguments, result, call count, or execution path. Sigil's automatic request observation is best-effort telemetry, not proof that a particular wallet action occurred.
 
+The attacker model includes arbitrary page JavaScript but not another malicious installed extension with earlier MAIN-world execution. Sigil relies on Chrome's manifest-declared `run_at: "document_start"` MAIN-world script to capture the required platform intrinsics before page scripts run. The manifest configuration is therefore part of the security boundary and must have a regression assertion.
+
 ## Architecture
 
 ### Main-world observer
@@ -29,9 +31,13 @@ For an analyzable request it:
 3. schedules all observation work as a separate best-effort task after the wrapper has returned, and
 4. in that task, creates an observation identifier and a fully detached, bounded snapshot before emitting one advisory observation.
 
+The replacement `request` function must be non-`async`. It forwards the complete argument list through a captured invocation intrinsic and calls the original method with the original provider object as receiver. It must not wrap, normalize, clone, or omit arguments.
+
 If the original provider throws synchronously, the wrapper rethrows the identical error without attempting observation. If it returns a promise or thenable, the wrapper returns that same object without awaiting, wrapping, or attaching handlers.
 
-Observation is scheduled through an intrinsic captured when the extension script initializes. Scheduler failure, hostile getters/proxies, snapshot failure, event construction failure, and event dispatch failure are all contained inside the advisory path and are silently abandoned. None may replace, delay, resolve, reject, or otherwise alter the provider return.
+Observation is scheduled through a timer intrinsic captured at script initialization under the `document_start` precondition. A wrapper-local `returned` guard remains false while the scheduler is invoked. If a poisoned or nonconforming scheduler executes the callback synchronously, the callback drops the observation without touching provider arguments. The guard is enabled immediately before returning the already captured provider result; a conforming queued task can then perform observation after the wrapper stack has completed.
+
+Scheduler invocation is wrapped so a thrown error drops the observation and the captured provider result is still returned. Scheduler failure, hostile getters/proxies, snapshot failure, event construction failure, and event dispatch failure are all contained inside the advisory path and are silently abandoned. None may replace, resolve, reject, or otherwise alter the provider return. The supported threat model relies on Chrome's pre-page `document_start` execution to prevent a hostile page from replacing the captured scheduler with an implementation that deliberately blocks forever.
 
 The snapshot must be created with captured platform intrinsics or explicit primitive-field copying. Passing a transaction, typed-data object, params array, or any nested object from the provider arguments directly into `CustomEvent.detail` is forbidden. Page-controlled getters and proxy traps may run only in the later advisory task, never before the provider invocation or wrapper return.
 
@@ -143,9 +149,11 @@ A focused executable test loads the main-world observer with a provider stub and
 4. an observation listener cannot mutate provider arguments through `CustomEvent.detail`,
 5. hostile getters or proxies are not touched until after the provider invocation and wrapper return,
 6. throwing scheduler, snapshot, event-construction, or dispatch APIs cannot alter the provider return or error,
-7. the original provider is invoked before any advisory event is dispatched,
-8. one advisory observation is emitted for a supported method, and
-9. unsupported methods pass through without an advisory event.
+7. a scheduler that invokes its callback synchronously produces no observation,
+8. receiver identity and the complete argument list are preserved,
+9. the original provider is invoked before any advisory event is dispatched,
+10. one advisory observation is emitted for a supported method, and
+11. unsupported methods pass through without an advisory event.
 
 The test must fail against the current implementation for the expected reason before production code changes.
 
