@@ -24,10 +24,12 @@ A hostile page may emit, suppress, replay, or alter DOM events. None of those ac
 
 For an analyzable request it:
 
-1. creates an observation identifier,
-2. emits one advisory observation event containing a bounded copy of the method and analysis target,
-3. invokes the captured original provider request immediately and exactly once, and
+1. creates an observation identifier and a fully detached, bounded snapshot of the method and analysis target,
+2. invokes the captured original provider request immediately and exactly once,
+3. emits one advisory observation that contains only the detached snapshot and no reference reachable from the provider arguments, and
 4. returns the original provider's result or error unchanged.
+
+The snapshot must be created with captured platform intrinsics or explicit primitive-field copying. Passing a transaction, typed-data object, params array, or any nested object from the provider arguments directly into `CustomEvent.detail` is forbidden. Dispatching the advisory event must occur only after the original provider function has been invoked so synchronous page event listeners cannot gain an extension-created re-entrancy point before that invocation.
 
 It does not subscribe to a decision event, wait for analysis, apply a timeout, or expose any `proceed`/`cancel` state.
 
@@ -53,13 +55,13 @@ No validation can make a DOM event authentic. UI and documentation must therefor
 The overlay provides decision support only.
 
 - Loading: “Sigil is checking an observed wallet request.”
-- Result: “Review this alert before confirming in your wallet.”
+- Result: “Review this alert alongside the request shown by your wallet.”
 - Failure: “Sigil could not complete this analysis. Verify the request directly in your wallet.”
 - Actions: “Full analysis”, “Dismiss alert”, and “Trust this site”.
 
 The overlay must not contain “Proceed”, “Cancel request”, a second-confirmation gate, or text claiming that Sigil controls the wallet request. Dismissing or trusting a site changes only Sigil's local advisory behavior.
 
-The wallet remains the sole place where the user authorizes or rejects the action. Sigil may still use notification policy and alert sensitivity to decide whether to show an advisory overlay.
+The wallet remains the sole place where the user authorizes or rejects the action. Sigil may still use notification policy and alert sensitivity to decide whether to show an advisory overlay. The extension cannot guarantee that an analysis finishes, or that an alert becomes visible, before a fast user confirms the wallet request.
 
 ## Settings Compatibility
 
@@ -79,13 +81,14 @@ Future schema migration may rename the persisted key after an explicit versioned
 
 Existing local session events with `proceed` or `cancel` remain readable.
 
-New events use neutral states:
+Each observation identifier maps to one local session event that is updated in place rather than appended once per lifecycle transition. New events use this lifecycle:
 
-- `observed`: received and recorded without a displayed result,
-- `reviewed`: an analysis result was displayed,
-- `dismissed`: the user closed the advisory panel.
+- `status: "observed"`: accepted but no result has been displayed,
+- `status: "reviewed"`: a local, API, or fallback analysis result was displayed,
+- `status: "analysis_failed"`: advisory processing failed before a usable result was displayed,
+- `dismissedAt`: optional timestamp set when the user closes the panel.
 
-Session summaries count observed, reviewed, and dismissed requests. Legacy proceeded/cancelled counts may remain visible for old sessions but must be labelled as legacy extension interactions, not proven wallet outcomes.
+Dismissal is orthogonal to analysis status: a reviewed alert may later be dismissed without losing the fact that its result was displayed. Session summaries count unique observation identifiers, reviewed observations, failed analyses, and alerts dismissed. Reviewed and dismissed counts may intentionally overlap, while the total request count never double-counts one observation. Legacy proceeded/cancelled counts may remain visible for old sessions but must be labelled as legacy extension interactions, not proven wallet outcomes.
 
 Analysis history remains local by default and continues to exclude session history from optional Chrome Sync.
 
@@ -107,7 +110,7 @@ Allowed:
 
 - “Understand wallet and transaction risk before you sign.”
 - “Reviews compatible wallet requests.”
-- “Shows risk alerts before you confirm in your wallet.”
+- “Shows advisory risk alerts for compatible wallet requests.”
 - “Best-effort request observation.”
 
 Disallowed:
@@ -116,6 +119,7 @@ Disallowed:
 - “Stops dangerous signatures.”
 - “Intercepts before your wallet opens.”
 - “Prevents a hostile dApp from submitting a request.”
+- “Guarantees an alert before wallet confirmation.”
 
 Privacy disclosures must continue to describe the request data sent for analysis. Store permission justifications should explain that all-site content scripts observe compatible wallet-provider calls and show local advisory UI.
 
@@ -130,8 +134,10 @@ A focused executable test loads the main-world observer with a provider stub and
 1. the original provider is called exactly once,
 2. a forged `sigil:decision` before or after the observation has no effect,
 3. the original return value and rejection are preserved,
-4. one advisory observation is emitted for a supported method, and
-5. unsupported methods pass through without an advisory event.
+4. an observation listener cannot mutate provider arguments through `CustomEvent.detail`,
+5. the original provider is invoked before the advisory event is dispatched,
+6. one advisory observation is emitted for a supported method, and
+7. unsupported methods pass through without an advisory event.
 
 The test must fail against the current implementation for the expected reason before production code changes.
 
@@ -145,7 +151,8 @@ Tests verify:
 
 - old `protectionMode` values still normalize and sync,
 - legacy session decisions remain readable,
-- new neutral session states summarize correctly,
+- one observation is upserted across lifecycle transitions without double-counting,
+- reviewed status and optional dismissal summarize correctly,
 - extension sources no longer contain the decision event or provider gating,
 - runtime UI contains no proceed/cancel authorization controls, and
 - analysis/session history remains local by default.
