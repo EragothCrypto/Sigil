@@ -7,6 +7,7 @@
   let currentRiskConfirmed = false;
   const requestQueue = [];
   let activeRequest = null;
+  const observationGate = core.createObservationGate();
   const sessionId = (() => {
     const host = (() => {
       try {
@@ -270,7 +271,7 @@
   async function handleIntercept(eventDetail) {
     currentRiskConfirmed = false;
 
-    const { requestId, method, target } = eventDetail;
+    const { observationId: requestId, method, target } = eventDetail;
     const url = window.location.href;
     const settings = await loadSettings();
     const input = core.getAnalysisInput(target);
@@ -329,9 +330,11 @@
     });
   }
 
-  window.addEventListener("sigil:intercept", (event) => {
-    if (!event.detail?.requestId) return;
-    requestQueue.push(event.detail);
+  window.addEventListener("sigil:observation", (event) => {
+    const queueLength = requestQueue.length + (activeRequest ? 1 : 0);
+    const decision = observationGate.accept(event.detail, { queueLength });
+    if (!decision.accepted) return;
+    requestQueue.push(decision.observation);
     processNextRequest();
   });
 })();

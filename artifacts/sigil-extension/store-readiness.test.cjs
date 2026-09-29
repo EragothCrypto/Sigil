@@ -99,3 +99,11 @@ test("main-world injector is advisory-only and never waits for page decisions", 
   assert.doesNotMatch(inject, /Sigil security check timed out/);
   assert.doesNotMatch(inject, /90000/);
 });
+
+test("isolated content intake listens only for bounded observations", () => {
+  const content = read("content.js");
+  assert.match(content, /createObservationGate/);
+  assert.match(content, /sigil:observation/);
+  assert.doesNotMatch(content, /sigil:intercept/);
+  assert.doesNotMatch(content, /requestQueue\.push\(event\.detail\)/);
+});

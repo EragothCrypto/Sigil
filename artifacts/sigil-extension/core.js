@@ -20,6 +20,20 @@
     "eth_signTypedData_v3",
     "eth_signTypedData_v4",
   ]);
+  const OBSERVATION_LIMITS = Object.freeze({
+    maxAgeMs: 30000,
+    maxFutureSkewMs: 5000,
+    maxSerializedTargetBytes: 65536,
+    maxQueued: 8,
+    maxAcceptedPerWindow: 12,
+    rateWindowMs: 60000,
+    seenTtlMs: 120000,
+    maxSeenIds: 128,
+  });
+  const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
+  const ARRAY_INDEX_PATTERN = /^(0|[1-9][0-9]*)$/;
+  const OBSERVATION_KEYS = ["version", "observationId", "method", "observedAt", "target"];
 
   const METHOD_LABELS = {
     eth_sendTransaction: "Sending Transaction",
@@ -68,6 +82,182 @@
   function normalizeArray(value) {
     if (!Array.isArray(value)) return [];
     return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+
+  function isPlainObject(value) {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+  }
+
+  function readExactDataProperties(value, expectedKeys) {
+    if (!isPlainObject(value)) return null;
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    const keys = Reflect.ownKeys(descriptors);
+    if (keys.length !== expectedKeys.length || keys.some((key) => typeof key !== "string" || !expectedKeys.includes(key))) {
+      return null;
+    }
+    for (const key of expectedKeys) {
+      const descriptor = descriptors[key];
+      if (!descriptor || !("value" in descriptor) || !descriptor.enumerable) return null;
+    }
+    return descriptors;
+  }
+
+  function cloneJsonValue(value, state, depth) {
+    state.nodes += 1;
+    if (state.nodes > 512 || depth > 8) throw new TypeError("Observation JSON limit exceeded");
+    if (value === null || typeof value === "boolean") return value;
+    if (typeof value === "number") {
+      if (!Number.isFinite(value)) throw new TypeError("Observation number must be finite");
+      return value;
+    }
+    if (typeof value === "string") {
+      if (value.length > 32768) throw new TypeError("Observation string limit exceeded");
+      return value;
+    }
+    if (typeof value !== "object") throw new TypeError("Unsupported observation value");
+    if (state.seen.has(value)) throw new TypeError("Cyclic observation value");
+    state.seen.add(value);
+
+    if (Array.isArray(value)) {
+      const prototype = Object.getPrototypeOf(value);
+      if (prototype !== Array.prototype && prototype !== null) throw new TypeError("Observation array must be plain");
+      if (value.length > 128) throw new TypeError("Observation array limit exceeded");
+      const descriptors = Object.getOwnPropertyDescriptors(value);
+      const keys = Reflect.ownKeys(descriptors);
+      if (keys.some((key) => typeof key !== "string" || (key !== "length" && !ARRAY_INDEX_PATTERN.test(key)))) {
+        throw new TypeError("Unsupported observation array key");
+      }
+      const copy = [];
+      Object.setPrototypeOf(copy, null);
+      for (let index = 0; index < value.length; index += 1) {
+        const descriptor = descriptors[index];
+        if (!descriptor || !("value" in descriptor) || !descriptor.enumerable) {
+          throw new TypeError("Sparse or accessor observation array");
+        }
+        copy[index] = cloneJsonValue(descriptor.value, state, depth + 1);
+      }
+      state.seen.delete(value);
+      return copy;
+    }
+
+    if (!isPlainObject(value)) throw new TypeError("Observation object must be plain");
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    const keys = Reflect.ownKeys(descriptors);
+    if (keys.length > 64) throw new TypeError("Observation object key limit exceeded");
+    const copy = Object.create(null);
+    for (const key of keys) {
+      if (typeof key !== "string" || key.length > 32768) throw new TypeError("Unsupported observation object key");
+      const descriptor = descriptors[key];
+      if (!("value" in descriptor) || !descriptor.enumerable) throw new TypeError("Accessor observation property");
+      copy[key] = cloneJsonValue(descriptor.value, state, depth + 1);
+    }
+    state.seen.delete(value);
+    return copy;
+  }
+
+  function hasExactKeys(value, expectedKeys) {
+    if (!isPlainObject(value)) return false;
+    const keys = Reflect.ownKeys(value);
+    return keys.length === expectedKeys.length && keys.every((key) => typeof key === "string" && expectedKeys.includes(key));
+  }
+
+  function isAddress(value) {
+    return typeof value === "string" && ADDRESS_PATTERN.test(value);
+  }
+
+  function targetMatchesMethod(method, target) {
+    if (method === "eth_sendTransaction" || method === "eth_signTransaction") {
+      return hasExactKeys(target, ["type", "data"]) && target.type === "transaction" && isPlainObject(target.data);
+    }
+    if (method === "eth_sign" || method === "personal_sign") {
+      const type = method === "eth_sign" ? "raw_sign" : "personal_sign";
+      return hasExactKeys(target, ["type", "data", "from"])
+        && target.type === type
+        && typeof target.data === "string"
+        && isAddress(target.from);
+    }
+    const validTypedData = typeof target.data === "string"
+      || isPlainObject(target.data)
+      || (method === "eth_signTypedData_v1" && Array.isArray(target.data));
+    return hasExactKeys(target, ["type", "data", "from"])
+      && target.type === "typed_data"
+      && validTypedData
+      && isAddress(target.from);
+  }
+
+  function serializedBytes(value) {
+    return new TextEncoder().encode(JSON.stringify(value)).byteLength;
+  }
+
+  function createObservationGate({ now = () => Date.now() } = {}) {
+    const seen = new Map();
+    let acceptedAt = [];
+
+    function reject(reason) {
+      return { accepted: false, reason, observation: null };
+    }
+
+    return {
+      accept(detail, { queueLength = 0 } = {}) {
+        const current = Number(now());
+        if (!Number.isFinite(current)) return reject("invalid_clock");
+
+        for (const [id, timestamp] of seen) {
+          if (current - timestamp >= OBSERVATION_LIMITS.seenTtlMs) seen.delete(id);
+        }
+        acceptedAt = acceptedAt.filter((timestamp) => current - timestamp < OBSERVATION_LIMITS.rateWindowMs);
+
+        if (queueLength >= OBSERVATION_LIMITS.maxQueued) return reject("queue_full");
+        if (acceptedAt.length >= OBSERVATION_LIMITS.maxAcceptedPerWindow) return reject("rate_limited");
+
+        let descriptors;
+        try {
+          descriptors = readExactDataProperties(detail, OBSERVATION_KEYS);
+        } catch (_error) {
+          return reject("malformed");
+        }
+        if (!descriptors) return reject("malformed");
+
+        const version = descriptors.version.value;
+        const observationId = descriptors.observationId.value;
+        const method = descriptors.method.value;
+        const observedAt = descriptors.observedAt.value;
+        if (version !== 1) return reject("version");
+        if (typeof observationId !== "string" || !UUID_V4_PATTERN.test(observationId)) return reject("observation_id");
+        if (typeof method !== "string" || !SIGN_METHODS.has(method)) return reject("method");
+        if (!Number.isFinite(observedAt) || !Number.isInteger(observedAt)) return reject("observed_at");
+        if (current - observedAt > OBSERVATION_LIMITS.maxAgeMs) return reject("stale");
+        if (observedAt - current > OBSERVATION_LIMITS.maxFutureSkewMs) return reject("future");
+        if (seen.has(observationId)) return reject("duplicate");
+
+        let target;
+        try {
+          target = cloneJsonValue(descriptors.target.value, { nodes: 0, seen: new WeakSet() }, 0);
+        } catch (_error) {
+          return reject("target");
+        }
+        if (!targetMatchesMethod(method, target)) return reject("target");
+
+        const observation = Object.create(null);
+        observation.version = version;
+        observation.observationId = observationId;
+        observation.method = method;
+        observation.observedAt = observedAt;
+        observation.target = target;
+        try {
+          if (serializedBytes(observation) > OBSERVATION_LIMITS.maxSerializedTargetBytes) return reject("serialized_size");
+        } catch (_error) {
+          return reject("serialized_size");
+        }
+
+        seen.set(observationId, current);
+        while (seen.size > OBSERVATION_LIMITS.maxSeenIds) seen.delete(seen.keys().next().value);
+        acceptedAt.push(current);
+        return { accepted: true, reason: "accepted", observation };
+      },
+    };
   }
 
   function normalizeSettings(value) {
@@ -694,6 +884,8 @@
     DEFAULT_API_URL,
     METHOD_LABELS,
     SIGN_METHODS,
+    OBSERVATION_LIMITS,
+    createObservationGate,
     normalizeSettings,
     createSyncSettingsPayload,
     extractAnalysisTarget,

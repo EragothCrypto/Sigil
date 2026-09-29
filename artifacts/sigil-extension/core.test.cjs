@@ -284,3 +284,272 @@ test("classifies pasted addresses, hashes, calldata, URLs, and typed data", () =
   assert.equal(core.classifyPastedInput('{"domain":{"name":"Permit2"},"message":{"spender":"0x1"}}').kind, "typed_data");
   assert.equal(core.classifyPastedInput("hello world").kind, "unknown");
 });
+
+const OBSERVATION_ID = "123e4567-e89b-42d3-a456-426614174000";
+const FROM = "0x1234567890abcdef1234567890abcdef12345678";
+
+function observation(overrides = {}) {
+  return {
+    version: 1,
+    observationId: OBSERVATION_ID,
+    method: "personal_sign",
+    observedAt: 1_000_000,
+    target: { type: "personal_sign", data: "hello", from: FROM },
+    ...overrides,
+  };
+}
+
+function accepts(detail, options, now = 1_000_000) {
+  return core.createObservationGate({ now: () => now }).accept(detail, options);
+}
+
+function uuidFor(index) {
+  return `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+}
+
+test("exports immutable observation limits", () => {
+  assert.deepEqual(core.OBSERVATION_LIMITS, {
+    maxAgeMs: 30000,
+    maxFutureSkewMs: 5000,
+    maxSerializedTargetBytes: 65536,
+    maxQueued: 8,
+    maxAcceptedPerWindow: 12,
+    rateWindowMs: 60000,
+    seenTtlMs: 120000,
+    maxSeenIds: 128,
+  });
+  assert.equal(Object.isFrozen(core.OBSERVATION_LIMITS), true);
+});
+
+test("accepts a valid observation once and rejects its duplicate", () => {
+  const gate = core.createObservationGate({ now: () => 1_000_000 });
+  const first = gate.accept(observation());
+  const duplicate = gate.accept(observation());
+
+  assert.equal(first.accepted, true);
+  assert.equal(Object.getPrototypeOf(first.observation), null);
+  assert.equal(Object.getPrototypeOf(first.observation.target), null);
+  assert.notEqual(first.observation, observation());
+  assert.deepEqual({ ...first.observation.target }, observation().target);
+  assert.equal(duplicate.accepted, false);
+  assert.equal(duplicate.reason, "duplicate");
+});
+
+test("rejects unsupported methods, invalid UUIDs, versions, and extra top-level keys", () => {
+  assert.equal(accepts(observation({ method: "wallet_switchEthereumChain" })).accepted, false);
+  assert.equal(accepts(observation({ observationId: "not-a-uuid" })).accepted, false);
+  assert.equal(accepts(observation({ observationId: "123e4567-e89b-12d3-a456-426614174000" })).accepted, false);
+  assert.equal(accepts(observation({ version: 2 })).accepted, false);
+  assert.equal(accepts({ ...observation(), extra: true }).accepted, false);
+});
+
+test("rejects stale and future observations at the exact time boundaries", () => {
+  assert.equal(accepts(observation({ observedAt: 970_000 })).accepted, true);
+  assert.equal(accepts(observation({ observedAt: 969_999 })).accepted, false);
+  assert.equal(accepts(observation({ observedAt: 1_005_000 })).accepted, true);
+  assert.equal(accepts(observation({ observedAt: 1_005_001 })).accepted, false);
+});
+
+test("accepts exactly the eight signing method target shapes", () => {
+  const cases = [
+    ["eth_sendTransaction", { type: "transaction", data: { to: FROM } }],
+    ["eth_signTransaction", { type: "transaction", data: Object.assign(Object.create(null), { value: "0x1" }) }],
+    ["eth_sign", { type: "raw_sign", data: "0x1234", from: FROM }],
+    ["personal_sign", { type: "personal_sign", data: "hello", from: FROM }],
+    ["eth_signTypedData", { type: "typed_data", data: { domain: { name: "Sigil" } }, from: FROM }],
+    ["eth_signTypedData_v1", { type: "typed_data", data: [{ name: "message", value: "hello" }], from: FROM }],
+    ["eth_signTypedData_v3", { type: "typed_data", data: '{"message":{"value":1}}', from: FROM }],
+    ["eth_signTypedData_v4", { type: "typed_data", data: { message: { value: 1 } }, from: FROM }],
+  ];
+
+  for (const [index, [method, target]] of cases.entries()) {
+    const result = accepts(observation({ observationId: uuidFor(index), method, target }));
+    assert.equal(result.accepted, true, method);
+  }
+});
+
+test("rejects extra target keys and method-target mismatches without reinterpreting input", () => {
+  assert.equal(accepts(observation({ target: { ...observation().target, extra: true } })).accepted, false);
+  assert.equal(accepts(observation({ target: { type: "raw_sign", data: "hello", from: FROM } })).accepted, false);
+  assert.equal(accepts(observation({ target: { type: "personal_sign", data: 123, from: FROM } })).accepted, false);
+  assert.equal(accepts(observation({ target: { type: "personal_sign", data: "hello", from: "0x1" } })).accepted, false);
+  assert.equal(accepts(observation({
+    method: "eth_sendTransaction",
+    target: { type: "transaction", data: { to: FROM }, from: FROM },
+  })).accepted, false);
+  assert.equal(accepts(observation({
+    method: "eth_signTypedData_v4",
+    target: { type: "typed_data", data: [], from: FROM },
+  })).accepted, false);
+});
+
+test("rejects accessors, symbols, cycles, non-plain objects, and invalid JSON leaves", () => {
+  const accessor = { safe: true };
+  Object.defineProperty(accessor, "trap", { enumerable: true, get() { throw new Error("must not run"); } });
+  const symbol = { safe: true };
+  symbol[Symbol("hidden")] = true;
+  const cycle = {};
+  cycle.self = cycle;
+  const invalid = [accessor, symbol, cycle, new Date(), { value: Infinity }, { value: undefined }, { value: 1n }, { value() {} }];
+
+  for (const [index, data] of invalid.entries()) {
+    const result = accepts(observation({
+      observationId: uuidFor(index),
+      method: "eth_signTypedData_v4",
+      target: { type: "typed_data", data, from: FROM },
+    }));
+    assert.equal(result.accepted, false, `invalid case ${index}`);
+  }
+});
+
+test("rejects non-plain typed-data arrays and normalizes accepted arrays without a prototype", () => {
+  const customPrototype = Object.create(Array.prototype);
+  const nonPlainArray = Object.setPrototypeOf([{ name: "message", value: "hello" }], customPrototype);
+  const rejected = accepts(observation({
+    method: "eth_signTypedData_v1",
+    target: { type: "typed_data", data: nonPlainArray, from: FROM },
+  }));
+  assert.equal(rejected.accepted, false);
+
+  const accepted = accepts(observation({
+    method: "eth_signTypedData_v1",
+    target: { type: "typed_data", data: [{ name: "message", value: "hello" }], from: FROM },
+  }));
+  assert.equal(accepted.accepted, true);
+  assert.equal(Object.getPrototypeOf(accepted.observation.target.data), null);
+});
+
+function nestedObject(depth) {
+  let value = "leaf";
+  for (let index = 0; index < depth; index += 1) value = { child: value };
+  return value;
+}
+
+test("enforces depth exactly below, at, and above eight", () => {
+  for (const [depth, expected] of [[7, true], [8, true], [9, false]]) {
+    const result = accepts(observation({
+      method: "eth_signTypedData_v4",
+      target: { type: "typed_data", data: nestedObject(depth - 1), from: FROM },
+    }));
+    assert.equal(result.accepted, expected, `depth ${depth}`);
+  }
+});
+
+test("enforces aggregate node count exactly below, at, and above 512", () => {
+  function dataForTotalNodes(total) {
+    const arrays = Array.from({ length: 64 }, () => []);
+    let leaves = total - 68;
+    for (const array of arrays) {
+      const count = Math.min(7, leaves);
+      array.push(...Array.from({ length: count }, () => null));
+      leaves -= count;
+    }
+    assert.equal(leaves, 0);
+    return Object.fromEntries(arrays.map((array, index) => [`k${index}`, array]));
+  }
+
+  for (const [nodes, expected] of [[511, true], [512, true], [513, false]]) {
+    const result = accepts(observation({
+      method: "eth_signTypedData_v4",
+      target: { type: "typed_data", data: dataForTotalNodes(nodes), from: FROM },
+    }));
+    assert.equal(result.accepted, expected, `nodes ${nodes}`);
+  }
+});
+
+test("enforces object key count exactly below, at, and above 64", () => {
+  for (const [count, expected] of [[63, true], [64, true], [65, false]]) {
+    const data = Object.fromEntries(Array.from({ length: count }, (_, index) => [`k${index}`, null]));
+    const result = accepts(observation({
+      method: "eth_signTypedData_v4",
+      target: { type: "typed_data", data, from: FROM },
+    }));
+    assert.equal(result.accepted, expected, `keys ${count}`);
+  }
+});
+
+test("enforces array length exactly below, at, and above 128", () => {
+  for (const [length, expected] of [[127, true], [128, true], [129, false]]) {
+    const result = accepts(observation({
+      method: "eth_signTypedData_v1",
+      target: { type: "typed_data", data: Array.from({ length }, () => null), from: FROM },
+    }));
+    assert.equal(result.accepted, expected, `array ${length}`);
+  }
+});
+
+test("enforces UTF-16 string and object-key lengths exactly below, at, and above 32768", () => {
+  for (const [length, expected] of [[32767, true], [32768, true], [32769, false]]) {
+    const stringResult = accepts(observation({ target: { type: "personal_sign", data: "a".repeat(length), from: FROM } }));
+    assert.equal(stringResult.accepted, expected, `string ${length}`);
+
+    const data = { ["k".repeat(length)]: null };
+    const keyResult = accepts(observation({ method: "eth_signTypedData_v4", target: { type: "typed_data", data, from: FROM } }));
+    assert.equal(keyResult.accepted, expected, `key ${length}`);
+  }
+});
+
+function detailAtSerializedBytes(bytes, multibyte) {
+  const base = observation({
+    method: "eth_signTypedData_v4",
+    target: { type: "typed_data", data: { first: "", second: "" }, from: FROM },
+  });
+  const baseBytes = Buffer.byteLength(JSON.stringify(base));
+  let remaining = bytes - baseBytes;
+  const firstUnits = multibyte ? Math.min(32768, Math.floor(remaining / 2)) : Math.min(32768, remaining);
+  const first = multibyte ? "\u00e9".repeat(firstUnits) : "a".repeat(firstUnits);
+  remaining -= multibyte ? firstUnits * 2 : firstUnits;
+  const secondPairs = multibyte ? Math.floor(remaining / 2) : 0;
+  const second = multibyte
+    ? "\u00e9".repeat(secondPairs) + (remaining % 2 ? "a" : "")
+    : "a".repeat(remaining);
+  return observation({
+    method: "eth_signTypedData_v4",
+    target: { type: "typed_data", data: { first, second }, from: FROM },
+  });
+}
+
+test("enforces final ASCII and multibyte UTF-8 serialized detail bytes below, at, and above 65536", () => {
+  for (const multibyte of [false, true]) {
+    for (const [bytes, expected] of [[65535, true], [65536, true], [65537, false]]) {
+      const detail = detailAtSerializedBytes(bytes, multibyte);
+      assert.equal(Buffer.byteLength(JSON.stringify(detail)), bytes);
+      assert.equal(accepts(detail).accepted, expected, `${multibyte ? "multibyte" : "ASCII"} ${bytes}`);
+    }
+  }
+});
+
+test("rejects queue length eight and the thirteenth accepted observation in a rolling minute", () => {
+  assert.equal(accepts(observation(), { queueLength: 7 }).accepted, true);
+  assert.equal(accepts(observation(), { queueLength: 8 }).accepted, false);
+
+  const gate = core.createObservationGate({ now: () => 1_000_000 });
+  for (let index = 0; index < 12; index += 1) {
+    assert.equal(gate.accept(observation({ observationId: uuidFor(index) })).accepted, true);
+  }
+  assert.equal(gate.accept(observation({ observationId: uuidFor(12) })).accepted, false);
+});
+
+test("expires the rolling rate window and duplicate TTL at their boundaries", () => {
+  let current = 1_000_000;
+  const gate = core.createObservationGate({ now: () => current });
+  for (let index = 0; index < 12; index += 1) {
+    assert.equal(gate.accept(observation({ observationId: uuidFor(index), observedAt: current })).accepted, true);
+  }
+
+  current += core.OBSERVATION_LIMITS.rateWindowMs;
+  assert.equal(gate.accept(observation({ observationId: uuidFor(12), observedAt: current })).accepted, true);
+  current = 1_000_000 + core.OBSERVATION_LIMITS.seenTtlMs;
+  assert.equal(gate.accept(observation({ observedAt: current })).accepted, true);
+});
+
+test("keeps the seen-id cap fixed at 128 with deterministic oldest-first pruning", () => {
+  assert.equal(core.OBSERVATION_LIMITS.maxSeenIds, 128);
+  let current = 1_000_000;
+  const gate = core.createObservationGate({ now: () => current });
+  for (let index = 0; index < 129; index += 1) {
+    if (index > 0 && index % 12 === 0) current += core.OBSERVATION_LIMITS.rateWindowMs;
+    assert.equal(gate.accept(observation({ observationId: uuidFor(index), observedAt: current })).accepted, true);
+  }
+  assert.equal(gate.accept(observation({ observationId: uuidFor(128), observedAt: current })).reason, "duplicate");
+});
