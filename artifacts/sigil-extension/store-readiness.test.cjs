@@ -1,21 +1,12 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const test = require("node:test");
 
 const root = __dirname;
 
 function read(file) {
   return fs.readFileSync(path.join(root, file), "utf8");
-}
-
-function test(name, fn) {
-  try {
-    fn();
-    console.log(`ok - ${name}`);
-  } catch (error) {
-    console.error(`not ok - ${name}`);
-    throw error;
-  }
 }
 
 test("manifest uses a main-world injector and isolated UI bridge", () => {
@@ -24,6 +15,7 @@ test("manifest uses a main-world injector and isolated UI bridge", () => {
   assert.equal(scripts.length, 2);
   assert.deepEqual(scripts[0].js, ["inject.js"]);
   assert.equal(scripts[0].world, "MAIN");
+  assert.equal(scripts[0].run_at, "document_start");
   assert.deepEqual(scripts[1].js, ["core.js", "content.js"]);
 });
 
@@ -97,12 +89,13 @@ test("extension package does not load remote executable code", () => {
   assert.doesNotMatch(popup, /https:\/\/fonts\.gstatic\.com/);
 });
 
-test("bridge uses request ids and fails closed on timeout", () => {
+test("main-world injector is advisory-only and never waits for page decisions", () => {
   const inject = read("inject.js");
-  const content = read("content.js");
-  assert.match(inject, /requestId/);
-  assert.match(content, /requestId/);
-  assert.match(inject, /Sigil security check timed out/);
-  assert.doesNotMatch(inject, /Object\.defineProperty\s*=/);
-  assert.doesNotMatch(content, /analysisInProgress[\s\S]*sigil:proceed[\s\S]*action:\s*"proceed"/);
+  assert.match(inject, /sigil:observation/);
+  assert.doesNotMatch(inject, /sigil:decision/);
+  assert.doesNotMatch(inject, /sigil:intercept/);
+  assert.doesNotMatch(inject, /request\s*=\s*async\s+function/);
+  assert.doesNotMatch(inject, /Sigil blocked wallet request/);
+  assert.doesNotMatch(inject, /Sigil security check timed out/);
+  assert.doesNotMatch(inject, /90000/);
 });
