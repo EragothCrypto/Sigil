@@ -147,6 +147,7 @@
     for (let keyIndex = 0; keyIndex < keys.length; keyIndex += 1) {
       const key = keys[keyIndex];
       if (typeof key !== "string") throw new TypeError("Symbol snapshot key");
+      if (key.length > MAX_STRING_LENGTH) throw new TypeError("Object key limit exceeded");
       const descriptor = descriptors[key];
       if (!reflectApply(objectHasOwnProperty, descriptor, ["value"]) || !descriptor.enumerable) {
         throw new TypeError("Accessor snapshot property");

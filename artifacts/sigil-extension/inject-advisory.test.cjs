@@ -370,6 +370,8 @@ test("all supported methods follow the target extraction matrix", () => {
     ["eth_signTypedData_v1", [address, v1Payload], { type: "typed_data", data: v1Payload, from: address }],
     ["eth_signTypedData_v1", [v1Payload, address], { type: "typed_data", data: v1Payload, from: address }],
     ["eth_signTypedData_v3", [address, typedPayload], { type: "typed_data", data: typedPayload, from: address }],
+    ["eth_signTypedData_v3", [typedPayload, address], { type: "typed_data", data: typedPayload, from: address }],
+    ["eth_signTypedData_v4", [address, typedPayload], { type: "typed_data", data: typedPayload, from: address }],
     ["eth_signTypedData_v4", [typedPayload, address], { type: "typed_data", data: typedPayload, from: address }],
   ];
 
@@ -445,6 +447,19 @@ test("snapshot validation enforces depth, node, and final UTF-8 byte limits", ()
     harness.flushTasks();
     assert.equal(harness.events.length, 0);
   }
+});
+
+test("snapshot validation rejects object keys over the UTF-16 string limit", () => {
+  const oversizedKey = "k".repeat(32769);
+  const transaction = { [oversizedKey]: true };
+  const serializedTarget = JSON.stringify({ type: "transaction", data: transaction });
+  assert.ok(new TextEncoder().encode(serializedTarget).byteLength < 65536);
+  const harness = createHarness();
+
+  harness.provider.request({ method: "eth_sendTransaction", params: [transaction] });
+  harness.flushTasks();
+
+  assert.equal(harness.events.length, 0);
 });
 
 test("missing or invalid randomUUID drops the observation", () => {
