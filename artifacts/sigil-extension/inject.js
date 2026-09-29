@@ -36,6 +36,7 @@
   const objectGetOwnPropertyDescriptors = Object.getOwnPropertyDescriptors;
   const objectGetPrototypeOf = Object.getPrototypeOf;
   const objectHasOwnProperty = Object.prototype.hasOwnProperty;
+  const objectSetPrototypeOf = Object.setPrototypeOf;
   const objectPrototype = Object.prototype;
   const numberIsFinite = Number.isFinite;
   const jsonStringify = JSON.stringify;
@@ -118,6 +119,7 @@
       }
 
       const copy = [];
+      objectSetPrototypeOf(copy, null);
       for (let index = 0; index < length; index += 1) {
         const descriptor = descriptors[index];
         if (
@@ -143,7 +145,7 @@
     const keys = reflectOwnKeys(descriptors);
     if (keys.length > MAX_OBJECT_KEYS) throw new TypeError("Object key limit exceeded");
 
-    const copy = objectCreate(objectPrototype);
+    const copy = objectCreate(null);
     for (let keyIndex = 0; keyIndex < keys.length; keyIndex += 1) {
       const key = keys[keyIndex];
       if (typeof key !== "string") throw new TypeError("Symbol snapshot key");
@@ -228,18 +230,19 @@
     }
 
     const state = { nodes: 1, seen: reflectConstruct(WeakSetConstructor, []) };
-    const detachedTarget = { type: target.type, data: cloneSnapshot(target.data, state, 1) };
+    const detachedTarget = objectCreate(null);
+    detachedTarget.type = target.type;
+    detachedTarget.data = cloneSnapshot(target.data, state, 1);
     if (reflectApply(objectHasOwnProperty, target, ["from"])) {
       detachedTarget.from = cloneSnapshot(target.from, state, 1);
     }
 
-    const detail = {
-      version: 1,
-      observationId,
-      method,
-      observedAt: reflectApply(dateNow, Date, []),
-      target: detachedTarget,
-    };
+    const detail = objectCreate(null);
+    detail.version = 1;
+    detail.observationId = observationId;
+    detail.method = method;
+    detail.observedAt = reflectApply(dateNow, Date, []);
+    detail.target = detachedTarget;
     const json = reflectApply(jsonStringify, JSON, [detail]);
     const bytes = reflectApply(textEncode, textEncoder, [json]);
     if (reflectApply(typedArrayByteLength, bytes, []) > MAX_JSON_BYTES) return null;

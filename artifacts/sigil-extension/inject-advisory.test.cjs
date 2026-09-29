@@ -449,6 +449,35 @@ test("snapshot validation enforces depth, node, and final UTF-8 byte limits", ()
   }
 });
 
+test("inherited toJSON cannot bypass the final UTF-8 byte limit", () => {
+  const transaction = {
+    payload: ["a".repeat(32768), "b".repeat(32768)],
+  };
+  const realDetail = {
+    version: 1,
+    observationId: "00000000-0000-4000-8000-000000000001",
+    method: "eth_sendTransaction",
+    observedAt: 0,
+    target: { type: "transaction", data: transaction },
+  };
+  assert.ok(new TextEncoder().encode(JSON.stringify(realDetail)).byteLength > 65536);
+  const harness = createHarness();
+  vm.runInContext(
+    `
+      Object.defineProperty(Object.getPrototypeOf({}), "toJSON", {
+        configurable: true,
+        value() { return "forged-small"; },
+      });
+    `,
+    harness.context
+  );
+
+  harness.provider.request({ method: "eth_sendTransaction", params: [transaction] });
+  harness.flushTasks();
+
+  assert.equal(harness.events.length, 0);
+});
+
 test("snapshot validation rejects object keys over the UTF-16 string limit", () => {
   const oversizedKey = "k".repeat(32769);
   const transaction = { [oversizedKey]: true };
