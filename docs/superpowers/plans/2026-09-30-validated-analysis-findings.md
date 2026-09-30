@@ -30,7 +30,7 @@ Verified source yields inspectability only and no negative score credit. Known p
 - [x] Route tests then persist validated report in details; disable free-text enrichments for this version, handle invalid input without AI/score, rotate cache. Preserve old records and show legacy notice.
 - [x] Add guarded shared client report parser and four-category web presentation, bounded safe label, score-policy note, no unvalidated preview. Test desktop/mobile rendering with synthetic local reports, not paid inference.
 - [x] Independent scoped review and selected regressions; API/web typechecks and builds.
-- [ ] Update dashboard/audit and publish only verified implementation; live model/control tests remain separate.
+- [x] Update dashboard/audit and publish only verified implementation; live model/control tests remain separate.
 
 ## Verification Checkpoint
 
@@ -41,5 +41,7 @@ Local headless installed Chrome via Playwright passed desktop1440x1000/mobile390
 Runtime output intentionally narrows: the AI cannot invent exploit classes, narratives, amounts or scores. The current catalog supports destination metadata, local selector hints, receipt-shaped observations, coverage limits and curated Ethereum registry flags only. Unsupported economic/routing/supply claims are absent, not verified safe. Dedicated evidence adapters and score calibration remain future work. No paid inference, new model/provider, privacy relaxation, production DB action or installed-extension QA was performed. New Vercel Ready and fresh live controls remain required after publication.
 
 ## Acceptance Limits
+
+Publication: runtime commit `a8dfc01808874b1ffa30eea620ba7a9259a38af0` pushed to GitHub main; independently queried remote SHA matches local. Phase dashboard updated and remains in progress. This completes the local implementation/publication checklist, not the Vercel/live-model, installed Chrome or EU/DE release gate.
 
 The pipeline constrains expression, not exploit completeness. New unsupported exploit classes cannot be invented by AI and require later evidence adapters. Legacy reports are not rewritten. No paid production calls, TLS relaxation, account/budget changes or compliance GO inferred.
