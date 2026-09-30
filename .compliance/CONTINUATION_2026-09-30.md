@@ -2,6 +2,8 @@
 
 Date: 2026-09-30. Canonical root: `C:\Coding Projects\Sigil`.
 
+Verified remediation and evidence commit: `e9dc3c6`. Subsequent checkpoint documentation does not change the tested runtime or lockfile.
+
 This resumes the 2026-09-28 Standard audit of `9dbfc8d`, retaining its applicability and legal-source evidence. Documentation evolved through `b734417`, initial remediation was committed as `4f3df52`, and independently reviewed advisory implementation through `51ac5e2` was fast-forwarded into local main. This checkpoint covers follow-up code/configuration/product-claim changes; no duplicate repository-wide security scan was launched. The existing sealed security panel describes the baseline, not an automatic certification of this release.
 
 ## Implemented Remediation

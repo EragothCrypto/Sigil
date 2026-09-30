@@ -6,7 +6,7 @@
 - Canonical repository root: `C:\Coding Projects\Sigil`
 - Jurisdiction: European Union / Germany
 - Audited revision: `9dbfc8db0dd7f6cfa04179fbdbedd3d82bc6f029`
-- Baseline continuity: documentation changes through `b734417`; initial audit remediation `4f3df52`; advisory implementation through `51ac5e2` fast-forwarded into local `main`. Current follow-up changes are tracked in the working tree and continuation report.
+- Baseline continuity: documentation changes through `b734417`; initial audit remediation `4f3df52`; advisory implementation through `51ac5e2` fast-forwarded into local `main`; tested follow-up remediation and release evidence committed as `e9dc3c6`. Local main is clean after the checkpoint commits; GitHub/Vercel/Store publication remains pending.
 - Working tree at start: clean, `main` aligned with `origin/main`
 - Auditor note: independent security subagents were requested but unavailable because the account-wide agent usage limit was reached. The required single-pass security review was completed by the primary auditor and this limitation is carried into the final coverage statement.
 
