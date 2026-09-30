@@ -1,6 +1,8 @@
 # Sigil — The Trust Layer of Web3
 ## Technical Whitepaper · v1.0 · April 2026
 
+Current-claims update: September 30, 2026. The Chrome Web Store has a historical published build. Advisory-only extension version 1.0.3 is implemented locally, pending release, and not yet published; production and installed-build manual QA remain pending. Historical roadmap completion does not establish deployment or verification of this update.
+
 ---
 
 ## Table of Contents
@@ -28,9 +30,9 @@
 
 ## 1. Executive Summary
 
-Sigil is a real-time, multi-chain Web3 security platform that translates the raw complexity of on-chain transactions and smart contracts into clear, actionable security verdicts — before a user touches their wallet.
+Sigil is a multi-chain Web3 security platform that translates on-chain transactions and smart contracts into advisory security verdicts. Its core positioning is: **Understand wallet and transaction risk before you sign.** Manual pre-sign review supports that goal; automatic extension observations do not guarantee an analysis before a wallet prompt or confirmation.
 
-Every time a DeFi protocol, NFT marketplace, or DAO smart contract is interacted with, the user is effectively signing a legal document they cannot read. Sigil changes that. It combines a deterministic static analysis engine, a two-step chain-of-thought AI model, OFAC sanctions detection, and a contract reputation system into a unified "Trust Layer" that sits between the user and every on-chain action.
+Wallet requests can expose users to permissions and asset movements that are difficult to interpret. Sigil combines deterministic static analysis, AI explanations, sanctions signals, and contract reputation into an advisory "Trust Layer" alongside the user's wallet, not an authorization gate for on-chain actions.
 
 **Core capabilities at a glance:**
 
@@ -39,7 +41,7 @@ Every time a DeFi protocol, NFT marketplace, or DAO smart contract is interacted
 | Supported chains | 10 EVM-compatible networks |
 | Risk signals per scan | 50+ |
 | AI model | GPT-5.2 (two-step chain-of-thought) |
-| Response time | < 2 seconds for cached inputs |
+| Response time | Variable; no guaranteed latency or pre-confirmation delivery |
 | Sanctions database | OFAC + Lazarus Group wallets |
 | Streaming | Real-time SSE token streaming |
 | Contract analysis | Source code, ABI, bytecode, upgrade diff |
@@ -78,7 +80,7 @@ Existing tools fail users in predictable ways:
 
 ### 2.3 The Gap Sigil Fills
 
-Sigil provides the layer that has always been missing: a real-time, plain-English security verdict delivered before confirmation, not after.
+Sigil supports before-you-sign review with plain-English risk analysis. Its extension observes compatible wallet requests on a best-effort basis; analysis may finish after the wallet prompt or confirmation. Post-transaction analysis and approval reviews also support ongoing wallet-risk awareness.
 
 ---
 
@@ -95,7 +97,7 @@ Sigil processes any transaction hash or smart contract address through a multi-s
 7. **Score factors** — a transparent explanation of how the risk score was calculated
 8. **Contract reputation** — a 0–100 "credit score" based on age, activity, and known exploit history
 
-All of this is streamed in real time to the user's browser via Server-Sent Events, with the first meaningful tokens appearing within 500 milliseconds.
+Streaming analysis is delivered to the browser via Server-Sent Events as results become available. Provider, network, and processing conditions affect timing; no first-token or completion latency is guaranteed.
 
 ---
 
@@ -169,7 +171,7 @@ Sigil streams its analysis in real time using **Server-Sent Events (SSE)**. The 
 3. `token` — streams individual prose tokens from the AI summary
 4. `done` — signals analysis is complete
 
-This design means the user starts reading the verdict within milliseconds rather than waiting for the full response. The frontend progressively reveals information: risk badge first, then score, then the full written summary.
+This design progressively reveals available analysis without waiting for the entire response. It does not guarantee when a verdict appears or that it precedes wallet confirmation.
 
 ### 5.2 Two-Step Chain-of-Thought AI
 
@@ -276,9 +278,9 @@ A dedicated simulation endpoint powered by **GPT-5.2** predicts the outcome of a
 
 Returns a predicted state change: tokens transferred, approvals granted, ETH moved, and any risk flags raised.
 
-### 5.10 Global Intel Feed
+### 5.10 Curated Public Intel Feed
 
-Every transaction and contract analysed through Sigil (excluding cached repeats) is recorded and made available through the Global Intel Feed — a chronological log of all analyses across all users and chains. The feed shows:
+The current local history UI shows curated public Hall-of-Shame cases only, supplied by `/api/sigil/hall-of-shame`. `/api/sigil/history` returns an empty list without a result identifier, not a cross-user feed of submitted analyses. Non-curated saved analyses are accessible through private, unguessable UUID links, subject to configured retention. These bearer links are not account-authenticated: anyone possessing a link can access its result, so users should share deliberately. Production deployment and migration verification remain pending. Public case entries show:
 
 - Input identifier (truncated address/hash)
 - Network analysed
@@ -309,16 +311,18 @@ Technical terms (ERC-20, OFAC, flash loan, proxy, permit, setApprovalForAll) in 
 
 ### 5.13 Share Button
 
-Every completed analysis generates a shareable URL that encodes the network and input, allowing users to share a specific verdict with colleagues, community members, or security researchers.
+Saved non-curated analyses use private UUID result links rather than enumerable numeric IDs. Anyone given the link can access the retained result. Deliberate sharing does not add an analysis to the curated public history; retention expiry can make a result unavailable.
 
 ### 5.14 Browser Extension
 
-A lightweight vanilla JavaScript browser extension that integrates directly with the EIP-1193 wallet API (MetaMask, Rabby, Frame):
+A lightweight vanilla JavaScript browser extension uses best-effort hooks for compatible EIP-1193 wallet requests. The following describes the locally implemented, unpublished 1.0.3 update, not verified behavior of the historical Store build:
 
-- Intercepts `eth_sendTransaction` calls before they reach the wallet
-- Sends the transaction data to the Sigil API in the background
-- Overlays a risk verdict on the wallet popup window
-- Allows the user to proceed or cancel based on the verdict
+- Reviews compatible wallet requests, including transaction, raw-signature, personal-signature, and typed-data methods, through untrusted page observations.
+- The original wallet provider runs independently exactly once per wrapped request, preserving its result or error without waiting for observations, Sigil UI, or network analysis.
+- Performs local advisory checks and sends suitable observations to the Sigil API for deeper analysis; a page overlay may display a risk verdict.
+- Has no blocking, proceed, or cancel authority. The wallet remains the only place that approves or rejects a request; dismissing an alert or trusting a site affects Sigil alerts only.
+- A hostile page may suppress or forge observations. Intake limits constrain accepted data but do not authenticate wallet activity or guarantee coverage.
+- Analysis may finish after the wallet prompt or confirmation. Missing warnings or a low score are not proof of safety.
 
 ---
 
@@ -374,7 +378,8 @@ workspace/
 | `POST` | `/api/sigil/simulate` | Transaction outcome simulation |
 | `POST` | `/api/sigil/contract-diff` | Proxy upgrade diff |
 | `GET` | `/api/sigil/hall-of-shame` | Historical exploit entries |
-| `GET` | `/api/sigil/history` | Global intel feed (paginated) |
+| `GET` | `/api/sigil/history` | Empty list without an identifier; result lookup with `?id=` |
+| `GET` | `/api/sigil/history/:id` | Private UUID result lookup; numeric IDs restricted to curated cases |
 
 ### 6.4 Frontend Pages
 
@@ -382,7 +387,7 @@ workspace/
 |---|---|---|
 | `/` | Scanner (Home) | Main analysis interface + landing page |
 | `/simulate` | Simulate | Transaction simulation |
-| `/history` | Feed | Global intel feed |
+| `/history` | Feed | Curated public cases only |
 | `/extension` | Extension | Browser extension documentation |
 
 ---
@@ -591,7 +596,7 @@ Used for:
 ### 12.4 PostgreSQL Database
 
 Stores:
-- Analysis history (all non-cached analyses)
+- Saved analysis results with private UUID links for non-curated results and configured retention; not a public cross-user history
 - Hall of Shame entries (pre-seeded on startup)
 - Approval records for the Approval Inspector's historical view
 
@@ -610,16 +615,17 @@ Sigil uses an in-memory **LRU (Least Recently Used) cache** with a 30-minute TTL
 ```
 
 Benefits:
-- Eliminates redundant AI API calls for identical inputs (cost reduction)
-- Sub-100ms responses for cached results
-- No user data is sent to any third party on a cache hit
+- Reuses eligible analysis results while present in the process-local cache, reducing redundant upstream calls.
+- Cache hits can avoid full recomputation; there is no response-time guarantee.
+- This analysis cache is distinct from token-price fetching: `token-price.ts` has no CoinGecko TTL cache or request coalescing.
 
 ### 13.2 Privacy Model
 
 - Sigil does not require wallet connection
-- No private keys, seed phrases, or signatures are ever requested
-- Input addresses are only sent to Etherscan (for contract data) and OpenAI (for analysis)
-- The Global Intel Feed shows only the analysed address/hash — no user identity
+- No private keys or seed phrases are needed; signature request payloads may be observed or intentionally submitted for advisory analysis.
+- Relevant addresses and request data may be processed by the Sigil backend and configured AI/blockchain providers, including OpenRouter, Etherscan, public EVM RPC endpoints, and CoinGecko as applicable. Wallet and transaction data may be personal data.
+- Public history exposes curated cases only. Non-curated saved results use private UUID bearer links and configured retention; possession of a link permits access and does not establish user identity.
+- Extension check/session history remains local by default; optional Chrome Sync covers settings and trust lists, not analysis or session history.
 
 ---
 
@@ -647,19 +653,19 @@ Benefits:
 
 **Scenario:** A researcher wants to quickly triage whether a suspicious transaction from yesterday's mempool was malicious.
 
-**With Sigil:** Paste the transaction hash. The full pattern detection, AI analysis, and OFAC check runs in seconds. The Global Intel Feed archives the result so it can be referenced later.
+**With Sigil:** Paste the transaction hash for pattern detection, AI explanation, and sanctions signals. A saved result can be referenced through its private UUID link while retained; it is not added to a public cross-user feed. Completion time varies.
 
 ### 14.5 Crypto Exchanges & Custodians
 
 **Scenario:** An exchange needs to screen incoming deposits for OFAC compliance.
 
-**With Sigil API:** Integrate the `/api/sigil/analyze` endpoint into the deposit flow. Any address that triggers an OFAC flag is automatically quarantined for compliance review.
+**Potential integration:** The `/api/sigil/analyze` endpoint provides advisory risk signals. An exchange would need to implement its own review and deposit-handling controls; Sigil does not quarantine funds or establish legal compliance.
 
 ### 14.6 Browser Extension Users
 
 **Scenario:** A user clicks "Connect and Approve" on a website they've never used. MetaMask pops up.
 
-**With Sigil Extension:** Before the MetaMask modal renders fully, the extension intercepts the `eth_sendTransaction` call, sends it to the Sigil API, and overlays a risk badge. If the verdict is HIGH or above, the user sees a red warning screen before any approval is possible.
+**With the pending Sigil 1.0.3 extension:** The wallet request runs independently exactly once through the wrapped provider. Best-effort observation may lead to a local or API-backed advisory warning on the page, but analysis may arrive after the wallet prompt or confirmation. The user approves or rejects only in the wallet. A hostile page can suppress or forge observations, and Sigil cannot block a request or guarantee a warning.
 
 ---
 
@@ -678,7 +684,7 @@ Benefits:
 | Score with explanation | Yes | No | Partial | No |
 | Browser extension | Yes | No | No | Partial |
 | Multi-chain (10 chains) | Yes | Partial | Yes | No |
-| Open global intel feed | Yes | No | No | No |
+| Curated public case feed | Yes | No | No | No |
 
 ### 15.2 Core Differentiators
 
@@ -689,10 +695,10 @@ Sigil never shows a number without explaining it. Every risk score is accompanie
 The two-step AI pipeline produces verifiable reasoning. Users and auditors can inspect Step 1 evidence independently from the Step 2 verdict.
 
 **3. Real-time over polling**
-SSE streaming means the user sees results in under 2 seconds for cached inputs and within 5 seconds for fresh analyses — comparable to a Google search, not a compliance tool.
+SSE streaming progressively delivers available results. Caching can reduce repeat work, but network and upstream processing vary; there is no guaranteed latency or delivery before wallet confirmation.
 
 **4. Proactive over reactive**
-Every feature in Sigil operates before the transaction is signed. There is no "undo" on a blockchain. Prevention is the only meaningful intervention.
+Before-you-sign review is Sigil's core positioning, not a promise that every feature runs before signing. The extension is advisory-only and best-effort; transaction-hash analysis, approval reviews, and monitoring also support post-event understanding and risk reduction. Only the wallet authorizes or rejects a signing request.
 
 **5. Neutral and non-custodial**
 Sigil never asks for a wallet connection, never holds funds, and never requires accounts. It is a read-only intelligence layer.
@@ -791,27 +797,28 @@ It should not answer investment, trading, tax, token-picking, or broad Web3 rese
 - [x] Contract diff (EIP-1967 proxy upgrades)
 - [x] Transaction simulation
 - [x] Approval Inspector
-- [x] Global Intel Feed
+- [x] Curated public case feed; private UUID links for non-curated saved analyses implemented locally, with production verification pending
 - [x] Hall of Shame
 - [x] Browser Extension scaffold
 - [x] Jargon tooltips
 - [x] Share button
 - [x] Hackathon pitch deck
 
-### Phase 2 — Daily Protection Extension
+### Phase 2 — Daily Advisory Extension (Local Update; Release Pending)
 
-Goal: make Sigil useful every time a user touches a wallet, without feeling heavy, slow, or intrusive.
+Goal: support before-you-sign risk awareness through best-effort advisory observations of compatible wallet requests. Version 1.0.3 is implemented locally but not published; checked implementation items do not establish production/manual QA completion.
 
-- [x] Harden the browser extension interception layer for MetaMask, Rabby, Coinbase Wallet, Trust Wallet, Frame, and other EIP-1193 providers
-- [x] Add a fast local pre-screen before API calls so obvious safe/unsafe prompts render immediately
+- [x] Replace page-decision gating with advisory observation hooks for compatible EIP-1193 providers; original wallet provider executes independently exactly once per wrapped request
+- [x] Add local advisory checks before deeper API analysis, without a rendering latency guarantee
 - [x] Support `eth_sendTransaction`, `eth_signTransaction`, `eth_sign`, `personal_sign`, and `eth_signTypedData_*` with method-specific explanations
-- [x] Improve the extension overlay into a compact decision surface: verdict, risk score, asset changes, permissions, and one clear next action
-- [x] Add configurable protection modes: Quiet, Standard, and Strict
+- [x] Provide an advisory overlay with risk information, dismiss/trust actions, and no wallet proceed/cancel controls
+- [x] Add configurable alert sensitivity: Quiet, Standard, and Strict; no effect on wallet execution
 - [x] Add trusted-site and trusted-contract allowlists with clear expiry controls
-- [x] Add dangerous-action friction: require an explicit second confirmation for critical verdicts
+- [x] Remove Sigil authorization/second-confirmation gating; wallet approval and rejection remain solely in the wallet
+- [x] Bound untrusted observations with size, depth, age, rate, queue, and deduplication limits; these do not authenticate observations
 - [x] Store lightweight local history in the extension so users can review recent prompts without creating an account
 - [x] Add a one-click "Open full analysis" handoff from extension overlay to the web app
-- [x] Package the extension for Chrome Web Store review, with a documented manual install path kept for power users
+- [x] Historical extension packaging for Chrome Web Store review, with a documented manual install path; not proof of 1.0.3 release readiness
 
 ### Phase 3 — Lightweight Daily Workflows (Delivered)
 
@@ -827,12 +834,14 @@ Goal: make Sigil fit natural crypto habits instead of asking users to visit anot
 
 Goal: finish the standalone web app and Chrome extension quality pass before starting premium wallet monitoring.
 
-- [x] Chrome Store Review Follow-Through: Sigil is live in the Chrome Web Store and the live listing URL is documented
+- [x] Historical Chrome Store publication and listing URL documented; this does not mean 1.0.3 is published
+- [ ] Package, verify, submit, and publish advisory-only 1.0.3
+- [ ] Complete production smoke tests and installed-build manual wallet QA for the update, including hostile observations, outages, and delayed analysis
 - [x] Notification Policy: define Critical only, Critical + high risk, and Off settings without adding new Chrome permissions
 - [x] Optional Settings Sync: sync preferences across browsers while keeping sensitive analysis history local by default
 - [x] Short Onboarding Flow: teach approval risk, signatures, sanctions/risk verdicts, extension usage, and wallet monitoring in under two minutes
 - [x] Standalone Web App Polish Pass: tighten navigation, empty states, scan flows, and extension handoff CTAs
-- [x] Production QA Matrix: document verified live checks, installed-Store-build manual QA, and production API route findings
+- [x] Production QA Matrix: document historical live checks and outstanding update/installed-build manual QA; current production verification remains pending
 
 ### Phase 4 — Premium Wallet Monitor
 

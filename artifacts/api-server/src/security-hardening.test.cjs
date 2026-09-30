@@ -35,3 +35,33 @@ test("etherscan calls do not silently use the shared dummy token", () => {
     assert.match(source, /getEtherscanApiKey/);
   }
 });
+
+test("analysis results do not correlate approval history across users", () => {
+  const routes = read(path.join("routes", "sigil", "index.ts"));
+  assert.doesNotMatch(routes, /Look up prior approvals to the same spender/);
+  assert.doesNotMatch(routes, /\.limit\(200\)/);
+  assert.match(routes, /priorApprovals:\s*\[\]/);
+});
+
+test("retention cleanup is scheduled and protected by a cron secret", () => {
+  const routes = read(path.join("routes", "sigil", "index.ts"));
+  const schema = read(path.join("routes", "sigil", "analysis-schema.ts"));
+  const rootVercel = read(path.join("..", "..", "..", "vercel.json"));
+  const artifactVercel = read(path.join("..", "..", "sigil", "vercel.json"));
+  const env = read(path.join("..", "..", "..", ".env.example"));
+  assert.match(routes, /maintenance\/retention/);
+  assert.match(routes, /CRON_SECRET/);
+  assert.match(routes, /Bearer/);
+  assert.match(schema, /export async function runAnalysisRetentionCleanup/);
+  for (const config of [rootVercel, artifactVercel]) {
+    const parsed = JSON.parse(config);
+    assert.deepEqual(parsed.crons, [{ path: "/api/sigil/maintenance/retention", schedule: "17 3 * * *" }]);
+  }
+  assert.match(env, /CRON_SECRET=/);
+});
+
+test("numeric public analysis ids are bounded before database lookup", () => {
+  const routes = read(path.join("routes", "sigil", "index.ts"));
+  assert.match(routes, /Number\.isSafeInteger\(numericId\)/);
+  assert.match(routes, /numericId\s*>\s*0/);
+});

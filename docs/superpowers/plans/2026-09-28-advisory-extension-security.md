@@ -1,5 +1,7 @@
 # Advisory Extension Security Implementation Plan
 
+Checkpoint 2026-09-30: provider/intake/lifecycle/popup implementation is integrated into local main through `51ac5e2`; product/store claims and deterministic v1.0.3 packaging are completed locally. Workspace typecheck, API/web builds, final advisory audits and focused automated tests pass. Independent scoped reviews approved the implementation/configuration. Production/installed Chrome verification, Store publication and organizational/legal gates remain pending. See `.compliance/CONTINUATION_2026-09-30.md`; overall release remains `NO_GO`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace Sigil's forgeable page-controlled wallet decision channel with a truthful, bounded, non-blocking advisory observer while preserving provider behavior, installed settings, local history, and useful risk alerts.

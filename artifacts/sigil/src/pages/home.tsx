@@ -36,7 +36,7 @@ const START_PATHS = [
     href: '/extension',
     icon: Chrome,
     title: 'Install the extension',
-    desc: 'Protect wallet prompts directly in Chrome before you sign.',
+    desc: 'Review compatible wallet prompts with advisory risk alerts in Chrome.',
     tone: 'primary',
   },
   {
@@ -335,7 +335,7 @@ export default function Home() {
               </h1>
 
               <p className="mt-5 text-lg text-white/45 max-w-xl mx-auto leading-relaxed font-sans">
-                Scan contracts, monitor wallet exposure, and install the browser extension that explains risky prompts before you sign.
+                Scan contracts, monitor wallet exposure, and use advisory browser alerts to understand compatible wallet prompts.
               </p>
 
               {/* Stats row */}

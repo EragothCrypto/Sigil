@@ -139,3 +139,32 @@ test("popup names advisory controls and keeps legacy actions separate", () => {
   assert.doesNotMatch(popupHtml, /Protection Mode/);
   assert.doesNotMatch(popup, /Guard enabled/);
 });
+
+test("current product claims describe best-effort advisory observation", () => {
+  const files = [
+    "manifest.json",
+    "../../docs/chrome-web-store-submission.md",
+    "../../docs/production-qa-matrix.md",
+    "../sigil/src/pages/extension.tsx",
+    "../sigil/src/pages/home.tsx",
+    "../sigil/src/pages/approvals.tsx",
+    "../sigil/src/pages/wallet-monitor.tsx",
+    "../sigil/src/pages/legal.tsx",
+    "../../sigil-whitepaper.md",
+    "../../overview.md",
+  ];
+  const claims = files.map((file) => read(file)).join("\n");
+  assert.doesNotMatch(claims, /intercepts every transaction/i);
+  assert.doesNotMatch(claims, /Sigil\\nintercepts/i);
+  assert.doesNotMatch(claims, /before (?:they|it|the request) reach(?:es)? your wallet/i);
+  assert.doesNotMatch(claims, /before the wallet request continues/i);
+  assert.doesNotMatch(claims, /allows the user to proceed or cancel/i);
+  assert.doesNotMatch(claims, /before any approval is possible/i);
+  assert.doesNotMatch(claims, /every feature in Sigil operates before/i);
+  assert.doesNotMatch(claims, /prevention is the only meaningful intervention/i);
+  assert.doesNotMatch(claims, /fails closed/i);
+  assert.doesNotMatch(claims, /transaction interception|signature interception/i);
+  assert.match(claims, /Reviews compatible wallet requests/);
+  assert.match(claims, /wallet remains the only place that approves or rejects/i);
+  assert.match(claims, /best-effort/i);
+});

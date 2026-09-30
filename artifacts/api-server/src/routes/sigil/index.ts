@@ -27,9 +27,25 @@ import { computeContractDiff } from "./contract-diff.js";
 import { computeScoreFactors } from "./score-factors.js";
 import { fetchTokenPrice, computeApprovalUsdValue } from "./token-price.js";
 import { analysisCache, cacheKey } from "./analysis-cache.js";
-import { ensureAnalysesSchema } from "./analysis-schema.js";
+import { ensureAnalysesSchema, runAnalysisRetentionCleanup } from "./analysis-schema.js";
 
 const router: IRouter = Router();
+
+router.get("/maintenance/retention", async (req, res) => {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || req.get("authorization") !== `Bearer ${cronSecret}`) {
+    res.status(401).json({ error: "unauthorized" });
+    return;
+  }
+  try {
+    await ensureAnalysesSchema();
+    const deleted = await runAnalysisRetentionCleanup();
+    res.json({ status: "ok", deleted });
+  } catch {
+    req.log.error("Scheduled analysis retention cleanup failed");
+    res.status(500).json({ error: "retention_cleanup_failed" });
+  }
+});
 
 router.post("/analyze", async (req, res) => {
   const parseResult = AnalyzeInputBody.safeParse(req.body);
@@ -90,30 +106,6 @@ router.post("/analyze", async (req, res) => {
         else if (approval.isUnlimited) approvalRisk = "high";
         else approvalRisk = "medium";
 
-        // Look up prior approvals to the same spender in our DB history
-        const allHistory = await db
-          .select()
-          .from(analysesTable)
-          .orderBy(desc(analysesTable.createdAt))
-          .limit(200);
-
-        const prior = allHistory
-          .filter((r) => {
-            const d = r.details as Record<string, unknown> | null;
-            return d?.spender === approval.spender && r.input !== trimmed;
-          })
-          .slice(0, 5)
-          .map((r) => {
-            const d = r.details as Record<string, unknown>;
-            return {
-              id: String(r.id),
-              analyzedAt: r.createdAt.toISOString(),
-              amountFormatted: String(d.approvalAmount ?? "unknown"),
-              isUnlimited: Boolean(d.approvalIsUnlimited),
-              network: r.network,
-            };
-          });
-
         approvalInfo = {
           isApproval: true,
           isRevoke: approval.isRevoke,
@@ -125,10 +117,10 @@ router.post("/analyze", async (req, res) => {
           amountFormatted,
           isUnlimited: approval.isUnlimited,
           riskLevel: approvalRisk,
-          priorApprovals: prior,
+          priorApprovals: [],
         };
 
-        // Store spender in details so future runs can find it
+        // Store approval context without correlating other users' analyses.
         details = {
           from: tx.from,
           to: tx.to,
@@ -739,10 +731,14 @@ function formatAnalysisRecord(record: typeof analysesTable.$inferSelect) {
 
 async function findPublicAnalysis(id: string) {
   if (/^[0-9]+$/.test(id)) {
+    const numericId = Number(id);
+    if (!(Number.isSafeInteger(numericId) && numericId > 0 && numericId <= 2147483647)) {
+      return undefined;
+    }
     const [record] = await db
       .select()
       .from(analysesTable)
-      .where(and(eq(analysesTable.id, Number(id)), eq(analysesTable.hallOfShame, true)))
+      .where(and(eq(analysesTable.id, numericId), eq(analysesTable.hallOfShame, true)))
       .limit(1);
     return record;
   }

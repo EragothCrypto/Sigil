@@ -1,10 +1,10 @@
 # Sigil Project Overview
 
-Stand: 29. September 2026  
+Stand: 30. September 2026
 Produktions-URL: [sigil.s3ntrylabs.com](https://sigil.s3ntrylabs.com)  
 Chrome Web Store: [Sigil - Web3 Trust Layer](https://chromewebstore.google.com/detail/sigil-web3-trust-layer/klogkofhnlifhakklkjmoofhfopnhnkg)
 
-> Statushinweis: Dieses Dokument beschreibt den nachpruefbaren Stand des aktuellen Repository-Worktrees. Der EU/DE-Release-Audit steht derzeit auf `NO_GO`, bis die bestaetigte Extension-Trust-Boundary-Schwachstelle behoben und die offenen organisatorischen Compliance-Nachweise bestaetigt sind. Roadmap-Haken allein gelten hier nicht als Funktionsnachweis.
+> Statushinweis: Dieses Dokument beschreibt den aktuellen Repository-Worktree. Die rein beratende Extension-Sanierung ist lokal implementiert; Version 1.0.3 ist als Update geplant, noch nicht veroeffentlicht und nicht durch Produktions-/manuelle Browser-QA bestaetigt. Der historische Chrome-Store-Build ist bereits veroeffentlicht, aber kein Nachweis fuer das Update. Die dokumentierte EU/DE-Audit-Entscheidung `NO_GO` ist damit nicht aufgehoben: Release-Gate-Neubewertung und offene organisatorische Compliance-Nachweise bleiben erforderlich. Roadmap-Haken allein gelten nicht als Produktionsnachweis.
 
 ## 1. README / Projektbeschreibung
 
@@ -17,10 +17,12 @@ Kernpositionierung:
 Sigil besteht aus drei zusammenhaengenden Produktflaechen:
 
 1. **Web-App:** Analysekonsole fuer Transaktionen, Smart Contracts, Signaturdaten, Freigaben, Wallet-Exposition und oeffentliche Bedrohungsinformationen.
-2. **Chrome Extension:** Lokale Vorpruefung und kontextbezogene Warnungen bei EIP-1193-Wallet-Anfragen sowie Copy/Paste-, Website- und Session-Werkzeuge.
+2. **Chrome Extension:** Best-effort-Beobachtung kompatibler EIP-1193-Wallet-Anfragen mit lokalen beratenden Checks und kontextbezogenen Warnungen sowie Copy/Paste-, Website- und Session-Werkzeugen.
 3. **API/Backend:** Normalisierung von On-Chain-Daten, deterministische Risikoerkennung, AI-gestuetzte Erklaerungen, Freigabeanalyse und Speicherung freigegebener Analyseergebnisse.
 
 Sigil ist kein Wallet, verwahrt keine Seed Phrases oder Private Keys und soll keine Transaktion selbst autorisieren. Es ist ein beratendes Sicherheitsprodukt und ersetzt weder Wallet-Bestaetigungen noch professionelle Sicherheits-, Rechts- oder Finanzberatung.
+
+Im lokal implementierten Update wird der originale Wallet-Provider pro umschlossener Anfrage exakt einmal und unabhaengig von Sigil-Beobachtungen, UI und Netzwerkanalyse ausgefuehrt. Sigil hat keine Blockier-, Proceed- oder Cancel-Autoritaet; allein das Wallet genehmigt oder lehnt ab. Eine boesartige Seite kann Beobachtungen unterdruecken oder faelschen. Die Analyse kann erst nach Wallet-Prompt oder Bestaetigung fertig werden. "Before you sign" beschreibt das Ziel der Risikopruefung, keine garantierte Abdeckung oder Latenz.
 
 ## 2. Aktueller Feature-Stand
 
@@ -36,7 +38,7 @@ Sigil ist kein Wallet, verwahrt keine Seed Phrases oder Private Keys und soll ke
 | Wallet Monitor v1 | Implementiert | Lokale Watchlist, Approval-basierter Hygiene-Score und priorisierte "Fix this first"-Liste. |
 | Address Watchlist | Implementiert | Wallets, Vaults, Multisigs und Contracts lokal speichern, aktualisieren sowie als JSON importieren/exportieren. |
 | Site Reputation | Implementiert | Schneller lokaler Heuristik-Check fuer bekannte Domains, verdachtige Clone-Muster und unbekannte Sites. |
-| History / Intel Feed | Implementiert | Zeigt gespeicherte Analysen und kuratierte Hall-of-Shame-Faelle. |
+| History / Intel Feed | Lokal implementiert; Produktionspruefung offen | Oeffentliche Historie zeigt nur kuratierte Hall-of-Shame-Faelle. Nicht kuratierte gespeicherte Analysen sind ueber private UUID-Links abrufbar, nicht als globale Nutzerhistorie. Wer einen Link besitzt, kann das Ergebnis waehrend der Aufbewahrung abrufen; kein kontobasierter Zugriffsschutz. |
 | Contract Diff | Implementiert | Vergleicht EIP-1967-Proxy-Implementierungen und hebt Aenderungsrisiken hervor. |
 | Onboarding | Implementiert | Kurzer Lernpfad zu Approvals, Signaturen, Verdicts, Extension und Wallet Monitor. |
 | Rechtliche Seiten | Implementiert, Review offen | Impressum, Datenschutz, Nutzungsbedingungen und Cookie-/Local-Storage-Hinweise sind als App-Routen vorhanden. |
@@ -45,14 +47,14 @@ Sigil ist kein Wallet, verwahrt keine Seed Phrases oder Private Keys und soll ke
 
 | Bereich | Stand | Aktuelle Funktion |
 | --- | --- | --- |
-| Chrome Web Store | Live | Manifest-V3-Extension ist im offiziellen Chrome Web Store veroeffentlicht. |
-| Wallet-Methodenerkennung | Implementiert | Erkennt `eth_sendTransaction`, `eth_signTransaction`, `eth_sign`, `personal_sign` und `eth_signTypedData*`. |
-| Lokale Vorpruefung | Implementiert | Methodenspezifische Regeln, Approval-/Typed-Data-Signale und lokale Site-Reputation. |
+| Chrome Web Store | Historischer Build live; 1.0.3 ausstehend | Der historische Manifest-V3-Build ist veroeffentlicht. Das lokal implementierte Advisory-Update 1.0.3 ist noch nicht veroeffentlicht. |
+| Wallet-Methodenerkennung | Lokal implementiert; manuelle QA offen | Beobachtet kompatible `eth_sendTransaction`, `eth_signTransaction`, `eth_sign`, `personal_sign` und `eth_signTypedData*`-Anfragen auf best-effort-Basis; keine Vollstaendigkeitsgarantie. |
+| Lokale beratende Checks | Lokal implementiert | Methodenspezifische Regeln, Approval-/Typed-Data-Signale und lokale Site-Reputation ohne Wallet-Gating oder Timing-Garantie. |
 | API-Analyse | Implementiert | Uebergibt geeignete Beobachtungen an die Sigil-Produktions-API. |
 | Popup-Werkzeuge | Implementiert | Site Check, Copy/Paste Analyzer, History, dApp Sessions, Trusted Sites/Contracts und Einstellungen. |
 | Einstellungen-Sync | Implementiert | Optionaler Chrome-Sync fuer Einstellungen und Vertrauenslisten; Analyse- und Session-Historie bleibt lokal. |
 | Notification Policy | Implementiert | Critical only, wichtige Risiken oder Off, ohne zusaetzliche Notification-Berechtigung. |
-| Security Remediation | **Offen / release-blockierend** | Die aktuelle Provider-Interception wartet auf ein seitengesteuertes `sigil:decision`-Event. Eine boesartige Seite kann dieses Event faelschen. Die freigegebene Neugestaltung macht Sigil rein beratend und entkoppelt Wallet-Ausfuehrung vollstaendig von Seitenevents, Netzwerk und UI. |
+| Security Remediation | **Lokal implementiert; Release-/Produktions-/manuelle QA offen** | Rein beratende Beobachtung statt `sigil:decision`-Gating: originaler Provider exakt einmal, unabhaengig von Sigil-UI, Beobachtungen und Netzwerk. Begrenzte untrusted Intake-Daten, Advisory-Overlay ohne Proceed/Cancel, Session-Zustaende fuer Beobachtung, Review, Dismissal und Analysefehler. Eine Seite kann weiterhin Beobachtungen unterdruecken oder faelschen; diese erhalten keine Wallet-Autoritaet. |
 
 ### Backend und Betrieb
 
@@ -121,7 +123,7 @@ Repository-Assets liegen unter `artifacts/sigil/public/` und Extension-Icons unt
 | --- | --- | --- |
 | Etherscan V2 | Contract-Metadaten, Verifikation, ABI, Token- und Approval-bezogene Explorer-Daten | Benoetigt `ETHERSCAN_API_KEY`; kein Dummy-Key-Fallback. |
 | Public EVM JSON-RPC | Transaktionen, Receipts, Bytecode, Storage und On-Chain-Abfragen | Mehrere Fallback-Endpunkte fuer Ethereum, Polygon, Arbitrum, Optimism, Base, BNB Chain sowie Testnetze. |
-| CoinGecko Free API | Token-Preise fuer Simulation und Asset-Darstellung | Mit TTL-Cache und Request-Coalescing im Backend. |
+| CoinGecko Free API | Token-Preise fuer Simulation und Asset-Darstellung | `token-price.ts` fragt direkt ab, ohne TTL-Cache oder Request-Coalescing; bei Fehlern koennen Preise fehlen. Der separate Analyse-Cache ist kein Token-Preis-Cache. |
 | OpenRouter / Modellprovider | Kontextgebundene Sicherheitsanalyse und Klartext-Erklaerung | OpenAI-kompatible Konfiguration ueber `AI_INTEGRATIONS_OPENAI_BASE_URL`, `AI_INTEGRATIONS_OPENAI_API_KEY` und optional `SIGIL_AI_MODEL`. |
 | Neon PostgreSQL | Persistente Analyseergebnisse und Hall-of-Shame-Daten | Verbindung ueber `DATABASE_URL`; Drizzle ORM. |
 | Interne Known-Entity-Daten | Bekannte Protokolle, Exploiter und sanktionierte Adressen | Statisch versionierte Daten im Repository; kein Ersatz fuer eine laufend gepflegte Threat-Intel-Quelle. |
@@ -143,19 +145,20 @@ Nach Code- und Testbestand sind folgende End-to-End-Bausteine vorhanden:
 - Lokaler Site-Reputation-Check und Copy/Paste-Klassifikation.
 - Onboarding-, Extension-, Legal-, History-, Simulation- und Analyseansichten in der Web-App.
 - Extension-Popup, lokale Historie, dApp-Session-Zusammenfassungen, optionale Settings-Synchronisierung und API-Handoff.
-- Chrome-Store-Listing und produktive API-Domain-Konfiguration.
+- Lokal implementierte beratende Best-effort-Beobachtung kompatibler Wallet-Anfragen, ohne Wallet-Entscheidungsautoritaet; Analyse kann nach Prompt/Bestaetigung eintreffen.
+- Historisches Chrome-Store-Listing und produktive API-Domain-Konfiguration; Update 1.0.3 noch nicht veroeffentlicht.
 
-Wichtige Einschraenkung: "Implementiert" bedeutet, dass der entsprechende Codepfad vorhanden und teilweise automatisiert getestet ist. Es bedeutet nicht, dass jeder externe Provider, jedes Netzwerk oder jeder produktive Browserpfad aktuell zu 100 Prozent verifiziert ist. Der letzte vollstaendige Typecheck/Build war in der Audit-Umgebung wegen eines lokalen TLS-Zertifikatsfehlers beim Dependency-Install nicht erneut ausfuehrbar.
+Wichtige Einschraenkung: "Implementiert" bedeutet, dass der entsprechende Codepfad vorhanden und teilweise automatisiert getestet ist. Es bedeutet nicht, dass jeder externe Provider, jedes Netzwerk oder jeder produktive Browserpfad aktuell verifiziert ist. Am 30. September 2026 bestanden Workspace-Typecheck sowie API- und Web-Produktionsbuild; TLS-Verifikation blieb aktiviert. Produktive Wallet-, Datenbank- und Provider-Pruefungen stehen aus.
 
 ## 7. Was bisher nur geplant ist
 
-### Bereits freigegeben, als Naechstes umzusetzen
+### Lokal umgesetzt, Release-Verifikation noch ausstehend
 
-- Extension in ein rein beratendes Modell umbauen: Der originale Wallet-Provider wird exakt einmal und unabhaengig von Sigil ausgefuehrt; Seiten koennen keine Sigil-Entscheidung mehr faelschen oder die Provider-Ausfuehrung steuern.
-- Untrusted-Observation-Gate mit Groessen-, Tiefen-, Alters-, Rate-, Queue- und Deduplication-Limits.
-- Advisory Overlay ohne "Proceed"- oder "Cancel request"-Steuerung; neue Session-Zustaende `observed`, `reviewed` und `analysis_failed`.
-- Extension-, Store-, Datenschutz- und Whitepaper-Texte an das beratende Sicherheitsmodell anpassen.
-- Deterministisches Extension-Paket bauen, Security-Regressionstests ausfuehren und EU/DE-Audit-Gate erneut bewerten.
+- Lokal implementiert: rein beratendes Modell, originaler Wallet-Provider exakt einmal und unabhaengig von Sigil; keine Blockier-, Proceed- oder Cancel-Autoritaet. Unterdrueckte oder gefaelschte Beobachtungen bleiben moeglich, steuern aber nicht die Wallet-Ausfuehrung.
+- Lokal implementiert: Untrusted-Observation-Gate mit Groessen-, Tiefen-, Alters-, Rate-, Queue- und Deduplication-Limits sowie Advisory-Overlay ohne Wallet-Steuerung und beobachtungsbezogenen Session-Zustaenden.
+- Lokal verifiziert: Update-Paket 1.0.3 zweimal reproduzierbar erzeugt; SHA-256 `9DB2340A093D84CB7155FBAB66C9FF3BEDBDB3223CDF3FABE3067B922CEF030B`. Store-Einreichung und Veroeffentlichung stehen aus.
+- Ausstehend: Produktions-Smoke-Tests und manuelle QA im echten Chrome-Profil fuer kompatible Wallets, gefaelschte/unterdrueckte Beobachtungen, API-Ausfall, Trusted Lists und verspaetete Analyse.
+- Ausstehend: Security-Regressionsergebnisse und organisatorische Nachweise fuer die Neubewertung des EU/DE-Release-Gates konsolidieren. Lokale Implementierung allein hebt `NO_GO` nicht auf.
 
 ### Premium Wallet Monitor
 
@@ -187,4 +190,3 @@ Wichtige Einschraenkung: "Implementiert" bedeutet, dass der entsprechende Codepf
 - Release-Checkliste: [`.compliance/RELEASE_CHECKLIST.md`](.compliance/RELEASE_CHECKLIST.md)
 - Chrome-Store-Unterlagen: [`docs/chrome-web-store-submission.md`](docs/chrome-web-store-submission.md)
 - Production-QA: [`docs/production-qa-matrix.md`](docs/production-qa-matrix.md)
-

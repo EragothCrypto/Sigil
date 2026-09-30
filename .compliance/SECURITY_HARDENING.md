@@ -6,11 +6,15 @@
 
 `artifacts/sigil-extension/inject.js` publishes a request ID in `sigil:intercept` and trusts any later `sigil:decision` event carrying that ID. Both events live in the hostile page's MAIN world. An executable proof of concept captured the ID, queued `action: "proceed"`, and caused the original provider to execute without an extension decision.
 
-Required remediation: replace DOM `CustomEvent` authorization with a browser-authenticated boundary whose response source/origin cannot be forged by the dApp. An extension-origin iframe/UI with strict source/origin verification or direct wallet integration are plausible designs. Until fixed and re-reviewed, the extension must be treated as advisory and may not claim reliable blocking against malicious pages.
+Implemented remediation: remove wallet authorization from the extension. The original provider runs independently exactly once, preserving its result/error; only bounded best-effort observations reach the advisory UI. Independent implementation reviews approved the provider/intake/lifecycle work. Page observations are untrusted and may be forged or suppressed, so product copy discloses those limits. Installed Chrome and production rollout remain pending.
 
 ### P1: Submitted analyses were publicly enumerable
 
-The audited revision exposed recent records and predictable numeric detail IDs without authentication. The working tree now removes the global feed, assigns UUID bearer-link IDs to new records, permits numeric IDs only for curated Hall of Shame rows, and leaves legacy private rows unreachable. Deployment and API regression tests remain required.
+The audited revision exposed recent records and predictable numeric detail IDs without authentication. Local fixes remove the global feed and cross-user prior-approval correlation, assign UUID bearer-link IDs to new records, permit bounded numeric IDs only for curated Hall of Shame rows, and leave legacy private rows unreachable. Executable mocked-route tests verify the private/public boundary; production verification remains required. UUID URLs remain bearer links available to anyone who obtains them, not account ownership authorization.
+
+### P1: Retention must run periodically
+
+The initial remediation cleaned up only during schema initialization. The follow-up exposes a secret-protected daily Vercel job and separates schema initialization from deletion. Missing/wrong credentials reject before database work. Mocked SQL tests cover retention age bounds and curated-case exclusion. See `RETENTION_OPERATIONS.md` for standalone scheduling, monitoring, daily timing and production evidence still needed.
 
 ### P2: Sensitive values in logs
 

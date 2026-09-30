@@ -327,9 +327,9 @@ export default function ApprovalsPage() {
               <div className="flex items-start gap-3">
                 <Chrome className="mt-0.5 h-5 w-5 text-primary" />
                 <div>
-                  <h2 className="text-sm font-bold text-white">Catch risky approvals before signing</h2>
+                  <h2 className="text-sm font-bold text-white">Review approval prompts in context</h2>
                   <p className="mt-1 text-xs leading-relaxed text-white/48">
-                    Install the Chrome extension so Sigil reviews approval prompts in the wallet flow.
+                    Install the Chrome extension for best-effort advisory alerts on compatible wallet requests.
                   </p>
                 </div>
               </div>

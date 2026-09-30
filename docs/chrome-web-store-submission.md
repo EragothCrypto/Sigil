@@ -1,8 +1,8 @@
 # Sigil Chrome Web Store Submission Pack
 
-Last updated: May 26, 2026
+Last updated: September 30, 2026
 
-Status: Live in the Chrome Web Store.
+Status: Historical build published in the Chrome Web Store. Advisory-only version 1.0.3 is implemented locally, pending release, and not yet published. The listing and historical submission checks below do not verify the pending update.
 
 Live listing:
 
@@ -22,21 +22,23 @@ Alternative category if Google suggests a security-focused placement: Developer 
 
 ### Short description
 
-Real-time Web3 signing protection. Understand wallet requests, approvals, and contract risk before you sign.
+Understand wallet requests, approvals, and contract risk before you sign. Best-effort advisory alerts for compatible wallets.
 
 ### Detailed description
 
-Sigil helps Web3 users review wallet signing requests before approving them.
+Sigil helps Web3 users understand wallet risk before you sign through manual analysis and best-effort advisory observation of compatible wallet requests.
 
-The extension watches for wallet signing methods such as transactions, typed-data signatures, raw signatures, and token approvals. Before the wallet request continues, Sigil shows a clear risk panel with a plain-English verdict, risk score, warnings, and a link to the full Sigil analysis when available.
+The pending 1.0.3 extension observes compatible wallet signing methods such as transactions, typed-data signatures, raw signatures, and token approvals on a best-effort basis. The original wallet provider runs independently exactly once per wrapped request, without waiting for Sigil observations, UI, or network analysis. Sigil may show an advisory risk panel with a plain-English verdict, risk score, warnings, and a link to full analysis when available. Analysis may finish after the wallet prompt or confirmation; there is no timing guarantee.
+
+Sigil has no blocking, proceed, or cancel authority: the wallet remains the only place that approves or rejects a request. Dismissing an alert or trusting a site only affects Sigil alerts. A hostile page may suppress or forge observations; an observation or missing warning is not proof of wallet activity or safety.
 
 Core features:
 
-- Detects risky signing requests before they reach your wallet.
+- Reviews compatible wallet requests through best-effort advisory observations.
 - Flags unlimited token approvals and high-risk permission grants.
 - Reviews typed-data signatures, transaction calldata, contract addresses, and transaction hashes.
 - Provides Safe, Caution, or Dangerous verdicts with 0-100 risk scoring.
-- Offers Quiet, Standard, and Strict protection modes for different daily-use preferences.
+- Offers Quiet, Standard, and Strict alert sensitivity settings; these affect alerts, not wallet execution.
 - Lets users manage trusted sites, trusted contracts, optional settings sync, and local recent-check history.
 - Connects to the Sigil backend at https://sigil.s3ntrylabs.com for deeper analysis.
 
@@ -60,13 +62,19 @@ https://sigil.s3ntrylabs.com/terms
 
 ## Release Package
 
-Latest ZIP:
+Historical release ZIP (not the pending 1.0.3 update):
 
 `artifacts/release/sigil-chrome-extension-v1.0.2.zip`
 
 SHA-256:
 
 `4827DEE1AAF5A2A328A1E87290069846B54CC2BEE34DDCBF72335B2AECCC3DFF`
+
+Local update package: `artifacts/release/sigil-chrome-extension-v1.0.3.zip`.
+
+SHA-256: `9DB2340A093D84CB7155FBAB66C9FF3BEDBDB3223CDF3FABE3067B922CEF030B`.
+
+Generated twice with `scripts/package-extension.ps1`; identical hashes. The web download ZIP matches this package. Submission, publication, and installed-build production/manual QA remain pending. The historical checksum above applies only to 1.0.2.
 
 Packaged files:
 
@@ -86,11 +94,11 @@ Packaged files:
 
 ### `storage`
 
-Required to save user-controlled extension settings, protection mode, notification policy, trusted sites, trusted contracts, optional Chrome settings sync state, and recent local check history.
+Required to save user-controlled extension settings, alert sensitivity, notification policy, trusted sites, trusted contracts, optional Chrome settings sync state, and recent local check history.
 
 ### Content scripts on `<all_urls>`
 
-Required because wallet signing prompts can be initiated from any dApp domain. Sigil must be present on arbitrary Web3 pages to intercept supported Ethereum provider signing methods before the wallet request continues. The extension does not request broad host permissions for arbitrary network access.
+Required because wallet signing prompts can be initiated from any dApp domain. Sigil uses page-context hooks to observe compatible Ethereum provider signing methods on a best-effort basis and presents advisory alerts separately. It does not control wallet execution. The extension does not request broad host permissions for arbitrary network access.
 
 ### Host permission: `https://sigil.s3ntrylabs.com/*`
 
@@ -100,12 +108,12 @@ Required to call the Sigil backend for transaction, contract, and signing-risk a
 
 ### Data usage summary
 
-Sigil processes wallet signing request data only to provide security analysis and user-requested protection features.
+Sigil processes wallet signing request observations to provide advisory security analysis and user-requested alert features. Page observations are untrusted and may not reflect genuine wallet activity.
 
 ### Data types collected or processed
 
-- Website content: the extension observes supported wallet provider signing requests on the current dApp page.
-- User activity: signing-request metadata such as method type, dApp hostname, transaction calldata, typed-data payloads, contract addresses, transaction hashes, selected protection decisions, and local recent-check history.
+- Website content: the extension observes compatible wallet provider signing requests on the current dApp page on a best-effort basis.
+- User activity: observed method type, dApp hostname, transaction calldata, typed-data payloads, contract addresses, transaction hashes, alert interactions, and local recent-check history. Alert interactions are not wallet approval or rejection records.
 - Authentication information: not collected by the extension.
 - Personally identifiable information: not intentionally collected. Wallet addresses and transaction data may be submitted if they are part of a signing request.
 - Financial and payment information: not collected as payment data. On-chain transaction details may be analyzed when submitted by the user flow.
@@ -116,7 +124,7 @@ When deeper analysis is required, Sigil sends the relevant signing request, tran
 
 ### Local storage
 
-The extension stores settings, trusted sites, trusted contracts, and recent check history locally in Chrome extension storage by default. If the user enables Settings Sync, protection mode, notification policy, trusted sites, trusted contracts, API endpoint, and history limit may sync through Chrome extension sync storage. Analysis history and dApp session history remain local by default and are not synced. Users can clear recent history from the extension popup.
+The extension stores settings, trusted sites, trusted contracts, and recent check history locally in Chrome extension storage by default. If the user enables Settings Sync, alert sensitivity, notification policy, trusted sites, trusted contracts, API endpoint, and history limit may sync through Chrome extension sync storage. Analysis history and dApp session history remain local by default and are not synced. Users can clear recent history from the extension popup.
 
 ### Data sale
 
@@ -139,9 +147,11 @@ Submitted analysis requests may be processed by the Sigil backend and configured
 - Popup scripts are local extension files.
 - Backend API responses are treated as data and rendered with escaping in the content overlay.
 - The extension does not inject third-party executable code.
-- The broad content script match is needed for wallet request interception across Web3 sites.
+- The broad content script match is needed for best-effort compatible wallet request observation across Web3 sites.
 
 ## Final Submission Checklist
+
+Checked entries record the historical published build only, not current production verification or publication of 1.0.3.
 
 - [x] Confirm the production app health endpoint is ready: https://sigil.s3ntrylabs.com/api/readyz
 - [x] Confirm Privacy Policy, Impressum, Terms, and Cookie pages are live.
@@ -149,6 +159,8 @@ Submitted analysis requests may be processed by the Sigil backend and configured
 - [x] Upload the final ZIP.
 - [x] Submit for review.
 - [x] Chrome Web Store listing is live.
+- [ ] Package and verify advisory-only 1.0.3, submit the update, and confirm publication.
+- [ ] Recheck production readiness, legal routes, listing copy, privacy disclosures, and download version for the update.
 - [ ] Run installed Store-build wallet signing QA from a real Chrome profile.
 - [ ] Test a safe transfer flow.
 - [ ] Test an unlimited approval flow.

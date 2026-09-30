@@ -18,7 +18,7 @@ catalog:
   '@vitejs/plugin-react': ^5.0.4
   class-variance-authority: ^0.7.1
   clsx: 2.1.1
-  drizzle-orm: ^0.45.1
+  drizzle-orm: ^0.45.2
   framer-motion: 12.35.1
   lucide-react: 0.545.0
   react: 19.1.0
@@ -26,7 +26,7 @@ catalog:
   tailwind-merge: 3.5.0
   tailwindcss: ^4.1.14
   tsx: ^4.21.0
-  vite: ^7.3.0
+  vite: ^7.3.5
   zod: ^3.25.76
 
 minimumReleaseAge: 1440
@@ -42,6 +42,24 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  'undici@>=7.0.0 <7.29.1': 7.29.1
+  '@babel/core@>=7.0.0 <7.29.6': 7.29.6
+  'brace-expansion@>=2.0.0 <2.1.7': 2.1.7
+  'picomatch@>=2.0.0 <2.3.2': 2.3.2
+  'picomatch@>=4.0.0 <4.0.4': 4.0.4
+  'yaml@>=2.0.0 <2.8.3': 2.8.3
+  'lodash@>=4.0.0 <4.18.0': 4.18.0
+  'postcss@>=8.0.0 <8.5.23': 8.5.23
+  'markdown-it@>=14.0.0 <14.3.1': 14.3.1
+  'linkify-it@>=5.0.0 <5.0.2': 5.0.2
+  'js-yaml@>=4.0.0 <4.3.2': 4.3.2
+  'fast-uri@>=3.0.0 <3.1.8': 3.1.8
+  'nanoid@>=3.0.0 <3.3.18': 3.3.18
+  'browserslist@>=4.0.0 <4.28.7': 4.28.7
+  'baseline-browser-mapping@>=2.0.0 <2.11.0': 2.11.0
+  'path-to-regexp@>=8.0.0 <8.4.0': 8.4.2
+  'qs@>=6.0.0 <6.16.0': 6.16.0
+  'body-parser@>=2.0.0 <2.3.0': 2.3.0
   '@esbuild-kit/esm-loader': npm:tsx@^4.21.0
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-arm64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-x64': '-'
@@ -62,7 +80,7 @@ overrides:
   '@tailwindcss/oxide>@tailwindcss/oxide-linux-arm64-musl': '-'
   '@tailwindcss/oxide>@tailwindcss/oxide-linux-x64-musl': '-'
   '@tailwindcss/oxide>@tailwindcss/oxide-win32-arm64-msvc': '-'
-  esbuild: 0.27.3
+  esbuild: 0.28.1
   esbuild>@esbuild/aix-ppc64: '-'
   esbuild>@esbuild/android-arm: '-'
   esbuild>@esbuild/android-arm64: '-'

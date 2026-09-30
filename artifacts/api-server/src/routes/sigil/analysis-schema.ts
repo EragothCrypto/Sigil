@@ -49,14 +49,18 @@ async function createOrUpdateAnalysesTable(): Promise<void> {
     CREATE UNIQUE INDEX IF NOT EXISTS analyses_public_id_idx ON analyses (public_id) WHERE public_id IS NOT NULL;
   `);
 
+}
+
+export async function runAnalysisRetentionCleanup(): Promise<number> {
   const configuredDays = Number.parseInt(process.env.SIGIL_ANALYSIS_RETENTION_DAYS ?? "30", 10);
   const retentionDays = Number.isFinite(configuredDays) ? Math.min(365, Math.max(1, configuredDays)) : 30;
-  await pool.query(
+  const result = await pool.query(
     `DELETE FROM analyses
        WHERE hall_of_shame = false
          AND created_at < now() - ($1 * interval '1 day')`,
     [retentionDays],
   );
+  return result.rowCount ?? 0;
 }
 
 export async function ensureAnalysesSchema(): Promise<void> {

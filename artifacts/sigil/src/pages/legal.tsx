@@ -193,6 +193,11 @@ export function PrivacyPage() {
           checks and third-party data. Treat every result as decision support, verify high-value actions independently, and never
           rely on a verdict as a guarantee of safety.
         </p>
+        <p>
+          The browser extension reviews compatible wallet requests on a best-effort basis and may show an advisory alert while
+          you evaluate a request. A hostile page can bypass or suppress automatic observation, and an analysis may finish after
+          the wallet prompt appears or is confirmed. The wallet remains the only place that approves or rejects an action.
+        </p>
       </Section>
 
       <Section title="Your Rights">

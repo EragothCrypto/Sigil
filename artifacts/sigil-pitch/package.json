@@ -21,7 +21,7 @@
     "@vitejs/plugin-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-router-dom": "^7.9.5",
+    "react-router-dom": "^7.18.2",
     "tailwindcss": "catalog:",
     "tsx": "catalog:",
     "vite": "catalog:",

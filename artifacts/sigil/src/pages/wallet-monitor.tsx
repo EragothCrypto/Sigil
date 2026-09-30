@@ -289,9 +289,9 @@ export default function WalletMonitorPage() {
               <div className="flex items-start gap-3">
                 <Chrome className="mt-0.5 h-5 w-5 text-primary" />
                 <div>
-                  <h2 className="text-sm font-bold text-white">Protect the next signing prompt</h2>
+                  <h2 className="text-sm font-bold text-white">Review the next signing prompt</h2>
                   <p className="mt-1 text-xs leading-relaxed text-white/48">
-                    Wallet Monitor shows exposure after the fact; the extension helps before you sign.
+                    Wallet Monitor shows existing exposure; the extension adds best-effort advisory context to compatible requests.
                   </p>
                 </div>
               </div>

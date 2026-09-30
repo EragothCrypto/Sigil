@@ -60,8 +60,8 @@ const FEATURES = [
     color: "text-primary",
     bg: "bg-primary/10",
     border: "border-primary/15",
-    title: "Intercepts Every Transaction",
-    desc: "Hooks into MetaMask, Rabby, and any EIP-1193 wallet. Catches eth_sendTransaction, eth_sign, personal_sign, and typed data.",
+    title: "Reviews Compatible Wallet Requests",
+    desc: "Observes supported EIP-1193 transaction and signing methods on a best-effort basis without controlling the wallet.",
   },
   {
     icon: ShieldCheck,
@@ -69,7 +69,7 @@ const FEATURES = [
     bg: "bg-emerald-500/8",
     border: "border-emerald-500/15",
     title: "Real-Time Risk Score",
-    desc: "AI engine returns a 0–100 risk verdict — Safe, Caution, or Dangerous — before you approve anything.",
+    desc: "Combines local checks and API analysis into a 0–100 advisory verdict: Safe, Caution, or Dangerous.",
   },
   {
     icon: AlertTriangle,
@@ -125,7 +125,7 @@ export default function ExtensionPage() {
         </h1>
 
         <p className="text-lg text-white/40 max-w-xl mx-auto leading-relaxed">
-          Every transaction gets analyzed <em className="text-white/60 not-italic">before</em> MetaMask or Rabby asks you to sign. No more blind approvals.
+          Sigil reviews compatible wallet requests and shows advisory risk context while you evaluate them in your wallet.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
@@ -179,11 +179,11 @@ export default function ExtensionPage() {
         <SectionLabel label="How it works" />
         <div className="flex flex-col md:flex-row items-center gap-2">
           {[
-            { icon: "🦊", label: "You click\nConfirm" },
-            { icon: "🔀", label: "Sigil\nintercepts" },
-            { icon: "🤖", label: "AI-assisted\nrisk analysis" },
-            { icon: "⚠️", label: "Risk overlay\nappears" },
-            { icon: "✅", label: "You decide\nto proceed" },
+            { icon: "🦊", label: "dApp sends\nwallet request" },
+            { icon: "🔀", label: "Sigil observes\nwhen compatible" },
+            { icon: "🤖", label: "Risk signals\nare reviewed" },
+            { icon: "⚠️", label: "Advisory alert\nis shown" },
+            { icon: "✅", label: "You decide\nin your wallet" },
           ].map((step, i, arr) => (
             <div key={i} className="flex items-center gap-2 flex-1">
               <div className="flex-1 flex flex-col items-center text-center gap-2">
@@ -199,6 +199,10 @@ export default function ExtensionPage() {
           ))}
         </div>
       </section>
+
+      <p className="text-sm text-white/35 leading-relaxed border border-white/8 bg-white/[0.03] rounded-xl p-4">
+        Automatic observation is best-effort and can be bypassed or suppressed by a hostile page. The wallet remains the only place that approves or rejects an action, and confirmation may happen before Sigil finishes an analysis.
+      </p>
 
       {/* ── Install steps ── */}
       <section className="space-y-6">

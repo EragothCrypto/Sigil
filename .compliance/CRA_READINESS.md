@@ -13,7 +13,7 @@ The Chrome extension is a product with digital elements made available in the EU
 | Secure development lifecycle | Partial | Existing tests/security scans help; add CI gates, threat-model updates and release sign-off. |
 | Vulnerability handling | Partial | No formal triage severity/SLA, coordinated disclosure or customer notification playbook. |
 | Security updates | Partial | Chrome/Vercel can distribute updates, but support period, emergency rollout, rollback and user communication are undocumented. |
-| SBOM/dependency evidence | Missing | Generate CycloneDX/SPDX SBOM per release and preserve lockfile/audit evidence. |
+| SBOM/dependency evidence | Partial | Installed component inventory, license metadata and final lockfile/advisory evidence generated on 2026-09-30. Complete asset rights, dependency graph/provenance and release archival. |
 | Product documentation | Partial | Version/permissions/store copy exist; add security properties, limitations, support period, update policy and manufacturer identity. |
 | Technical documentation/conformity | Missing | Prepare risk assessment, architecture, essential cybersecurity requirements mapping, testing evidence and EU declaration/CE process before full application. |
 | End-of-support | Missing | Define a support period consistent with expected use and publish end-of-support handling. |
