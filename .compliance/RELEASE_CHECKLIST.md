@@ -7,8 +7,13 @@
 - [x] Record supplied legal operator/controller and content responsible person: Kevin Kauper; implement in legal UI.
 - [ ] Verify live publication and preserve serviceability evidence for Kevin Kauper at the supplied Hamburg c/o address.
 - [ ] Complete vendor DPAs, transfer assessment, regions and retention settings.
+- [x] Record operator declaration: Sigil currently operates non-profit/non-commercial; retain Vercel Hobby for this stage. This is not independent provider approval or confirmation of charitable status.
+- [ ] Resolve Vercel Hobby processor-term coverage and verify model-training opt-out; reassess plan eligibility if commercial activity is introduced. See `VENDORS_AND_TRANSFERS.md`.
+- [ ] Before monetisation launch or promotion of paid offerings: move Sigil production to an appropriate paid Vercel plan, verify applicable DPA and plan limits, then enable paid features/checkout/API subscriptions. No upgrade now.
 - [ ] Lock OpenRouter/model routing to documented no-training behavior or migrate to a contracted suitable provider.
-- [ ] Configure and test the CRA Article 14 reporting runbook and responsible contacts.
+- [x] Prepare conditional CRA/GDPR incident runbook and synthetic tabletop template; clarify unresolved CRA scope for current non-commercial operation.
+- [x] Record Kevin Kauper's acceptance of emergency responsibility, incoming-mail notification arrangement and absence of a deputy.
+- [ ] Test intake notifications/access, document absence handling, confirm applicable reporting routes/access and complete the tabletop exercise; owner acceptance is not operational sign-off.
 - [x] Restore dependencies from the available package cache with TLS verification enabled; run library/API/web typechecks and production API/web builds.
 - [x] Run full dependency advisory audit and generate installed-package license/SBOM inventories.
 - [ ] Complete asset/license clearance, signed provenance and installed-profile QA.
@@ -16,6 +21,7 @@
 - [x] Generate deterministic v1.0.3 ZIP and SHA-256 evidence with a runtime-file allowlist.
 - [ ] Submit v1.0.3 with updated advisory disclosures after release-gate approval.
 - [ ] Configure `CRON_SECRET`, redeploy and verify the daily retention job, failure monitoring and provider backups; see `RETENTION_OPERATIONS.md`.
+- [x] Verify retention callback/config and SQL/schema behavior with 7 focused mocked tests; prepare Hobby failure-control, isolated staging drill and Neon restore/erasure procedures. Production execution, real PostgreSQL drill and monitoring remain unverified.
 
 ## Manual Product QA
 

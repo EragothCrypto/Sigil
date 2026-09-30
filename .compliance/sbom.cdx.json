@@ -11,7 +11,7 @@
     "properties": [
       {
         "name": "sigil:pnpm-lock-sha256",
-        "value": "27571e799ea9746c58c031d6f62efe079b39fda98d2d62b20292330d1f0a3c9e"
+        "value": "f3487d5a7c61aac2e8ff8dc48fef765bb0819c4ef6b309c6bd9aed2012147a82"
       }
     ]
   },
@@ -2594,10 +2594,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/caniuse-lite@1.0.30001814",
+      "bom-ref": "pkg:npm/caniuse-lite@1.0.30001813",
       "name": "caniuse-lite",
-      "version": "1.0.30001814",
-      "purl": "pkg:npm/caniuse-lite@1.0.30001814",
+      "version": "1.0.30001813",
+      "purl": "pkg:npm/caniuse-lite@1.0.30001813",
       "licenses": [
         {
           "license": {
@@ -3266,10 +3266,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/electron-to-chromium@1.5.442",
+      "bom-ref": "pkg:npm/electron-to-chromium@1.5.440",
       "name": "electron-to-chromium",
-      "version": "1.5.442",
-      "purl": "pkg:npm/electron-to-chromium@1.5.442",
+      "version": "1.5.440",
+      "purl": "pkg:npm/electron-to-chromium@1.5.440",
       "licenses": [
         {
           "license": {

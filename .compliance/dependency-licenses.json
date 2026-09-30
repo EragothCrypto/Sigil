@@ -5064,10 +5064,10 @@
     {
       "name": "caniuse-lite",
       "versions": [
-        "1.0.30001814"
+        "1.0.30001813"
       ],
       "paths": [
-        "C:\\Coding Projects\\Sigil\\node_modules\\.pnpm\\caniuse-lite@1.0.30001814\\node_modules\\caniuse-lite"
+        "C:\\Coding Projects\\Sigil\\node_modules\\.pnpm\\caniuse-lite@1.0.30001813\\node_modules\\caniuse-lite"
       ],
       "license": "CC-BY-4.0",
       "author": "Ben Briggs",
@@ -5209,10 +5209,10 @@
     {
       "name": "electron-to-chromium",
       "versions": [
-        "1.5.442"
+        "1.5.440"
       ],
       "paths": [
-        "C:\\Coding Projects\\Sigil\\node_modules\\.pnpm\\electron-to-chromium@1.5.442\\node_modules\\electron-to-chromium"
+        "C:\\Coding Projects\\Sigil\\node_modules\\.pnpm\\electron-to-chromium@1.5.440\\node_modules\\electron-to-chromium"
       ],
       "license": "ISC",
       "author": "Kilian Valkhof",

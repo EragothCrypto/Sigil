@@ -23,7 +23,7 @@ Continuation verification supersedes the dependency/build limitation above: work
 | P0 | Public analysis history and sequential detail IDs disclose submitted scans. | Remediated in working tree; deployment and regression verification pending. |
 | P1 | DDG/GDPR operator/controller identity was missing. | Kevin Kauper supplied by operator on 2026-09-30 and implemented locally. Publication and c/o-address supporting evidence remain pending. |
 | P1 | OpenRouter free-model routing, provider training, retention, DPA and international transfer safeguards are unverified. | Manual account/contract change required. |
-| P1 | CRA Article 14 reporting process and contacts are not operational although the duty date has begun. | Organisational implementation required. |
+| P1 | Security/privacy incident ownership and reporting readiness are unverified; CRA scope is unresolved after the non-commercial clarification. | Conditional runbook and exercise template prepared locally. CRA applicability requires legal review; do not claim a current Article 14 duty from downloadability alone. Ownership/access/rehearsal remain pending. |
 | P1 | Ordinary analyses had no reliable retention/deletion schedule. | Secret-protected daily Vercel job and executable mocked SQL/auth tests added; scheduler/secret/deletion drill/provider backup verification pending. |
 | P2 | Wallet/hash/model output appeared in error logs. | Remediated in working tree; provider log retention pending. |
 | P2 | No CI, SBOM, license inventory, formal support period or reproducible extension release evidence. | Backlog before full CRA application; CI/SBOM should start now. |

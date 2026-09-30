@@ -752,6 +752,8 @@ Features that do not improve one of these pillars should be deferred.
 
 ### Monetization Direction
 
+Hosting prerequisite (operator decision, 2026-09-30): Sigil currently operates as a non-profit/non-commercial offering on Vercel Hobby. Retain Hobby during this stage. Before activating or commercially promoting paid features, subscriptions, checkout or paid API access, move the production deployment to an appropriate paid Vercel plan and verify applicable processing terms and operational limits. This future upgrade does not close current privacy/DPA evidence requirements.
+
 Sigil's commercial direction is security SaaS, not ads, portfolio tracking, trading, or broad crypto content. Premium value should come from persistent monitoring, higher limits, better prioritization, alerts, decision support, and team/API access.
 
 The product should keep a useful free safety loop so users can trust Sigil before paying. Paid tiers should deepen the same security workflow instead of hiding basic warnings behind a paywall.
