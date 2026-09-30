@@ -656,7 +656,7 @@
 
     if (!normalized.enabled) {
       return {
-        action: "proceed",
+        display: "skip",
         reason: "disabled",
         verdict: "safe",
         riskScore: 0,
@@ -671,7 +671,7 @@
 
     if (siteReputation.verdict === "dangerous") {
       return {
-        action: "show",
+        display: "show",
         reason: "site_reputation",
         verdict: "dangerous",
         riskScore: siteReputation.riskScore,
@@ -685,7 +685,7 @@
 
     if (isTrustedSite(url, normalized.trustedSites)) {
       return {
-        action: "proceed",
+        display: "skip",
         reason: "trusted_site",
         verdict: "safe",
         riskScore: 0,
@@ -698,7 +698,7 @@
 
     if (isTrustedContract(target, normalized.trustedContracts)) {
       return {
-        action: normalized.protectionMode === "strict" ? "show" : "proceed",
+        display: normalized.protectionMode === "strict" ? "show" : "skip",
         reason: "trusted_contract",
         verdict: "safe",
         riskScore: 5,
@@ -711,7 +711,7 @@
 
     if (isUnlimitedApproval(target)) {
       return {
-        action: "show",
+        display: "show",
         reason: "unlimited_approval",
         verdict: "dangerous",
         riskScore: 88,
@@ -729,7 +729,7 @@
 
     if (isPlainTransfer(target)) {
       const result = {
-        action: normalized.protectionMode === "quiet" ? "proceed" : "show",
+        display: normalized.protectionMode === "quiet" ? "skip" : "show",
         reason: "plain_transfer",
         verdict: "safe",
         riskScore: 12,
@@ -743,7 +743,7 @@
 
     if (target && target.type === "typed_data") {
       return {
-        action: "show",
+        display: "show",
         reason: siteReputation.riskScore >= 58 ? "site_reputation" : "typed_data",
         verdict: "caution",
         riskScore: Math.max(siteReputation.riskScore, normalized.protectionMode === "strict" ? 55 : 42),
@@ -759,7 +759,7 @@
     }
 
     return {
-      action: "show",
+      display: "show",
       reason: "needs_analysis",
       verdict: "caution",
       riskScore: Math.max(siteReputation.riskScore, normalized.protectionMode === "strict" ? 45 : 30),
@@ -769,14 +769,6 @@
       siteReputation,
       requiresApi: true,
     };
-  }
-
-  function requiresSecondConfirm(result, settings) {
-    const normalized = normalizeSettings(settings);
-    if (!result) return false;
-    if (result.verdict === "dangerous") return true;
-    if (Number(result.riskScore || 0) >= 75) return true;
-    return normalized.protectionMode === "strict" && Number(result.riskScore || 0) >= 50;
   }
 
   function shouldNotify(result, settings) {
@@ -814,8 +806,9 @@
     };
   }
 
-  function normalizeDecision(value) {
-    return value === "cancel" ? "cancel" : "proceed";
+  function normalizeSessionStatus(value) {
+    if (value === "reviewed" || value === "analysis_failed") return value;
+    return "observed";
   }
 
   function verdictRank(verdict) {
@@ -825,18 +818,20 @@
     return 0;
   }
 
-  function createSessionEvent({ sessionId, method, url, target, input, result, decision }) {
+  function createSessionEvent({ observationId, sessionId, method, url, target, input, result, status, dismissedAt }) {
     const timestamp = Date.now();
     const warnings = Array.isArray(result?.warnings) ? result.warnings.slice(0, 6).map(String) : [];
     return {
       id: `${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
+      observationId: String(observationId || ""),
       sessionId: String(sessionId || `${getHostname(url)}-${timestamp}`),
       site: getHostname(url),
       method,
       methodLabel: METHOD_LABELS[method] || "Wallet Request",
       category: classifySessionCategory(method, target),
       inputKind: input ? input.kind : "unknown",
-      decision: normalizeDecision(decision),
+      status: normalizeSessionStatus(status),
+      dismissedAt: dismissedAt ? String(dismissedAt) : null,
       verdict: result?.verdict || "caution",
       riskScore: Number(result?.riskScore || 0),
       riskLevel: result?.riskLevel || "medium",
@@ -866,8 +861,12 @@
       approvals: safeEvents.filter((event) => event.category === "approval").length,
       signatures: safeEvents.filter((event) => event.category === "signature").length,
       transactions: safeEvents.filter((event) => event.category === "transaction").length,
-      proceeded: safeEvents.filter((event) => event.decision === "proceed").length,
-      cancelled: safeEvents.filter((event) => event.decision === "cancel").length,
+      observed: safeEvents.filter((event) => event.status === "observed").length,
+      reviewed: safeEvents.filter((event) => event.status === "reviewed").length,
+      analysisFailed: safeEvents.filter((event) => event.status === "analysis_failed").length,
+      dismissed: safeEvents.filter((event) => Boolean(event.dismissedAt)).length,
+      legacyProceeded: safeEvents.filter((event) => !event.status && event.decision === "proceed").length,
+      legacyCancelled: safeEvents.filter((event) => !event.status && event.decision === "cancel").length,
       maxRiskScore,
       highestVerdict,
       warnings,
@@ -878,7 +877,13 @@
     const existing = Array.isArray(sessions) ? sessions : [];
     const current = existing.find((session) => session.id === event.sessionId);
     const other = existing.filter((session) => session.id !== event.sessionId);
-    const events = [...(current?.events || []), event].slice(-40);
+    const currentEvents = current?.events || [];
+    const existingIndex = event.observationId
+      ? currentEvents.findIndex((item) => item.observationId === event.observationId)
+      : -1;
+    const events = existingIndex >= 0
+      ? currentEvents.map((item, index) => index === existingIndex ? { ...item, ...event, id: item.id } : item)
+      : [...currentEvents, event].slice(-40);
     const timestamp = event.timestamp || Date.now();
     const session = {
       id: event.sessionId,
@@ -906,7 +911,6 @@
     getAnalysisInput,
     evaluateSiteReputation,
     localPreScreen,
-    requiresSecondConfirm,
     shouldNotify,
     trimHistory,
     createHistoryEntry,

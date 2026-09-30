@@ -111,7 +111,8 @@ test("flags unlimited approvals locally", () => {
 
   assert.equal(result.verdict, "dangerous");
   assert.equal(result.requiresApi, true);
-  assert.equal(core.requiresSecondConfirm(result, core.normalizeSettings({})), true);
+  assert.equal(result.display, "show");
+  assert.equal("action" in result, false);
 });
 
 test("quiet mode skips safe plain transfers", () => {
@@ -129,7 +130,7 @@ test("quiet mode skips safe plain transfers", () => {
     settings: core.normalizeSettings({ protectionMode: "quiet" }),
   });
 
-  assert.equal(result.action, "proceed");
+  assert.equal(result.display, "skip");
   assert.equal(result.verdict, "safe");
 });
 
@@ -141,7 +142,7 @@ test("trusted sites bypass analysis", () => {
     settings: core.normalizeSettings({ trustedSites: ["app.uniswap.org"] }),
   });
 
-  assert.equal(result.action, "proceed");
+  assert.equal(result.display, "skip");
   assert.equal(result.reason, "trusted_site");
 });
 
@@ -160,7 +161,7 @@ test("site reputation blocks known phishing domains locally", () => {
 
   assert.equal(result.reason, "site_reputation");
   assert.equal(result.verdict, "dangerous");
-  assert.equal(result.action, "show");
+  assert.equal(result.display, "show");
 });
 
 test("site reputation identifies trusted and clone-like domains", () => {
@@ -223,46 +224,79 @@ test("classifies session events by wallet request type", () => {
   assert.equal(core.classifySessionCategory("eth_sendTransaction", { type: "transaction", data: { to: "0x1", data: "0x" } }), "transaction");
 });
 
-test("records and summarizes dapp session events", () => {
+test("upserts advisory lifecycle and summarizes unique observations", () => {
+  const observationId = "00000000-0000-4000-8000-000000000001";
+  const approvalTarget = {
+    type: "transaction",
+    data: {
+      to: "0x0000000000000000000000000000000000000001",
+      data:
+        "0x095ea7b3" +
+        "000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25ef" +
+        "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    },
+  };
   const approvalEvent = core.createSessionEvent({
+    observationId,
     sessionId: "session-1",
     method: "eth_sendTransaction",
     url: "https://app.example",
-    target: {
-      type: "transaction",
-      data: {
-        to: "0x0000000000000000000000000000000000000001",
-        data:
-          "0x095ea7b3" +
-          "000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25ef" +
-          "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-      },
-    },
+    target: approvalTarget,
     input: { kind: "simulation", value: "approve" },
     result: { verdict: "dangerous", riskScore: 88, riskLevel: "critical", summary: "Unlimited approval", warnings: ["Unlimited approval"] },
-    decision: "cancel",
+    status: "observed",
   });
 
-  const signEvent = core.createSessionEvent({
+  const reviewedEvent = core.createSessionEvent({
+    observationId,
     sessionId: "session-1",
+    method: "eth_sendTransaction",
+    url: "https://app.example",
+    target: approvalTarget,
+    input: { kind: "simulation", value: "approve" },
+    result: { verdict: "dangerous", riskScore: 88, riskLevel: "critical", summary: "Unlimited approval", warnings: ["Unlimited approval"] },
+    status: "reviewed",
+    dismissedAt: "2026-09-30T12:00:00.000Z",
+  });
+
+  const sessions = core.recordSessionEvent(core.recordSessionEvent([], approvalEvent, 8), reviewedEvent, 8);
+
+  assert.equal(sessions.length, 1);
+  assert.equal(sessions[0].events.length, 1);
+  assert.equal(sessions[0].summary.eventCount, 1);
+  assert.equal(sessions[0].summary.approvals, 1);
+  assert.equal(sessions[0].summary.reviewed, 1);
+  assert.equal(sessions[0].summary.dismissed, 1);
+  assert.equal(sessions[0].summary.analysisFailed, 0);
+  assert.equal(sessions[0].summary.maxRiskScore, 88);
+  assert.equal(sessions[0].summary.highestVerdict, "dangerous");
+});
+
+test("counts analysis failures and keeps legacy decision records readable", () => {
+  const base = {
+    sessionId: "session-legacy",
     method: "personal_sign",
     url: "https://app.example",
     target: { type: "personal_sign", data: "hello" },
     input: { kind: "simulation", value: "hello" },
     result: { verdict: "caution", riskScore: 42, riskLevel: "medium", summary: "Message signature", warnings: [] },
-    decision: "proceed",
+  };
+  const failed = core.createSessionEvent({
+    ...base,
+    observationId: "00000000-0000-4000-8000-000000000002",
+    status: "analysis_failed",
   });
+  const legacyProceed = { ...failed, id: "legacy-proceed", observationId: undefined, status: undefined, decision: "proceed" };
+  const legacyCancel = { ...failed, id: "legacy-cancel", observationId: undefined, status: undefined, decision: "cancel" };
+  const sessions = [failed, legacyProceed, legacyCancel].reduce(
+    (value, event) => core.recordSessionEvent(value, event, 8),
+    [],
+  );
 
-  const sessions = core.recordSessionEvent(core.recordSessionEvent([], approvalEvent, 8), signEvent, 8);
-
-  assert.equal(sessions.length, 1);
-  assert.equal(sessions[0].summary.eventCount, 2);
-  assert.equal(sessions[0].summary.approvals, 1);
-  assert.equal(sessions[0].summary.signatures, 1);
-  assert.equal(sessions[0].summary.cancelled, 1);
-  assert.equal(sessions[0].summary.proceeded, 1);
-  assert.equal(sessions[0].summary.maxRiskScore, 88);
-  assert.equal(sessions[0].summary.highestVerdict, "dangerous");
+  assert.equal(sessions[0].summary.analysisFailed, 1);
+  assert.equal(sessions[0].summary.legacyProceeded, 1);
+  assert.equal(sessions[0].summary.legacyCancelled, 1);
+  assert.equal(sessions[0].summary.eventCount, 3);
 });
 
 test("classifies pasted addresses, hashes, calldata, URLs, and typed data", () => {

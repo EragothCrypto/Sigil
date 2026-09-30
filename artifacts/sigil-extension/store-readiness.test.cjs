@@ -107,3 +107,15 @@ test("isolated content intake listens only for bounded observations", () => {
   assert.doesNotMatch(content, /sigil:intercept/);
   assert.doesNotMatch(content, /requestQueue\.push\(event\.detail\)/);
 });
+
+test("content UI is advisory-only and cannot claim wallet authority", () => {
+  const content = read("content.js");
+  assert.doesNotMatch(content, /sigil:decision/);
+  assert.doesNotMatch(content, /Cancel request/);
+  assert.doesNotMatch(content, /id="proceedBtn"/);
+  assert.doesNotMatch(content, /finish\("proceed"/);
+  assert.doesNotMatch(content, /finish\("cancel"/);
+  assert.match(content, /Dismiss alert/);
+  assert.match(content, /Trust this site/);
+  assert.match(content, /wallet remains the only place/i);
+});

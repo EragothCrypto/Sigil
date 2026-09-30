@@ -62,7 +62,7 @@ function createHarness({ holdStorage = false, requiresApi = false } = {}) {
       localPreScreen: () => {
         effects.processed += 1;
         return {
-          action: requiresApi ? "show" : "proceed",
+          display: requiresApi ? "show" : "skip",
           requiresApi,
           verdict: "caution",
           warnings: [],
@@ -258,7 +258,8 @@ test("an old async result cannot update a newer observation that reuses the same
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(harness.effects.renders, 1);
 
-  harness.click("proceedBtn");
+  harness.click("dismissBtn");
+  await new Promise((resolve) => setImmediate(resolve));
   harness.advanceTime(realCore.OBSERVATION_LIMITS.seenTtlMs);
   harness.dispatch(observation(0, { observedAt: 1_000_000 + realCore.OBSERVATION_LIMITS.seenTtlMs }));
   await new Promise((resolve) => setImmediate(resolve));

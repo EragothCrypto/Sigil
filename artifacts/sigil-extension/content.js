@@ -2,11 +2,12 @@
   "use strict";
 
   const core = window.SigilExtensionCore;
+  const ADVISORY_TIMEOUT_MS = 45000;
   let overlayRoot = null;
   let shadowRoot = null;
-  let currentRiskConfirmed = false;
   const requestQueue = [];
   let activeRequest = null;
+  let activeLifecycle = null;
   const observationGate = core.createObservationGate();
   const sessionId = (() => {
     const host = (() => {
@@ -46,27 +47,45 @@
     return core.normalizeSettings(localSettings);
   }
 
-  async function saveSettings(settings) {
+  async function saveSettings(settings, eventDetail, token) {
+    if (!isActive(eventDetail, token)) return null;
     const normalized = core.normalizeSettings(settings);
     await storageSet("local", normalized);
+    if (!isActive(eventDetail, token)) return null;
     if (normalized.syncEnabled) {
       await storageSet("sync", core.createSyncSettingsPayload(normalized));
+      if (!isActive(eventDetail, token)) return null;
     }
     return normalized;
   }
 
-  async function saveHistory(entry, settings) {
-    const stored = await storageGet("local", { history: [] });
-    const history = core.trimHistory([entry, ...(stored.history || [])], settings.historyLimit);
-    await storageSet("local", { history });
+  function isActive(eventDetail, token) {
+    return activeRequest === eventDetail && activeLifecycle?.token === token;
   }
 
-  async function saveSessionEvent(payload, decision) {
-    if (!payload) return;
+  async function saveHistory(entry, settings, eventDetail, token) {
+    if (!isActive(eventDetail, token)) return false;
+    const stored = await storageGet("local", { history: [] });
+    if (!isActive(eventDetail, token)) return false;
+    const history = core.trimHistory([entry, ...(stored.history || [])], settings.historyLimit);
+    await storageSet("local", { history });
+    return isActive(eventDetail, token);
+  }
+
+  async function saveSessionEvent(payload, status, eventDetail, token, dismissedAt = null) {
+    if (!payload || !isActive(eventDetail, token)) return false;
     const stored = await storageGet("local", { sessions: [] });
-    const event = core.createSessionEvent({ ...payload, sessionId, decision });
+    if (!isActive(eventDetail, token)) return false;
+    const event = core.createSessionEvent({
+      ...payload,
+      observationId: eventDetail.observationId,
+      sessionId,
+      status,
+      dismissedAt,
+    });
     const sessions = core.recordSessionEvent(stored.sessions || [], event, 12);
     await storageSet("local", { sessions });
+    return isActive(eventDetail, token);
   }
 
   function escHtml(value) {
@@ -166,27 +185,23 @@
   function hidePanel() {
     const panel = shadowRoot?.getElementById("panel");
     if (panel) panel.classList.remove("visible");
-    setTimeout(() => {
-      overlayRoot?.remove();
-      overlayRoot = null;
-      shadowRoot = null;
-    }, 320);
+    overlayRoot?.remove();
+    overlayRoot = null;
+    shadowRoot = null;
   }
 
-  function finish(action, observationId = activeRequest?.observationId) {
-    const sessionPayload = activeRequest?.sessionPayload;
-    if (sessionPayload) {
-      saveSessionEvent(sessionPayload, action).catch(() => {});
-    }
-    window.dispatchEvent(new CustomEvent("sigil:decision", {
-      detail: { requestId: observationId, action },
-    }));
-    hidePanel();
+  function finishAdvisory(eventDetail, token) {
+    if (!isActive(eventDetail, token)) return false;
+    clearTimeout(activeLifecycle.timer);
+    activeLifecycle = null;
     activeRequest = null;
+    hidePanel();
     processNextRequest();
+    return true;
   }
 
-  function render({ method, url, result, input, loading = false, error = false, fullUrl = "" }, settings) {
+  function render({ method, url, result, input, loading = false, error = false, fullUrl = "" }, settings, eventDetail, token) {
+    if (!isActive(eventDetail, token)) return;
     buildOverlay();
     const verdict = loading ? "loading" : error ? "caution" : result.verdict || "caution";
     const verdictClass = safeVerdictClass(verdict);
@@ -196,7 +211,6 @@
     const numericRisk = Number(result.riskScore);
     const risk = Number.isFinite(numericRisk) ? numericRisk : 0;
     const warnings = Array.isArray(result.warnings) ? result.warnings : [];
-    const needsSecond = !loading && !error && core.requiresSecondConfirm(result, settings) && !currentRiskConfirmed;
     const site = (() => { try { return new URL(url).hostname; } catch { return "current site"; } })();
 
     shadowRoot.getElementById("content").innerHTML = `
@@ -216,38 +230,39 @@
             <div class="sub">${loading ? "Analyzing" : `Risk ${risk}/100 - ${escHtml(result.riskLevel || "medium")}`}</div>
           </div>
         </div>
-        <div class="summary">${escHtml(result.summary || "Sigil is reviewing the request before it reaches your wallet.")}</div>
+        <div class="summary">${escHtml(result.summary || "Sigil is reviewing this request while you evaluate it in your wallet.")}</div>
         ${loading ? "" : `<div class="score"><div class="track"><div class="fill" style="width:${Math.max(0, Math.min(100, risk))}%"></div></div><strong>${risk}</strong></div>`}
         ${warnings.length ? `<div class="warnings"><p>Warnings</p><ul>${warnings.slice(0, 4).map((item) => `<li>${escHtml(item)}</li>`).join("")}</ul></div>` : ""}
+        <div class="summary">This is an advisory alert. Your wallet remains the only place that approves or rejects the request.</div>
         <div class="actions">
           ${fullAnalysisUrl ? `<a class="btn primary" href="${escHtml(fullAnalysisUrl)}" target="_blank" rel="noopener">Full analysis</a>` : `<button class="ghost" id="detailsBtn">Input: ${escHtml(input?.kind || "request")}</button>`}
-          <button class="${needsSecond || verdictClass === "dangerous" ? "danger" : "primary"}" id="proceedBtn">${needsSecond ? "I understand risk" : "Proceed"}</button>
-          <button class="ghost" id="cancelBtn">Cancel request</button>
+          <button class="ghost" id="dismissBtn">Dismiss alert</button>
           <button class="ghost" id="trustSiteBtn">Trust this site</button>
         </div>
       </div>
     `;
 
-    shadowRoot.getElementById("proceedBtn").addEventListener("click", () => {
-      if (needsSecond) {
-        currentRiskConfirmed = true;
-        render({ method, url, result, input, loading, error, fullUrl }, settings);
-        return;
-      }
-      finish("proceed");
+    shadowRoot.getElementById("dismissBtn").addEventListener("click", async () => {
+      if (!isActive(eventDetail, token)) return;
+      const payload = eventDetail.sessionPayload;
+      const status = eventDetail.sessionStatus || "observed";
+      const dismissedAt = new Date().toISOString();
+      await saveSessionEvent(payload, status, eventDetail, token, dismissedAt);
+      finishAdvisory(eventDetail, token);
     });
-    shadowRoot.getElementById("cancelBtn").addEventListener("click", () => finish("cancel"));
     shadowRoot.getElementById("trustSiteBtn").addEventListener("click", async () => {
+      if (!isActive(eventDetail, token)) return;
       let host = "";
       try {
         host = new URL(url).hostname;
       } catch {
-        finish("cancel");
+        finishAdvisory(eventDetail, token);
         return;
       }
       const trustedSites = Array.from(new Set([...(settings.trustedSites || []), host]));
-      await saveSettings({ ...settings, trustedSites });
-      finish("proceed");
+      await saveSettings({ ...settings, trustedSites }, eventDetail, token);
+      if (!isActive(eventDetail, token)) return;
+      finishAdvisory(eventDetail, token);
     });
 
     showPanel();
@@ -270,42 +285,52 @@
     return response.json();
   }
 
-  async function handleIntercept(eventDetail) {
-    currentRiskConfirmed = false;
-
-    const { observationId, method, target } = eventDetail;
+  async function handleObservation(eventDetail, token) {
+    const { method, target } = eventDetail;
     const url = window.location.href;
     const settings = await loadSettings();
-    if (activeRequest !== eventDetail) return;
+    if (!isActive(eventDetail, token)) return;
     const input = core.getAnalysisInput(target);
     const localResult = core.localPreScreen({ method, target, url, settings });
+    const sessionPayload = { method, url, target, input, result: localResult };
+    eventDetail.sessionPayload = sessionPayload;
+    eventDetail.sessionStatus = "observed";
+    await saveSessionEvent(sessionPayload, "observed", eventDetail, token);
+    if (!isActive(eventDetail, token)) return;
 
-    if (localResult.action === "proceed" && !localResult.requiresApi) {
-      await saveHistory(core.createHistoryEntry({ method, url, input, result: localResult }), settings);
-      await saveSessionEvent({ method, url, target, input, result: localResult }, "proceed");
-      finish("proceed", observationId);
+    if (localResult.display === "skip" && !localResult.requiresApi) {
+      await saveHistory(core.createHistoryEntry({ method, url, input, result: localResult }), settings, eventDetail, token);
+      if (!isActive(eventDetail, token)) return;
+      eventDetail.sessionStatus = "reviewed";
+      await saveSessionEvent(sessionPayload, "reviewed", eventDetail, token);
+      finishAdvisory(eventDetail, token);
       return;
     }
 
-    render({ method, url, result: localResult, input, loading: localResult.requiresApi }, settings);
-    activeRequest.sessionPayload = { method, url, target, input, result: localResult };
+    render({ method, url, result: localResult, input, loading: localResult.requiresApi }, settings, eventDetail, token);
 
     if (!localResult.requiresApi) {
-      await saveHistory(core.createHistoryEntry({ method, url, input, result: localResult }), settings);
+      await saveHistory(core.createHistoryEntry({ method, url, input, result: localResult }), settings, eventDetail, token);
+      if (!isActive(eventDetail, token)) return;
+      eventDetail.sessionStatus = "reviewed";
+      await saveSessionEvent(sessionPayload, "reviewed", eventDetail, token);
       return;
     }
 
     try {
       const apiResult = await callSigilApi(settings, input);
-      if (activeRequest !== eventDetail) return;
+      if (!isActive(eventDetail, token)) return;
       const analysisPath = apiResult.id ? `/analysis/${encodeURIComponent(apiResult.id)}` : `/?q=${encodeURIComponent(input?.value || "")}`;
       const fullUrl = `${settings.apiUrl}${analysisPath}`;
       const result = { ...localResult, ...apiResult };
-      render({ method, url, result, input, fullUrl }, settings);
-      activeRequest.sessionPayload = { method, url, target, input, result };
-      await saveHistory(core.createHistoryEntry({ method, url, input, result }), settings);
+      const reviewedPayload = { method, url, target, input, result };
+      eventDetail.sessionPayload = reviewedPayload;
+      eventDetail.sessionStatus = "reviewed";
+      render({ method, url, result, input, fullUrl }, settings, eventDetail, token);
+      await saveHistory(core.createHistoryEntry({ method, url, input, result }), settings, eventDetail, token);
+      await saveSessionEvent(reviewedPayload, "reviewed", eventDetail, token);
     } catch (error) {
-      if (activeRequest !== eventDetail) return;
+      if (!isActive(eventDetail, token)) return;
       const fallback = {
         ...localResult,
         verdict: localResult.verdict === "safe" ? "caution" : localResult.verdict,
@@ -314,22 +339,24 @@
         riskScore: Math.max(localResult.riskScore || 0, 45),
         warnings: [...(localResult.warnings || []), "Network or API error prevented a full analysis."],
       };
-      render({ method, url, result: fallback, input, error: true }, settings);
-      activeRequest.sessionPayload = { method, url, target, input, result: fallback };
-      await saveHistory(core.createHistoryEntry({ method, url, input, result: fallback }), settings);
+      const failedPayload = { method, url, target, input, result: fallback };
+      eventDetail.sessionPayload = failedPayload;
+      eventDetail.sessionStatus = "analysis_failed";
+      render({ method, url, result: fallback, input, error: true }, settings, eventDetail, token);
+      await saveHistory(core.createHistoryEntry({ method, url, input, result: fallback }), settings, eventDetail, token);
+      await saveSessionEvent(failedPayload, "analysis_failed", eventDetail, token);
     }
   }
 
   function processNextRequest() {
     if (activeRequest || requestQueue.length === 0) return;
     activeRequest = requestQueue.shift();
-    handleIntercept(activeRequest).catch(async () => {
-      window.dispatchEvent(new CustomEvent("sigil:decision", {
-        detail: { requestId: activeRequest?.observationId, action: "cancel" },
-      }));
-      activeRequest = null;
-      hidePanel();
-      processNextRequest();
+    const eventDetail = activeRequest;
+    const token = Object.freeze({ observationId: eventDetail.observationId });
+    activeLifecycle = { token, timer: null };
+    activeLifecycle.timer = setTimeout(() => finishAdvisory(eventDetail, token), ADVISORY_TIMEOUT_MS);
+    handleObservation(eventDetail, token).catch(() => {
+      finishAdvisory(eventDetail, token);
     });
   }
 
