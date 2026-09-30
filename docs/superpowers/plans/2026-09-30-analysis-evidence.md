@@ -24,6 +24,12 @@ Approval corrections include intent-only web copy, no automatic revoke/exact-amo
 
 ## Live Follow-Up
 
+### Token Truncation Follow-Up (2026-09-30)
+
+The operator reports a new length failure, but the old error cannot distinguish signal gathering from verdict generation. Added phase-aware errors and validated numeric completion/reasoning usage only, including streamed usage-only trailers. Requests now prioritize compact signals and verdict fields, explicitly disclose partial summaries, retain all existing bounded receipt input and avoid duplicating signal JSON in the second prompt. Budgets and privacy/routing settings remain unchanged. Output-length instructions are advisory, not a guarantee against reasoning-token exhaustion.
+
+Independent review identified a trailing-usage transport error could retry a known terminal completion; regression first failed, then passed after fallback was restricted to streams without a terminal finish reason. All 106 selected tests, API typecheck/build and final independent review pass. No paid inference or live database call. Deployment and a fresh production scan must establish whether truncation remains; if it does, obtain the signals/verdict phase and numeric usage before adjusting budgets or model configuration.
+
 ### Receipt Follow-Up (2026-09-30)
 
 The post-publication screenshot exposed a remaining status defect: unavailable receipt data was labelled Pending/Unknown even for a mined example. Null results also stopped RPC fallback. Regression tests reproduced both before correction. Inclusion now remains independent of execution outcome; validated receipt retrieval advances through the existing endpoint fallback for mined null/malformed/mismatched data. Pending null receipts stop promptly. Fixed diagnostic enums are visible without storing raw upstream errors or user request data in logs. Curated historical labels remain separately visible in details but are excluded from AI evidence, preventing the application's example tag from authorising contract-incident/loss attribution. Cache v2 prevents stale process-cache reports.

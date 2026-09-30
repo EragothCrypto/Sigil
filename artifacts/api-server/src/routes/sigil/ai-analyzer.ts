@@ -82,15 +82,32 @@ export type StreamEvent =
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+interface AnalysisTokenUsage {
+  completion_tokens?: number;
+  completion_tokens_details?: { reasoning_tokens?: number | null } | null;
+}
+
+function safeTokenCount(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+}
+
 export class AIAnalysisOutputError extends Error {
   readonly code: "invalid_ai_output" | "truncated_ai_output";
+  readonly phase?: "signals" | "verdict";
+  readonly tokenLimit?: number;
+  readonly completionTokens?: number;
+  readonly reasoningTokens?: number;
 
-  constructor(code: "invalid_ai_output" | "truncated_ai_output") {
+  constructor(code: "invalid_ai_output" | "truncated_ai_output", phase?: "signals" | "verdict", usage?: AnalysisTokenUsage | null) {
     super(code === "truncated_ai_output"
-      ? "AI analysis output exceeded its token limit; no risk verdict was produced"
+      ? `AI analysis output exceeded its token limit; no risk verdict was produced${phase ? ` (${phase})` : ""}`
       : "AI analysis output is invalid or incomplete; no risk verdict was produced");
     this.name = "AIAnalysisOutputError";
     this.code = code;
+    this.phase = phase;
+    this.tokenLimit = phase ? completionTokenBudget(phase) : undefined;
+    this.completionTokens = safeTokenCount(usage?.completion_tokens);
+    this.reasoningTokens = safeTokenCount(usage?.completion_tokens_details?.reasoning_tokens);
   }
 }
 
@@ -207,7 +224,7 @@ function completionTokenBudget(step: "signals" | "verdict"): number {
 
 const STEP1_INSTRUCTIONS = `
 Your task in this step is ONLY to enumerate the concrete security signals you can observe from the data above.
-Do NOT produce a verdict or score yet. Do NOT speculate beyond what the data shows.
+Do NOT produce a final verdict yet. The estimatedBaseScore is only a rough preview, not a verdict. Do NOT speculate beyond what the data shows.
 
 Respond ONLY with a JSON object (no markdown, no prose):
 {
@@ -223,6 +240,8 @@ Respond ONLY with a JSON object (no markdown, no prose):
 }
 
 Rules:
+- Return at most 8 signals, prioritizing critical/high risks and material evidence gaps. Each observation and implication must be at most 25 words.
+- Aggregate repetitive receipt events into concise evidence signals rather than enumerating every event. Do not omit a distinct critical risk to make room for positives. If evidence cannot be summarized exhaustively, explicitly disclose that limitation.
 - Include ONLY signals actually present in the data above — never invent or assume
 - Be specific and technical in "observation" (e.g. "Contract source code is not verified on Etherscan" not "suspicious contract")
 - "implication" should be plain English a non-technical user can understand
@@ -238,10 +257,8 @@ Rules:
 
 // ─── Step 2: Verdict derivation (streaming-compatible format) ─────────────────
 
-function buildStep2StreamingPrompt(signals: string): string {
-  return `You have now gathered the evidence. Here is what you observed:
-
-${signals}
+function buildStep2StreamingPrompt(): string {
+  return `You have now gathered the evidence in the preceding assistant message. Derive the verdict from that evidence and the original context.
 
 Use only supplied evidence. Preserve uncertainty and coverage limitations. Zero native value and ordinary gas are not positives. Empty positives are valid. Historical labels are retrospective context, not technical confirmation of an exploit. Do not invent transfers, token decimals, losses, source audits or public selector searches.
 
@@ -299,6 +316,9 @@ JSON object structure (do NOT include "summary" — it is the prose above):
 }
 
 Rules:
+- Keep the entire visible response concise (target under 1400 tokens). Return at most 6 warnings, 3 positives, 2 patternMatches, 3 indicators per pattern, and 6 riskFactors. Each explanation must be at most 25 words.
+- Use at most 4 entries each in assetsOut, assetsIn and permissions; these are a summary, not an exhaustive transfer ledger. If there are more relevant observations, disclose that the breakdown is partial. Never invent human-unit amounts or USD prices; leave unsupported asset lists empty.
+- Preserve distinct critical risks and evidence gaps before positives or optional patterns. Do not repeat the same warning across multiple patterns; leave optional patterns empty when unsupported.
 - patternMatches: ONLY include patterns with real evidence — never fabricate. [] if nothing suspicious.
 - warnings: must be non-empty if riskScore > 25
 - positives: must be non-empty if any positive signals exist
@@ -325,7 +345,7 @@ async function runTwoStepAnalysis(
 
   const step1Content = step1Response.choices[0]?.message?.content ?? "{}";
   if (step1Response.choices[0]?.finish_reason === "length") {
-    throw new AIAnalysisOutputError("truncated_ai_output");
+    throw new AIAnalysisOutputError("truncated_ai_output", "signals", step1Response.usage);
   }
 
   // Step 2 — derive verdict (streaming prompt format, but called non-streaming)
@@ -336,13 +356,13 @@ async function runTwoStepAnalysis(
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: step1UserContent },
       { role: "assistant", content: step1Content },
-      { role: "user", content: buildStep2StreamingPrompt(step1Content) },
+      { role: "user", content: buildStep2StreamingPrompt() },
     ],
   });
 
   const step2Content = step2Response.choices[0]?.message?.content ?? "{}";
   if (step2Response.choices[0]?.finish_reason === "length") {
-    throw new AIAnalysisOutputError("truncated_ai_output");
+    throw new AIAnalysisOutputError("truncated_ai_output", "verdict", step2Response.usage);
   }
 
   // Parse the new format (prose + ---JSON--- + json)
@@ -378,7 +398,7 @@ export async function runStreamingAnalysis(
 
   const step1Content = step1Response.choices[0]?.message?.content ?? "{}";
   if (step1Response.choices[0]?.finish_reason === "length") {
-    throw new AIAnalysisOutputError("truncated_ai_output");
+    throw new AIAnalysisOutputError("truncated_ai_output", "signals", step1Response.usage);
   }
 
   // Parse Step 1 to emit metadata (estimated score + signal preview)
@@ -411,7 +431,7 @@ export async function runStreamingAnalysis(
     { role: "system" as const, content: SYSTEM_PROMPT },
     { role: "user" as const, content: step1UserContent },
     { role: "assistant" as const, content: step1Content },
-    { role: "user" as const, content: buildStep2StreamingPrompt(step1Content) },
+    { role: "user" as const, content: buildStep2StreamingPrompt() },
   ];
 
   let summaryBuffer = "";
@@ -419,6 +439,7 @@ export async function runStreamingAnalysis(
   let inJson = false;
   let emittedSummaryLength = 0;
   let finishReason: string | null = null;
+  let usage: AnalysisTokenUsage | null | undefined;
   const SEP = "---JSON---";
 
   try {
@@ -427,10 +448,12 @@ export async function runStreamingAnalysis(
       model: chatModel(),
       max_completion_tokens: completionTokenBudget("verdict"),
       stream: true,
+      stream_options: { include_usage: true },
       messages: step2Messages,
     });
 
     for await (const chunk of stream) {
+      if (chunk.usage) usage = chunk.usage;
       finishReason = chunk.choices[0]?.finish_reason ?? finishReason;
       const text = chunk.choices[0]?.delta?.content ?? "";
       if (!text) continue;
@@ -461,27 +484,31 @@ export async function runStreamingAnalysis(
       }
     }
   } catch {
-    const fallbackResponse = await openai.chat.completions.create({
-      model: chatModel(),
-      max_completion_tokens: completionTokenBudget("verdict"),
-      messages: step2Messages,
-    });
+    // A trailing usage failure must not overwrite an already terminal completion.
+    if (finishReason === null) {
+      const fallbackResponse = await openai.chat.completions.create({
+        model: chatModel(),
+        max_completion_tokens: completionTokenBudget("verdict"),
+        messages: step2Messages,
+      });
 
-    const fallbackContent = fallbackResponse.choices[0]?.message?.content ?? "{}";
-    finishReason = fallbackResponse.choices[0]?.finish_reason ?? null;
-    const sepIdx = fallbackContent.indexOf(SEP);
-    if (sepIdx !== -1) {
-      const fallbackSummary = fallbackContent.slice(0, sepIdx).trim();
-      if (!summaryBuffer.trim() && fallbackSummary) onEvent({ type: "token", text: fallbackSummary });
-      summaryBuffer = summaryBuffer.trim() || fallbackSummary;
-      jsonBuffer = fallbackContent.slice(sepIdx + SEP.length);
-    } else {
-      jsonBuffer = fallbackContent;
+      const fallbackContent = fallbackResponse.choices[0]?.message?.content ?? "{}";
+      finishReason = fallbackResponse.choices[0]?.finish_reason ?? null;
+      usage = fallbackResponse.usage;
+      const sepIdx = fallbackContent.indexOf(SEP);
+      if (sepIdx !== -1) {
+        const fallbackSummary = fallbackContent.slice(0, sepIdx).trim();
+        if (!summaryBuffer.trim() && fallbackSummary) onEvent({ type: "token", text: fallbackSummary });
+        summaryBuffer = summaryBuffer.trim() || fallbackSummary;
+        jsonBuffer = fallbackContent.slice(sepIdx + SEP.length);
+      } else {
+        jsonBuffer = fallbackContent;
+      }
     }
   }
 
   if (finishReason === "length") {
-    throw new AIAnalysisOutputError("truncated_ai_output");
+    throw new AIAnalysisOutputError("truncated_ai_output", "verdict", usage);
   }
   // Some endpoints return a JSON object directly rather than the prose separator.
   if (!inJson && !jsonBuffer.trim()) {

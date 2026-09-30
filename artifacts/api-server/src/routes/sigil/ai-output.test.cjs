@@ -186,3 +186,99 @@ test("Tornado Cash context records historical delisting, not a current blanket s
   assert.doesNotMatch(entity.description, /may violate OFAC|US persons are prohibited/);
   assert.match(entity.url, /sb0057/);
 });
+
+test("truncation identifies the signal phase with numeric usage, not raw evidence", async () => {
+  const api = loadAnalyzer(async () => ({ choices: [{ message: { content: "private evidence" }, finish_reason: "length" }], usage: { completion_tokens: 4096, completion_tokens_details: { reasoning_tokens: 4000 } } }));
+  await assert.rejects(api.runTwoStepAnalysis("private context"), error => {
+    assert.equal(error.phase, "signals");
+    assert.equal(error.tokenLimit, 4096);
+    assert.equal(error.completionTokens, 4096);
+    assert.equal(error.reasoningTokens, 4000);
+    assert.match(error.message, /\(signals\)/);
+    assert.doesNotMatch(JSON.stringify(error), /private/);
+    return true;
+  });
+});
+
+test("stream truncation captures the final usage-only chunk and verdict phase", async () => {
+  const calls = [];
+  const api = loadAnalyzer(async request => {
+    calls.push(request);
+    if (calls.length === 1) return { choices: [{ message: { content: '{"signals":[]}' }, finish_reason: "stop" }] };
+    return (async function* () {
+      yield { choices: [{ delta: {}, finish_reason: "length" }] };
+      yield { choices: [], usage: { completion_tokens: 12288, completion_tokens_details: { reasoning_tokens: 12200 } } };
+    })();
+  });
+  await assert.rejects(api.runStreamingAnalysis("context", "", () => {}), error => {
+    assert.equal(error.phase, "verdict");
+    assert.equal(error.completionTokens, 12288);
+    assert.equal(error.reasoningTokens, 12200);
+    return true;
+  });
+  assert.equal(calls[1].stream_options.include_usage, true);
+  assert.equal(calls.length, 2);
+});
+
+test("requests bound visible output and carry the signals only once into verdict generation", async () => {
+  const calls = [];
+  const signals = '{"signals":[],"estimatedBaseScore":40}';
+  const api = loadAnalyzer(async request => {
+    calls.push(request);
+    return { choices: [{ message: { content: calls.length === 1 ? signals : JSON.stringify(verdict) }, finish_reason: "stop" }] };
+  });
+  await api.runTwoStepAnalysis("context");
+  assert.match(calls[0].messages[1].content, /at most 8 signals/i);
+  assert.match(calls[0].messages[1].content, /aggregate.*receipt/i);
+  assert.match(calls[1].messages.at(-1).content, /at most 6 warnings/i);
+  assert.equal(calls[1].messages.filter(m => m.content.includes(signals)).length, 1);
+});
+
+test("fallback and non-streaming verdict truncation preserve phase and never retry length", async () => {
+  for (const streaming of [false, true]) {
+    let calls = 0;
+    const api = loadAnalyzer(async () => {
+      if (++calls === 1) return { choices: [{ message: { content: '{"signals":[]}' }, finish_reason: "stop" }] };
+      if (streaming && calls === 2) throw new Error("transport unavailable");
+      return { choices: [{ message: { content: "" }, finish_reason: "length" }], usage: { completion_tokens: 12288, completion_tokens_details: { reasoning_tokens: 12000 } } };
+    });
+    await assert.rejects(streaming ? api.runStreamingAnalysis("context", "", () => {}) : api.runTwoStepAnalysis("context"), error => {
+      assert.equal(error.phase, "verdict");
+      assert.equal(error.tokenLimit, 12288);
+      assert.equal(error.reasoningTokens, 12000);
+      return true;
+    });
+    assert.equal(calls, streaming ? 3 : 2);
+  }
+});
+
+test("absent or invalid usage is unknown, never zero or raw upstream data", () => {
+  const api = loadAnalyzer();
+  for (const value of [undefined, null, -1, Infinity, "private input", 1.5]) {
+    assert.equal(api.safeTokenCount(value), undefined);
+  }
+  assert.equal(api.safeTokenCount(0), 0);
+});
+
+test("a trailing usage transport error cannot retry a terminal completion", async () => {
+  for (const reason of ["length", "stop"]) {
+    let calls = 0;
+    const events = [];
+    const api = loadAnalyzer(async () => {
+      if (++calls === 1) return { choices: [{ message: { content: '{"signals":[]}' }, finish_reason: "stop" }] };
+      if (calls > 2) throw new Error("unexpected billable retry");
+      return (async function* () {
+        yield { choices: [{ delta: { content: JSON.stringify(verdict) }, finish_reason: reason }] };
+        throw new Error("usage trailer disconnected");
+      })();
+    });
+    const operation = api.runStreamingAnalysis("context", "", event => events.push(event));
+    if (reason === "length") {
+      await assert.rejects(operation, error => error.code === "truncated_ai_output" && error.phase === "verdict");
+      assert.equal(events.some(event => event.type === "result"), false);
+    } else {
+      assert.equal((await operation).riskScore, 40);
+    }
+    assert.equal(calls, 2);
+  }
+});
