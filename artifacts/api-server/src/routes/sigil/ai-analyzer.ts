@@ -222,6 +222,14 @@ function completionTokenBudget(step: "signals" | "verdict"): number {
 
 // ─── Step 1: Evidence gathering ───────────────────────────────────────────────
 
+const RECEIPT_INTERPRETATION_RULES = `Receipt interpretation limits:
+- A zero-address endpoint is a mint/burn-shaped event observation, not proof of actual supply changes. Minting/burning alone is not evidence of safety or danger; normal lending, wrapping and liquidity operations can emit these events.
+- Raw integer magnitude does not establish economic size without verified decimals and valuation. Do not describe unknown-unit amounts as massive, large, inflated or valuable.
+- Mint/burn-shaped events are not proof of artificial inflation, manipulation, malicious tokenomics, locked funds or an exploit. Such claims require separately supplied supporting evidence.
+- Receipt order does not establish an internal call path, control of recipients, a coordinated funnel or net fund loss. Describe only the observed emitter/from/to relationships.
+- Do not infer DAI or another token symbol from model memory; use a symbol only when the supplied evidence explicitly verifies the emitter-to-token mapping.
+- Distinguish concrete threats from uncertainty. Unverified source and missing traces limit confidence but do not establish malicious intent. Do not double-count correlated evidence gaps as independent critical threats; retain them as limitations and recommend verification without declaring safety.`;
+
 const STEP1_INSTRUCTIONS = `
 Your task in this step is ONLY to enumerate the concrete security signals you can observe from the data above.
 Do NOT produce a final verdict yet. The estimatedBaseScore is only a rough preview, not a verdict. Do NOT speculate beyond what the data shows.
@@ -251,6 +259,7 @@ Rules:
 - Selectors come from a local registry, not a public database search. Do not claim searches, traces, simulation, source audits or compiler vulnerability checks that were not performed.
 - Compiler age alone does not establish a vulnerability. Token metadata failure does not establish an inconsistent token contract.
 - Receipt events are observations, not balances or proven losses. Do not invent decimals, prices, net losses or internal calls. Historical example labels are retrospective, not live exploit detection.
+${RECEIPT_INTERPRETATION_RULES}
 - Approval calldata expresses attempted intent. Pending or failed transactions do not prove permissions were granted/revoked; approve(address,uint256) may refer to an NFT token ID.
 - Severity guide: critical = immediate fund loss risk, high = strong risk indicator, medium = notable concern, low = minor concern or uncertainty
 - SANCTIONS / OFAC RULE: If the context contains a "⚠ CRITICAL ALERT" block indicating an OFAC-sanctioned or dangerous entity, you MUST include this as a "critical" risk signal. Set estimatedBaseScore to 95. No positive signals can outweigh a sanctions designation.`;
@@ -261,6 +270,7 @@ function buildStep2StreamingPrompt(): string {
   return `You have now gathered the evidence in the preceding assistant message. Derive the verdict from that evidence and the original context.
 
 Use only supplied evidence. Preserve uncertainty and coverage limitations. Zero native value and ordinary gas are not positives. Empty positives are valid. Historical labels are retrospective context, not technical confirmation of an exploit. Do not invent transfers, token decimals, losses, source audits or public selector searches.
+${RECEIPT_INTERPRETATION_RULES}
 
 CRITICAL FORMATTING INSTRUCTIONS — follow this EXACTLY:
 
@@ -558,6 +568,7 @@ Destination source verification: ${tx.destinationVerification ?? "unknown"} (des
 Destination bytecode at transaction block: ${tx.destinationHasCode === true ? "present" : tx.destinationHasCode === false ? "absent; source verification not applicable" : "unknown"}
 Receipt event evidence: ${JSON.stringify(tx.receiptEvidence ?? { status: "unavailable", complete: false, transfers: [] })}
 Coverage: complete refers only to bounded Transfer-shaped event decoding, not complete asset movement. Events can be emitted by arbitrary contracts; raw amounts have no inferred decimals. NFT token IDs are not amounts. Other event types are not decoded. No balance deltas or net losses are established.
+${RECEIPT_INTERPRETATION_RULES}
 Internal call traces: not collected. Internal native transfers and full call paths are unknown.
 Curated example labels are displayed separately in the report, not supplied as technical evidence. Do not infer incident association, past malicious behavior, exploit identity or dollar losses from a transaction hash or your memory.`
     : `Transaction not found on network "${network}".

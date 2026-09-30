@@ -20,6 +20,45 @@ function loadAnalyzer(create = async () => { throw new Error("unexpected AI call
 
 const verdict = { summary: "Public contract analysis.", verdict: "caution", verdictReason: "Caution: review permissions", riskScore: 40, warnings: ["Review permissions"], positives: [] };
 
+test("mint/burn-shaped receipt observations preserve raw units and disclose economic uncertainty", () => {
+  const api = loadAnalyzer();
+  const zero = `0x${'0'.repeat(40)}`;
+  const token = `0x${'1'.repeat(40)}`;
+  const owner = `0x${'2'.repeat(40)}`;
+  const amount = '1000000000000000000000000';
+  const transfers = [
+    { kind: 'erc20-shaped', token, from: zero, to: owner, amountRaw: amount },
+    { kind: 'erc20-shaped', token, from: owner, to: zero, amountRaw: amount },
+  ];
+  const context = api.buildTransactionContext({ hash: 'hash', from: owner, to: token, value: '0x0', input: '0x', gasPrice: '0x1', status: '0x1', inclusionStatus: 'mined', blockNumber: '0x1', receiptEvidence: { status: 'available', complete: true, logsExamined: 2, totalLogs: 2, malformedTransferLogs: 0, transfers } }, null, 'mainnet', 'hash').contextBlock;
+  assert.ok(context.includes(JSON.stringify(transfers)));
+  assert.match(context, /zero-address.*mint\/burn-shaped/i);
+  assert.match(context, /raw integer magnitude.*not.*economic size/i);
+  assert.match(context, /not.*proof of.*inflation.*manipulation/i);
+  assert.match(context, /receipt order.*not.*internal call path/i);
+});
+
+test("both AI stages distinguish observation and uncertainty from confirmed threats", async () => {
+  for (const streaming of [false, true]) {
+    const calls = [];
+    const api = loadAnalyzer(async request => {
+      calls.push(request);
+      if (calls.length === 1) return { choices: [{ message: { content: '{"signals":[]}' }, finish_reason: 'stop' }] };
+      if (!streaming) return { choices: [{ message: { content: JSON.stringify(verdict) }, finish_reason: 'stop' }] };
+      return (async function* () { yield { choices: [{ delta: { content: JSON.stringify(verdict) }, finish_reason: 'stop' }] }; })();
+    });
+    if (streaming) await api.runStreamingAnalysis('context', '', () => {});
+    else await api.runTwoStepAnalysis('context');
+    for (const request of calls) {
+      const instruction = request.messages.at(-1).content;
+      assert.match(instruction, /not.*proof of.*inflation.*manipulation/i);
+      assert.match(instruction, /do not double-count.*evidence gaps/i);
+      assert.match(instruction, /do not infer.*DAI.*symbol/i);
+      assert.match(instruction, /minting\/burning.*alone.*not.*safety.*danger/i);
+    }
+  }
+});
+
 test('mined without receipt is not pending and curated hindsight is excluded from AI evidence', () => {
   const api = loadAnalyzer();
   const context = api.buildTransactionContext({ hash: 'hash', from: 'sender', to: 'target', value: '0x0', input: '0x', blockNumber: '0x1009f4c', inclusionStatus: 'mined', gasPrice: '0x1', receiptIssue: 'not_returned', historicalExample: { name: 'Euler exploit example', incidentSource: 'historical incident reference' } }, null, 'mainnet', 'hash').contextBlock;

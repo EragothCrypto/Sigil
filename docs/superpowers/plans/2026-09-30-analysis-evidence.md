@@ -24,6 +24,18 @@ Approval corrections include intent-only web copy, no automatic revoke/exact-amo
 
 ## Live Follow-Up
 
+### Receipt Interpretation Follow-Up (2026-09-30)
+
+Operator screenshot 171059 establishes one complete live result with mined/success status and 20 bounded Transfer-shaped observations, but not score calibration or confirmed exploit mechanics. Shared rules now explicitly forbid interpreting unknown raw magnitudes as large economic amounts, zero-address events as proof of inflation/manipulation, event order as internal routing or recipient control, and remembered token symbols as verified emitter metadata. Normal protocol mint/burn is neither automatic danger nor safety; correlated evidence gaps must not become independent critical threats. Existing raw input, scoring algorithm, completion budgets and privacy routing are unchanged.
+
+Two tests failed before implementation and pass afterward, verifying preservation of synthetic mint/burn-shaped raw observations and rule delivery through both streaming/non-streaming stages. All 108 selected regressions, API typecheck/build and independent review pass. Model adherence is NOT established by mocked tests; no paid AI call or live benign-control test was performed.
+
+Production comparison after deployment:
+- Run a fresh Euler example and one known legitimate lending/wrapping/liquidity transaction supplied by the operator; do not reuse saved reports.
+- Check neither case calls unknown-unit values massive, assumes DAI/symbols without verified mapping, or asserts inflation/manipulative economics from mint/burn alone.
+- Retain genuine source/selector/coverage concerns without asserting safety or requiring a predetermined score. Missing traces must be a limitation, not proof of hidden losses.
+- If the model still produces unsupported claims, preserve the report as quality evidence and investigate structured evidence-linked output validation rather than assigning a preferred score.
+
 ### Token Truncation Follow-Up (2026-09-30)
 
 The operator reports a new length failure, but the old error cannot distinguish signal gathering from verdict generation. Added phase-aware errors and validated numeric completion/reasoning usage only, including streamed usage-only trailers. Requests now prioritize compact signals and verdict fields, explicitly disclose partial summaries, retain all existing bounded receipt input and avoid duplicating signal JSON in the second prompt. Budgets and privacy/routing settings remain unchanged. Output-length instructions are advisory, not a guarantee against reasoning-token exhaustion.
