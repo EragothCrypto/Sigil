@@ -43,6 +43,14 @@ and configure an OpenRouter API-key spending limit before production use (propos
 initial budget: USD 5/month; not enforced by this repository). Model selection
 does not pin a hosting provider or establish ZDR, EU residency or DPA coverage.
 
+For this exact DeepSeek slug, Sigil bounds signals at 4,096 completion tokens
+and the final verdict at 12,288. OpenRouter providers commonly count reasoning
+and visible output against the same completion budget. These are ceilings, not
+fixed consumption; actual usage, retry calls, latency and cost must be measured.
+Truncation in either step fails without creating a risk verdict. Other models
+retain the existing 700/2,048 limits. No automatic larger-budget truncation retry
+is introduced; the existing non-streaming transport fallback retains the same cap.
+
 `DATABASE_URL` must point at a hosted Postgres database. For Sigil production, use Neon Postgres with the pooled connection string as `DATABASE_URL`. The pooled Neon host usually contains `-pooler`.
 
 `DATABASE_URL_UNPOOLED` is recommended for schema pushes and migrations. Use the direct Neon connection string without `-pooler`.

@@ -5,13 +5,13 @@ const { join } = require("node:path");
 const vm = require("node:vm");
 const { test } = require("node:test");
 
-function loadAnalyzer(create = async () => { throw new Error("unexpected AI call"); }) {
+function loadAnalyzer(create = async () => { throw new Error("unexpected AI call"); }, model = "deepseek/deepseek-v4-flash") {
   const source = readFileSync(join(__dirname, "ai-analyzer.ts"), "utf8")
     .replace(/^import .*;\r?\n/gm, "")
     .replace(/export /g, "");
   const context = vm.createContext({
     openai: { chat: { completions: { create } } },
-    getSigilAiModel: () => "deepseek/deepseek-v4-flash",
+    getSigilAiModel: () => model,
   });
   vm.runInContext(stripTypeScriptTypes(source), context);
   return context;
@@ -66,6 +66,83 @@ test("truncated and malformed streams never emit a successful result", async () 
     await assert.rejects(api.runStreamingAnalysis("context", "", (e) => events.push(e)), /AI analysis output/);
     assert.equal(events.some(e => e.type === "result"), false);
   }
+});
+
+test("DeepSeek has bounded headroom for reasoning plus the complete verdict", async () => {
+  const calls = [];
+  const api = loadAnalyzer(async (request) => {
+    calls.push(request);
+    if (calls.length === 1) return { choices: [{ message: { content: '{"signals":[],"estimatedBaseScore":40}' }, finish_reason: "stop" }] };
+    return (async function* () {
+      yield { choices: [{ delta: { content: JSON.stringify(verdict) }, finish_reason: "stop" }] };
+    })();
+  });
+  await api.runStreamingAnalysis("context", "", () => {});
+  assert.equal(calls[0].max_completion_tokens, 4096);
+  assert.equal(calls[1].max_completion_tokens, 12288);
+  assert.equal(calls.length, 2);
+});
+
+test("length-limited evidence collection stops before verdict generation", async () => {
+  let calls = 0;
+  const api = loadAnalyzer(async () => {
+    calls += 1;
+    return { choices: [{ message: { content: '{"signals":' }, finish_reason: "length" }] };
+  });
+  await assert.rejects(api.runStreamingAnalysis("context", "", () => {}), (error) => error.code === "truncated_ai_output");
+  assert.equal(calls, 1);
+});
+
+test("non-streaming DeepSeek uses the same reasoning-aware budgets", async () => {
+  const calls = [];
+  const api = loadAnalyzer(async (request) => {
+    calls.push(request);
+    return { choices: [{ message: { content: calls.length === 1 ? '{"signals":[]}' : JSON.stringify(verdict) }, finish_reason: "stop" }] };
+  });
+  await api.runTwoStepAnalysis("context");
+  assert.equal(calls[0].max_completion_tokens, 4096);
+  assert.equal(calls[1].max_completion_tokens, 12288);
+});
+
+test("stream transport fallback retains the same bounded verdict budget", async () => {
+  const calls = [];
+  const api = loadAnalyzer(async (request) => {
+    calls.push(request);
+    if (calls.length === 1) return { choices: [{ message: { content: '{"signals":[]}' }, finish_reason: "stop" }] };
+    if (calls.length === 2) throw new Error("stream transport unavailable");
+    return { choices: [{ message: { content: JSON.stringify(verdict) }, finish_reason: "stop" }] };
+  });
+  await api.runStreamingAnalysis("context", "", () => {});
+  assert.equal(calls[2].max_completion_tokens, 12288);
+  assert.equal(calls.length, 3);
+});
+
+test("other configured models retain their existing token ceilings", () => {
+  const api = loadAnalyzer(undefined, "another/model");
+  assert.equal(api.completionTokenBudget("signals"), 700);
+  assert.equal(api.completionTokenBudget("verdict"), 2048);
+});
+
+test("non-streaming truncated signals do not trigger another billable call", async () => {
+  let calls = 0;
+  const api = loadAnalyzer(async () => {
+    calls += 1;
+    return { choices: [{ message: { content: "" }, finish_reason: "length" }] };
+  });
+  await assert.rejects(api.runTwoStepAnalysis("context"), (error) => error.code === "truncated_ai_output");
+  assert.equal(calls, 1);
+});
+
+test("a length-limited verdict is not automatically retried", async () => {
+  let calls = 0;
+  const api = loadAnalyzer(async () => {
+    if (++calls === 1) return { choices: [{ message: { content: '{"signals":[]}' }, finish_reason: "stop" }] };
+    return (async function* () {
+      yield { choices: [{ delta: { content: JSON.stringify(verdict) }, finish_reason: "length" }] };
+    })();
+  });
+  await assert.rejects(api.runStreamingAnalysis("context", "", () => {}), (error) => error.code === "truncated_ai_output");
+  assert.equal(calls, 2);
 });
 
 test("Tornado Cash context records historical delisting, not a current blanket sanction", () => {

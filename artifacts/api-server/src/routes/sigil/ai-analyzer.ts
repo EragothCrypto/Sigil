@@ -195,6 +195,14 @@ function chatModel(): string {
   return getSigilAiModel();
 }
 
+function completionTokenBudget(step: "signals" | "verdict"): number {
+  // DeepSeek's completion limit covers reasoning and visible JSON together.
+  if (chatModel() === "deepseek/deepseek-v4-flash") {
+    return step === "signals" ? 4096 : 12288;
+  }
+  return step === "signals" ? 700 : 2048;
+}
+
 // ─── Step 1: Evidence gathering ───────────────────────────────────────────────
 
 const STEP1_INSTRUCTIONS = `
@@ -300,7 +308,7 @@ async function runTwoStepAnalysis(
   // Step 1 — gather evidence signals
   const step1Response = await openai.chat.completions.create({
     model: chatModel(),
-    max_completion_tokens: 700,
+    max_completion_tokens: completionTokenBudget("signals"),
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: step1UserContent },
@@ -308,11 +316,14 @@ async function runTwoStepAnalysis(
   });
 
   const step1Content = step1Response.choices[0]?.message?.content ?? "{}";
+  if (step1Response.choices[0]?.finish_reason === "length") {
+    throw new AIAnalysisOutputError("truncated_ai_output");
+  }
 
   // Step 2 — derive verdict (streaming prompt format, but called non-streaming)
   const step2Response = await openai.chat.completions.create({
     model: chatModel(),
-    max_completion_tokens: 2048,
+    max_completion_tokens: completionTokenBudget("verdict"),
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: step1UserContent },
@@ -350,7 +361,7 @@ export async function runStreamingAnalysis(
   // Step 1 — non-streaming (structured JSON only, fast)
   const step1Response = await openai.chat.completions.create({
     model: chatModel(),
-    max_completion_tokens: 700,
+    max_completion_tokens: completionTokenBudget("signals"),
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: step1UserContent },
@@ -358,6 +369,9 @@ export async function runStreamingAnalysis(
   });
 
   const step1Content = step1Response.choices[0]?.message?.content ?? "{}";
+  if (step1Response.choices[0]?.finish_reason === "length") {
+    throw new AIAnalysisOutputError("truncated_ai_output");
+  }
 
   // Parse Step 1 to emit metadata (estimated score + signal preview)
   let estimatedScore = 50;
@@ -403,7 +417,7 @@ export async function runStreamingAnalysis(
     // Step 2 — STREAMING
     const stream = await openai.chat.completions.create({
       model: chatModel(),
-      max_completion_tokens: 2048,
+      max_completion_tokens: completionTokenBudget("verdict"),
       stream: true,
       messages: step2Messages,
     });
@@ -441,7 +455,7 @@ export async function runStreamingAnalysis(
   } catch {
     const fallbackResponse = await openai.chat.completions.create({
       model: chatModel(),
-      max_completion_tokens: 2048,
+      max_completion_tokens: completionTokenBudget("verdict"),
       messages: step2Messages,
     });
 
