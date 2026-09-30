@@ -2,6 +2,7 @@ import { Link } from 'wouter';
 import { Mail, MapPin, Shield, FileText, Cookie, Scale } from 'lucide-react';
 
 const OPERATOR = {
+  name: 'Kevin Kauper',
   brand: 'S3ntryLabs',
   addressLine1: 'Eragoth.Crypto c/o IP-Management #5849',
   addressLine2: 'Ludwig-Erhard-Str. 18',
@@ -32,7 +33,7 @@ function LegalShell({
       <div className="mb-8">
         <p className="text-xs font-mono uppercase tracking-widest text-primary/55 mb-3">{eyebrow}</p>
         <h1 className="text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight">{title}</h1>
-        <p className="mt-4 text-sm text-white/40">Last updated: September 28, 2026</p>
+        <p className="mt-4 text-sm text-white/40">Last updated: September 30, 2026</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-8 items-start">
@@ -69,7 +70,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function OperatorBlock() {
   return (
     <div className="rounded-xl border border-primary/15 bg-primary/5 p-4">
-      <p className="font-display font-bold text-white mb-2">{OPERATOR.brand}</p>
+      <p className="font-display font-bold text-white">{OPERATOR.name}</p>
+      <p className="text-white/60 mb-2">{OPERATOR.brand}</p>
       <div className="flex gap-2 text-white/60">
         <MapPin className="w-4 h-4 mt-1 text-primary/70 shrink-0" />
         <p>
@@ -92,19 +94,20 @@ function OperatorBlock() {
 
 export function ImpressumPage() {
   return (
-    <LegalShell eyebrow="Legal Notice" title="Impressum">
-      <Section title="Information according to Section 5 DDG">
+    <LegalShell eyebrow="Anbieterkennzeichnung" title="Impressum">
+      <Section title="Diensteanbieter">
         <OperatorBlock />
+      </Section>
+
+      <Section title="Kontakt">
         <p>
-          Responsible for this website and the Sigil web application: {OPERATOR.brand}.
+          Bei rechtlichen Fragen sowie Datenschutz- und Sicherheitsanfragen erreichen Sie uns unter{' '}
+          <a className="text-primary hover:text-primary/80" href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>.
         </p>
       </Section>
 
-      <Section title="Contact">
-        <p>
-          For legal, privacy, or security inquiries, contact us at{' '}
-          <a className="text-primary hover:text-primary/80" href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>.
-        </p>
+      <Section title="Verantwortlich für den Inhalt">
+        <p>{OPERATOR.name}<br />Anschrift wie oben.</p>
       </Section>
 
       <Section title="Consumer Dispute Resolution">

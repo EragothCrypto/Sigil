@@ -2,8 +2,8 @@
 
 ## Release-Blocking Confirmations
 
-1. Replace/confirm the controller and DDG operator name with the actual natural person or registered legal entity. `S3ntryLabs` and `Eragoth.Crypto` appear to be brands; add legal form, authorised representative, register/court/number and VAT ID only when factually applicable.
-2. Confirm that `Eragoth.Crypto c/o IP-Management #5849, Ludwig-Erhard-Str. 18, 20459 Hamburg` is a valid serviceable business address for the identified operator.
+1. Operator identity supplied on 2026-09-30: **Kevin Kauper**, operating under S3ntryLabs, also responsible for content. Implemented in the shared legal/controller block and Impressum. Verify publication after deployment; do not invent a company legal form, register or VAT details.
+2. Operator supplied address: `Eragoth.Crypto c/o IP-Management #5849, Ludwig-Erhard-Str. 18, 20459 Hamburg, Germany`. Address is reproduced as supplied; serviceability for Kevin Kauper has not been independently verified. Preserve the c/o service agreement/authorization as operator evidence.
 3. Confirm VSBG participation status and whether any sector-specific supervisory authority exists.
 4. Execute/accept and archive processor agreements and transfer safeguards listed in `VENDORS_AND_TRANSFERS.md`.
 5. Configure OpenRouter/model routing so submitted data is not used for training; document provider retention and actual routed provider. The current free-model alias is not acceptable on assumption alone.

@@ -20,7 +20,7 @@
 | D. Safe remediation | Implemented locally | Advisory-only provider execution and bounded intake; private opaque analysis links; cross-user approval correlation removed; authenticated daily retention job; bounded numeric IDs; log minimisation; legal disclosures and claim alignment. |
 | E. Verification | Complete with production limits | Libraries, API and web typechecks and both builds passed after dependency restore from cache. API privacy/auth/retention behavior verified using mocks. Extension and package checks recorded in continuation evidence. Production database/Chrome/vendor verification remains pending. |
 | F. Audit artifact completion | Complete | Required `.compliance/` document set and sealed Codex Security report created. |
-| G. Release decision | `NO_GO` | Local authorization-channel defect remediated; deployment, installed Chrome QA, legal identity, vendor and CRA operational evidence remain pending. |
+| G. Release decision | `NO_GO` | Local authorization-channel defect remediated; Kevin Kauper supplied as operator/controller and implemented locally. Deployment, installed Chrome QA, address evidence, vendor and CRA operational evidence remain pending. |
 
 ## Product Inventory
 

@@ -4,7 +4,8 @@
 
 - [x] Remove page-event wallet authorization; independently test provider preservation and bounded best-effort advisory observations. Hostile-page warning suppression remains an explicitly disclosed limitation.
 - [ ] Deploy the UUID/private-history migration and verify new analysis links, legacy-row denial, Hall of Shame numeric links and empty public history collection.
-- [ ] Confirm and publish the exact legal operator/controller identity under DDG/GDPR.
+- [x] Record supplied legal operator/controller and content responsible person: Kevin Kauper; implement in legal UI.
+- [ ] Verify live publication and preserve serviceability evidence for Kevin Kauper at the supplied Hamburg c/o address.
 - [ ] Complete vendor DPAs, transfer assessment, regions and retention settings.
 - [ ] Lock OpenRouter/model routing to documented no-training behavior or migrate to a contracted suitable provider.
 - [ ] Configure and test the CRA Article 14 reporting runbook and responsible contacts.

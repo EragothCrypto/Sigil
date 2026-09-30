@@ -21,7 +21,7 @@ Continuation verification supersedes the dependency/build limitation above: work
 | --- | --- | --- |
 | P0 | Hostile dApps can forge `sigil:decision` and bypass extension analysis/warning. | Fixed locally by advisory redesign, adversarial tests and independent reviews; production/Store rollout unverified. |
 | P0 | Public analysis history and sequential detail IDs disclose submitted scans. | Remediated in working tree; deployment and regression verification pending. |
-| P1 | DDG/GDPR operator/controller identity is not proven to be a legal person/entity name. | Manual legal/business confirmation required. |
+| P1 | DDG/GDPR operator/controller identity was missing. | Kevin Kauper supplied by operator on 2026-09-30 and implemented locally. Publication and c/o-address supporting evidence remain pending. |
 | P1 | OpenRouter free-model routing, provider training, retention, DPA and international transfer safeguards are unverified. | Manual account/contract change required. |
 | P1 | CRA Article 14 reporting process and contacts are not operational although the duty date has begun. | Organisational implementation required. |
 | P1 | Ordinary analyses had no reliable retention/deletion schedule. | Secret-protected daily Vercel job and executable mocked SQL/auth tests added; scheduler/secret/deletion drill/provider backup verification pending. |
