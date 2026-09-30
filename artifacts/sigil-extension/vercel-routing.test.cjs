@@ -119,7 +119,9 @@ test("environment template and deployment docs cover required production variabl
     assert.match(docs, new RegExp(key));
   }
   assert.match(envExample, /^AI_INTEGRATIONS_OPENAI_BASE_URL=https:\/\/openrouter\.ai\/api\/v1$/m);
-  assert.match(envExample, /^SIGIL_AI_MODEL=deepseek\/deepseek-v4-flash:free$/m);
+  assert.match(envExample, /^SIGIL_AI_MODEL=deepseek\/deepseek-v4-flash$/m);
+  assert.match(docs, /^SIGIL_AI_MODEL=deepseek\/deepseek-v4-flash$/m);
+  assert.match(read("artifacts/api-server/src/env.ts"), /DEFAULT_SIGIL_AI_MODEL = "deepseek\/deepseek-v4-flash"/);
   assert.match(read(".gitignore"), /^\.env$/m);
   assert.match(read(".gitignore"), /^!\.env\.example$/m);
 });

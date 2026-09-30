@@ -13,6 +13,7 @@ import {
   formatApprovalAmount,
 } from "./ethereum.js";
 import {
+  AIAnalysisOutputError,
   analyzeTransaction,
   analyzeContract,
   analyzeUnknown,
@@ -294,7 +295,10 @@ router.post("/analyze", async (req, res) => {
     res.json(result);
   } catch (err) {
     req.log.error({ err }, "Analysis failed");
-    res.status(500).json({ error: "analysis_failed", message: "Failed to analyze input" });
+    res.status(err instanceof AIAnalysisOutputError ? 502 : 500).json({
+      error: err instanceof AIAnalysisOutputError ? err.code : "analysis_failed",
+      message: err instanceof AIAnalysisOutputError ? err.message : "Failed to analyze input",
+    });
   }
 });
 
@@ -627,7 +631,9 @@ router.post("/analyze-stream", async (req, res) => {
     res.end();
   } catch (err) {
     req.log.error({ err }, "Streaming analysis failed");
-    send({ type: "error", message: `Failed to analyze input — please try again. (${stage})` });
+    send({ type: "error", message: err instanceof AIAnalysisOutputError
+      ? err.message
+      : `Failed to analyze input — please try again. (${stage})` });
     res.end();
   }
 });

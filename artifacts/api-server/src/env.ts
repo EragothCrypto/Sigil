@@ -53,7 +53,7 @@ export const REQUIRED_ENV_VARS = [
   "AI_INTEGRATIONS_OPENAI_API_KEY",
 ] as const;
 
-export const DEFAULT_SIGIL_AI_MODEL = "deepseek/deepseek-v4-flash:free";
+export const DEFAULT_SIGIL_AI_MODEL = "deepseek/deepseek-v4-flash";
 
 export function getSigilAiModel(): string {
   return process.env.SIGIL_AI_MODEL || DEFAULT_SIGIL_AI_MODEL;

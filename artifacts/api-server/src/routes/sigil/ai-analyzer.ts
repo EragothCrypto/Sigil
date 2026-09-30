@@ -82,6 +82,18 @@ export type StreamEvent =
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+export class AIAnalysisOutputError extends Error {
+  readonly code: "invalid_ai_output" | "truncated_ai_output";
+
+  constructor(code: "invalid_ai_output" | "truncated_ai_output") {
+    super(code === "truncated_ai_output"
+      ? "AI analysis output exceeded its token limit; no risk verdict was produced"
+      : "AI analysis output is invalid or incomplete; no risk verdict was produced");
+    this.name = "AIAnalysisOutputError";
+    this.code = code;
+  }
+}
+
 function getRiskLevel(score: number): "low" | "medium" | "high" | "critical" {
   if (score <= 25) return "low";
   if (score <= 50) return "medium";
@@ -97,16 +109,24 @@ function getVerdictFromScore(score: number): "safe" | "caution" | "dangerous" {
 
 /**
  * Parse and sanitise the final JSON verdict response from step 2.
- * Returns a safe fallback on any parse failure.
+ * Rejects incomplete output rather than inventing a risk score.
  * Accepts an optional externally-extracted summary to override.
  */
 function parseVerdictJson(content: string, externalSummary?: string): AIAnalysisResult {
   try {
     // Strip any accidental markdown fences the model adds
-    const clean = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+    const clean = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
     const parsed = JSON.parse(clean);
 
-    const score = Math.max(0, Math.min(100, parseInt(parsed.riskScore) || 0));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)
+      || !Number.isInteger(parsed.riskScore) || parsed.riskScore < 0 || parsed.riskScore > 100
+      || parsed.verdict !== getVerdictFromScore(parsed.riskScore)
+      || typeof parsed.verdictReason !== "string" || !parsed.verdictReason.trim()
+      || !Array.isArray(parsed.warnings) || !parsed.warnings.every((value: unknown) => typeof value === "string")
+      || !Array.isArray(parsed.positives) || !parsed.positives.every((value: unknown) => typeof value === "string")) {
+      throw new Error("Invalid verdict fields");
+    }
+    const score = parsed.riskScore;
     const verdictRaw = parsed.verdict;
     const verdict: "safe" | "caution" | "dangerous" =
       verdictRaw === "safe" || verdictRaw === "caution" || verdictRaw === "dangerous"
@@ -139,6 +159,7 @@ function parseVerdictJson(content: string, externalSummary?: string): AIAnalysis
       : [];
 
     const summary = externalSummary?.trim() || parsed.summary || "Unable to analyze this transaction.";
+    if (typeof summary !== "string") throw new Error("Invalid summary");
 
     return {
       summary,
@@ -154,15 +175,7 @@ function parseVerdictJson(content: string, externalSummary?: string): AIAnalysis
       aiPatterns,
     };
   } catch {
-    return {
-      summary: externalSummary?.trim() || content.substring(0, 400),
-      verdict: "caution",
-      verdictReason: "Caution — could not fully parse analysis results",
-      riskScore: 50,
-      riskLevel: "medium",
-      warnings: ["Could not fully parse AI response"],
-      positives: [],
-    };
+    throw new AIAnalysisOutputError("invalid_ai_output");
   }
 }
 
@@ -309,6 +322,9 @@ async function runTwoStepAnalysis(
   });
 
   const step2Content = step2Response.choices[0]?.message?.content ?? "{}";
+  if (step2Response.choices[0]?.finish_reason === "length") {
+    throw new AIAnalysisOutputError("truncated_ai_output");
+  }
 
   // Parse the new format (prose + ---JSON--- + json)
   const sepIdx = step2Content.indexOf("---JSON---");
@@ -379,6 +395,8 @@ export async function runStreamingAnalysis(
   let summaryBuffer = "";
   let jsonBuffer = "";
   let inJson = false;
+  let emittedSummaryLength = 0;
+  let finishReason: string | null = null;
   const SEP = "---JSON---";
 
   try {
@@ -391,6 +409,7 @@ export async function runStreamingAnalysis(
     });
 
     for await (const chunk of stream) {
+      finishReason = chunk.choices[0]?.finish_reason ?? finishReason;
       const text = chunk.choices[0]?.delta?.content ?? "";
       if (!text) continue;
 
@@ -399,14 +418,19 @@ export async function runStreamingAnalysis(
         const sepIdx = combined.indexOf(SEP);
         if (sepIdx !== -1) {
           // Emit the tail of the summary text up to the separator
-          const newSummaryTail = combined.slice(summaryBuffer.length, sepIdx);
+          const newSummaryTail = combined.slice(emittedSummaryLength, sepIdx);
           if (newSummaryTail) onEvent({ type: "token", text: newSummaryTail });
           summaryBuffer = combined.slice(0, sepIdx).trim();
           jsonBuffer = combined.slice(sepIdx + SEP.length);
           inJson = true;
         } else {
-          // Stream summary tokens live
-          onEvent({ type: "token", text });
+          // Retain enough text to recognise a separator split across chunks.
+          const safeEnd = Math.max(emittedSummaryLength, combined.length - (SEP.length - 1));
+          if (!combined.trimStart().startsWith("{")) {
+            const safeText = combined.slice(emittedSummaryLength, safeEnd);
+            if (safeText) onEvent({ type: "token", text: safeText });
+            emittedSummaryLength = safeEnd;
+          }
           summaryBuffer += text;
         }
       } else {
@@ -422,6 +446,7 @@ export async function runStreamingAnalysis(
     });
 
     const fallbackContent = fallbackResponse.choices[0]?.message?.content ?? "{}";
+    finishReason = fallbackResponse.choices[0]?.finish_reason ?? null;
     const sepIdx = fallbackContent.indexOf(SEP);
     if (sepIdx !== -1) {
       const fallbackSummary = fallbackContent.slice(0, sepIdx).trim();
@@ -433,6 +458,14 @@ export async function runStreamingAnalysis(
     }
   }
 
+  if (finishReason === "length") {
+    throw new AIAnalysisOutputError("truncated_ai_output");
+  }
+  // Some endpoints return a JSON object directly rather than the prose separator.
+  if (!inJson && !jsonBuffer.trim()) {
+    jsonBuffer = summaryBuffer;
+    summaryBuffer = "";
+  }
   // Parse final JSON (strip any trailing markdown fences)
   const cleanJson = jsonBuffer.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
   const result = parseVerdictJson(cleanJson, summaryBuffer);

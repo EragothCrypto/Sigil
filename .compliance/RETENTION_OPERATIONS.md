@@ -2,7 +2,7 @@
 
 Updated: 2026-09-30. Implemented configuration is not evidence of a successful production cleanup.
 
-Operator checkpoint: Kevin Kauper confirms Production `CRON_SECRET` and `SIGIL_ANALYSIS_RETENTION_DAYS` setup completed and authorises GitHub publication of the prepared code. Values were not disclosed or independently inspected. Successful deployment, active scheduled job, run status and Neon backup evidence remain pending. Publishing the job can activate real age-based deletion; publication permission is not an overall compliance GO.
+Operator checkpoint: Kevin Kauper confirms Production `CRON_SECRET` and `SIGIL_ANALYSIS_RETENTION_DAYS` setup completed and authorises GitHub publication of the prepared code. Values were not disclosed or independently inspected. Commit `d03a89c3fce45dd65e29bad5052a771d44391372` was pushed; Kevin subsequently confirms its Vercel deployment is Ready and the cron job is visible. This is operator-provided deployment evidence, not an independently observed successful cron run. Run status and Neon backup evidence remain pending. Publishing the job can activate real age-based deletion; publication permission is not an overall compliance GO.
 
 Ordinary analysis rows become eligible for deletion after `SIGIL_ANALYSIS_RETENTION_DAYS` (default 30, bounded to 1-365). Curated Hall of Shame rows are excluded. The daily job can leave eligible rows until the next successful run; allow approximately one additional day during healthy daily operation. Backups and upstream provider retention require separate controls.
 
@@ -42,6 +42,8 @@ Use an isolated empty staging database with synthetic fixtures, not a branch clo
 Also verify missing/wrong secret denial before DB work, sanitized DB failure and subsequent successful recovery. Archive counts/statuses, not record contents. Mock tests do not replace this PostgreSQL drill. No staging credentials or database connector are available to this audit, so the drill is prepared, NOT RUN.
 
 ## Neon Restore and Backup Inventory
+
+Operator-confirmed settings on 2026-09-30: integrated Neon database uses Free; project History Window is 6 hours; region is AWS US East 1 (N. Virginia), `us-east-1`, USA, as read by Kevin Kauper in the console. Plan/window/region evidence is complete on operator attestation, not independent console inspection. Other branches, snapshots, external exports and provider physical-deletion terms remain unverified. This does not establish that all copies disappear six hours after SQL deletion. No region migration performed; US processing must be included in the vendor/transfer assessment.
 
 Record the actual integrated Neon plan, region, root/child branches, restore/history window, snapshots and any external exports with their owners/access and expiry. Do not infer settings from a generic Free-plan default. Neon restore history can recover earlier data; ordinary SQL deletion does not prove immediate erasure from that history or provider infrastructure.
 

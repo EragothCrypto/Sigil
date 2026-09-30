@@ -28,13 +28,20 @@ SIGIL_RATE_LIMIT_MAX
 LOG_LEVEL
 ```
 
-For OpenRouter with DeepSeek V4 Flash free:
+For OpenRouter with DeepSeek V4 Flash (paid):
 
 ```text
 AI_INTEGRATIONS_OPENAI_BASE_URL=https://openrouter.ai/api/v1
 AI_INTEGRATIONS_OPENAI_API_KEY=<your OpenRouter API key>
-SIGIL_AI_MODEL=deepseek/deepseek-v4-flash:free
+SIGIL_AI_MODEL=deepseek/deepseek-v4-flash
 ```
+
+The retired `:free` slug returns an upstream 404. Update an existing Vercel
+`SIGIL_AI_MODEL` value as well: environment configuration overrides the code
+default. Redeploy after changing the variable. Keep training permissions disabled
+and configure an OpenRouter API-key spending limit before production use (proposed
+initial budget: USD 5/month; not enforced by this repository). Model selection
+does not pin a hosting provider or establish ZDR, EU residency or DPA coverage.
 
 `DATABASE_URL` must point at a hosted Postgres database. For Sigil production, use Neon Postgres with the pooled connection string as `DATABASE_URL`. The pooled Neon host usually contains `-pooler`.
 

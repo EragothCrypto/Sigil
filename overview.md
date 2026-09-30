@@ -77,7 +77,7 @@ Im lokal implementierten Update wird der originale Wallet-Provider pro umschloss
 | Backend | Express 5, Vercel Serverless Functions, esbuild |
 | Datenbank | Neon PostgreSQL, Drizzle ORM, `pg` |
 | API-Vertrag | OpenAPI, Orval, Zod-generierte Schemas |
-| AI | OpenAI-kompatibler Client ueber OpenRouter; Standardmodell `deepseek/deepseek-v4-flash:free` |
+| AI | OpenAI-kompatibler Client ueber OpenRouter; Standardmodell `deepseek/deepseek-v4-flash` (kostenpflichtig; Produktionswechsel und Test noch zu bestaetigen) |
 | Blockchain | Etherscan V2 sowie oeffentliche EVM JSON-RPC-Endpunkte |
 | Extension | Chrome Manifest V3, Service Worker, Main-World- und Isolated-World-Content-Scripts, Chrome Storage |
 | Deployment | Vercel fuer Web-App und API, Neon fuer PostgreSQL |

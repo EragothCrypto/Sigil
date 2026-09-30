@@ -20,7 +20,10 @@
 - [ ] Test production headers, CORS, rate limits, health endpoints and deletion/retention behavior.
 - [x] Generate deterministic v1.0.3 ZIP and SHA-256 evidence with a runtime-file allowlist.
 - [ ] Submit v1.0.3 with updated advisory disclosures after release-gate approval.
-- [ ] Configure `CRON_SECRET`, redeploy and verify the daily retention job, failure monitoring and provider backups; see `RETENTION_OPERATIONS.md`.
+- [x] Operator confirms Production secret/retention setup, deployment `d03a89c` Ready and daily cron job visible in Vercel.
+- [x] Operator confirms integrated Neon Free plan and 6-hour project History Window. Other backup copies, region and contractual retention remain unverified.
+- [x] Operator subsequently confirms Neon region AWS `us-east-1` (N. Virginia), USA. Region information is now complete; applicable US transfer safeguards/contract evidence remain open.
+- [ ] Verify a successful scheduled retention run, failure monitoring and provider backups; see `RETENTION_OPERATIONS.md`. Visible job/deployment is not execution evidence.
 - [x] Verify retention callback/config and SQL/schema behavior with 7 focused mocked tests; prepare Hobby failure-control, isolated staging drill and Neon restore/erasure procedures. Production execution, real PostgreSQL drill and monitoring remain unverified.
 
 ## Manual Product QA
