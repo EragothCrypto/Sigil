@@ -19,6 +19,77 @@ function loadEthereum(tx, receipt, explorer = { status: '0', result: 'NOTOK' }, 
   vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/ethereum.ts`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '')), api);
   return api;
 }
+
+test('mined transaction recovers receipt from a fallback after an empty response', async () => {
+  const hash = `0x${'aa'.repeat(32)}`;
+  const tx = { hash, from: address, to: address, value: '0x0', input: '0x', blockNumber: '0x1', blockHash: hash };
+  const receipt = { transactionHash: hash, blockNumber: '0x1', blockHash: hash, status: '0x1', logs: [log] };
+  const api = loadEthereum(tx, receipt);
+  let calls = 0;
+  const originalFetch = api.fetch;
+  api.fetch = async (url, options) => {
+    if (options?.body && JSON.parse(options.body).method === 'eth_getTransactionReceipt' && ++calls === 1) return { ok: true, json: async () => ({ result: null }) };
+    return originalFetch(url, options);
+  };
+  const result = await api.fetchTransaction(hash, 'mainnet');
+  assert.equal(result.status, '0x1');
+  assert.equal(result.inclusionStatus, 'mined');
+  assert.equal(result.receiptEvidence.transfers.length, 1);
+  assert.equal(calls, 2);
+});
+
+test('missing mined receipt preserves inclusion and a sanitized diagnostic', async () => {
+  const hash = `0x${'aa'.repeat(32)}`;
+  const tx = { hash, from: address, to: address, value: '0x0', input: '0x', blockNumber: '0x1', blockHash: hash };
+  const result = await loadEthereum(tx, null).fetchTransaction(hash, 'mainnet');
+  assert.equal(result.inclusionStatus, 'mined');
+  assert.equal(result.status, undefined);
+  assert.equal(result.receiptIssue, 'not_returned');
+  const pending = await loadEthereum({ ...tx, blockNumber: null, blockHash: null }, null).fetchTransaction(hash, 'mainnet');
+  assert.equal(pending.inclusionStatus, 'pending');
+  assert.equal(pending.receiptIssue, 'not_returned');
+});
+
+test('pending null receipt stops after one endpoint; mismatched mined receipts are rejected', async () => {
+  const hash = `0x${'aa'.repeat(32)}`;
+  const tx = { hash, from: address, to: address, value: '0x0', input: '0x', blockNumber: null, blockHash: null };
+  const api = loadEthereum(tx, null);
+  let calls = 0;
+  const fetch = api.fetch;
+  api.fetch = async (url, options) => {
+    if (options?.body && JSON.parse(options.body).method === 'eth_getTransactionReceipt') calls++;
+    return fetch(url, options);
+  };
+  const pending = await api.fetchTransaction(hash, 'mainnet');
+  assert.equal(pending.inclusionStatus, 'pending');
+  assert.equal(calls, 1);
+  const mined = { ...tx, blockNumber: '0x1', blockHash: hash };
+  const invalid = await loadEthereum(mined, { transactionHash: `0x${'bb'.repeat(32)}`, blockNumber: '0x1', blockHash: hash, status: '0x1', logs: [log] }).fetchTransaction(hash, 'mainnet');
+  assert.equal(invalid.receiptIssue, 'identity_mismatch');
+  assert.equal(invalid.status, undefined);
+  assert.equal(invalid.receiptEvidence.transfers.length, 0);
+});
+
+test('missing JSON-RPC result and malformed receipt use fallback rather than ending evidence gathering', async () => {
+  const hash = `0x${'aa'.repeat(32)}`;
+  const tx = { hash, from: address, to: address, value: '0x0', input: '0x', blockNumber: '0x1', blockHash: hash };
+  const receipt = { transactionHash: hash, blockNumber: '0x1', blockHash: hash, status: '0x1', logs: [] };
+  const api = loadEthereum(tx, receipt);
+  let calls = 0;
+  const fetch = api.fetch;
+  api.fetch = async (url, options) => {
+    if (options?.body && JSON.parse(options.body).method === 'eth_getTransactionReceipt') {
+      calls++;
+      if (calls === 1) return { ok: true, json: async () => ({ jsonrpc: '2.0', id: 1 }) };
+      if (calls === 2) return { ok: true, json: async () => ({ result: { ...receipt, status: 'unexpected' } }) };
+    }
+    return fetch(url, options);
+  };
+  const result = await api.fetchTransaction(hash, 'mainnet');
+  assert.equal(calls, 3);
+  assert.equal(result.status, '0x1');
+  assert.equal(result.receiptIssue, undefined);
+});
 const topic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 const address = `0x${'11'.repeat(20)}`;
 const word = `0x${'0'.repeat(24)}${'22'.repeat(20)}`;

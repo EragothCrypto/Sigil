@@ -24,6 +24,12 @@ Approval corrections include intent-only web copy, no automatic revoke/exact-amo
 
 ## Live Follow-Up
 
+### Receipt Follow-Up (2026-09-30)
+
+The post-publication screenshot exposed a remaining status defect: unavailable receipt data was labelled Pending/Unknown even for a mined example. Null results also stopped RPC fallback. Regression tests reproduced both before correction. Inclusion now remains independent of execution outcome; validated receipt retrieval advances through the existing endpoint fallback for mined null/malformed/mismatched data. Pending null receipts stop promptly. Fixed diagnostic enums are visible without storing raw upstream errors or user request data in logs. Curated historical labels remain separately visible in details but are excluded from AI evidence, preventing the application's example tag from authorising contract-incident/loss attribution. Cache v2 prevents stale process-cache reports.
+
+Verification: 100 selected regressions pass, API typecheck/build pass and independent scoped review approves. A real public-RPC ingestion smoke (no explorer, AI or database access) returned mined/success, 56 receipt logs, 20 observed Transfer-shaped events and complete bounded event scan. Initial local Node TLS trust failed; Windows system certificate trust resolved it with verification retained. Earlier Vercel acquisition-failure reason remains unknown and must be checked on the next fresh production run. No forced risk score or claim of full trace/exploit detection.
+
 - Deploy the reviewed version, then request a fresh scan rather than reusing an old stored report.
 - Test Euler's curated example and an unrelated same-selector transaction; retrospective labels must never imply live exploit detection or a forced score.
 - Test zero native value with token Transfer logs, an EOA destination, pending/reverted calls and unavailable explorer/receipt data.

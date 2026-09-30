@@ -29,6 +29,8 @@ export interface TransactionData {
   input: string;
   blockNumber: string;
   status?: string;
+  inclusionStatus?: "mined" | "pending" | "unknown";
+  receiptIssue?: "not_returned" | "malformed_receipt" | "identity_mismatch" | "rpc_unavailable";
   methodId?: string;
   receiptEvidence?: ReceiptEvidence;
   destinationVerification?: ContractData["verificationStatus"];
@@ -94,6 +96,9 @@ export function verifiedEvidence(contract: ContractData): boolean | undefined {
 export function transactionEvidenceDetails(tx: TransactionData | null): Record<string, unknown> {
   return {
     sourceVerification: tx?.destinationVerification ?? "unknown",
+    transactionInclusion: tx?.inclusionStatus ?? "unknown",
+    executionOutcome: tx?.status === "0x1" ? "success" : tx?.status === "0x0" ? "reverted" : "unknown; receipt outcome unavailable",
+    receiptDiagnostic: tx?.receiptIssue ?? "none",
     destinationCode: tx?.destinationHasCode === true ? "present at transaction block"
       : tx?.destinationHasCode === false ? "absent at transaction block; source verification not applicable" : "lookup unavailable",
     transferCoverage: tx?.receiptEvidence?.status === "available"
@@ -103,7 +108,7 @@ export function transactionEvidenceDetails(tx: TransactionData | null): Record<s
   };
 }
 
-export async function rpcCall(network: string, method: string, params: unknown[]): Promise<unknown> {
+export async function rpcCall(network: string, method: string, params: unknown[], acceptResult?: (value: unknown) => boolean): Promise<unknown> {
   const endpoints = isSupportedNetwork(network) ? PUBLIC_RPC[network] : undefined;
   if (!endpoints) throw new Error("Unsupported network");
   let lastErr: unknown;
@@ -118,8 +123,16 @@ export async function rpcCall(network: string, method: string, params: unknown[]
       });
       if (!res.ok) continue;
       const json = (await res.json()) as { result?: unknown; error?: { message: string } };
+      if (!json || typeof json !== "object" || (!Object.hasOwn(json, "result") && !json.error)) {
+        lastErr = new Error("Malformed JSON-RPC response");
+        continue;
+      }
       if (json.error) {
         lastErr = new Error(json.error.message);
+        continue;
+      }
+      if (acceptResult && !acceptResult(json.result)) {
+        lastErr = new Error("RPC result failed validation");
         continue;
       }
       return json.result;
@@ -130,20 +143,27 @@ export async function rpcCall(network: string, method: string, params: unknown[]
   throw lastErr ?? new Error("All RPC endpoints failed");
 }
 
+function receiptIssueFor(tx: Record<string, unknown>, value: unknown): TransactionData["receiptIssue"] {
+  if (value == null) return "not_returned";
+  if (typeof value !== "object" || Array.isArray(value)) return "malformed_receipt";
+  const receipt = value as Record<string, unknown>;
+  if (typeof receipt.transactionHash !== "string" || !isTransactionHash(receipt.transactionHash)
+    || typeof receipt.blockHash !== "string" || !isTransactionHash(receipt.blockHash)
+    || typeof receipt.blockNumber !== "string" || !/^0x[a-f0-9]+$/i.test(receipt.blockNumber)
+    || !Array.isArray(receipt.logs) || !["0x0", "0x1"].includes(receipt.status as string)) return "malformed_receipt";
+  if (receipt.transactionHash.toLowerCase() !== (tx.hash as string).toLowerCase()
+    || typeof tx.blockHash !== "string" || receipt.blockHash.toLowerCase() !== tx.blockHash.toLowerCase()
+    || typeof tx.blockNumber !== "string" || !/^0x[a-f0-9]+$/i.test(tx.blockNumber)
+    || BigInt(receipt.blockNumber) !== BigInt(tx.blockNumber)) return "identity_mismatch";
+  return undefined;
+}
+
 export async function fetchTransaction(
   hash: string,
   network: string,
 ): Promise<TransactionData | null> {
   try {
-    const [tx, receipt] = await Promise.allSettled([
-      rpcCall(network, "eth_getTransactionByHash", [hash]),
-      rpcCall(network, "eth_getTransactionReceipt", [hash]),
-    ]);
-
-    const txData = tx.status === "fulfilled" ? (tx.value as Record<string, string> | null) : null;
-    let receiptData = receipt.status === "fulfilled"
-      ? (receipt.value as Record<string, string> | null)
-      : null;
+    const txData = await rpcCall(network, "eth_getTransactionByHash", [hash]) as Record<string, string> | null;
 
     if (!txData || typeof txData.hash !== "string" || txData.hash.toLowerCase() !== hash.toLowerCase()
       || typeof txData.from !== "string" || !isContractAddress(txData.from)
@@ -154,21 +174,26 @@ export async function fetchTransaction(
       return null;
     }
 
-    if (!receiptData || typeof receiptData.transactionHash !== "string"
-      || receiptData.transactionHash.toLowerCase() !== hash.toLowerCase()
-      || receiptData.blockNumber !== txData.blockNumber
-      || !txData.blockHash || receiptData.blockHash !== txData.blockHash) receiptData = null;
-    let destination: ContractData | undefined;
+    const blockTag = typeof txData.blockNumber === "string" && /^0x[a-f0-9]+$/i.test(txData.blockNumber) ? txData.blockNumber : undefined;
+    const inclusionStatus = blockTag && typeof txData.blockHash === "string" && isTransactionHash(txData.blockHash)
+      ? "mined" : txData.blockNumber == null && txData.blockHash == null ? "pending" : "unknown";
+    let receiptIssue: TransactionData["receiptIssue"];
+    const hasDestination = !!txData.to && isContractAddress(txData.to);
+    const [receipt, metadata, code] = await Promise.allSettled([
+      rpcCall(network, "eth_getTransactionReceipt", [hash], value => {
+        receiptIssue = receiptIssueFor(txData, value);
+        return receiptIssue === undefined || (value == null && inclusionStatus !== "mined");
+      }),
+      hasDestination ? fetchContract(txData.to!, network, false) : Promise.resolve(undefined),
+      hasDestination && blockTag ? rpcCall(network, "eth_getCode", [txData.to!, blockTag]) : Promise.resolve(undefined),
+    ]);
+    const receiptData = receipt.status === "fulfilled" && receipt.value
+      ? receipt.value as Record<string, string> : null;
+    if (receipt.status === "rejected") receiptIssue ??= "rpc_unavailable";
+    if (!receiptData && inclusionStatus === "mined") logger.warn({ network, receiptIssue, inclusionStatus }, "Mined transaction receipt unavailable after RPC fallback");
+    const destination = metadata.status === "fulfilled" ? metadata.value : undefined;
     let destinationHasCode: boolean | undefined;
-    if (txData.to && isContractAddress(txData.to)) {
-      const blockTag = typeof txData.blockNumber === "string" && /^0x[a-f0-9]+$/i.test(txData.blockNumber) ? txData.blockNumber : undefined;
-      const [metadata, code] = await Promise.allSettled([
-        fetchContract(txData.to, network, false),
-        blockTag ? rpcCall(network, "eth_getCode", [txData.to, blockTag]) : Promise.resolve(undefined),
-      ]);
-      if (metadata.status === "fulfilled") destination = metadata.value;
-      if (code.status === "fulfilled" && typeof code.value === "string" && /^0x(?:[a-f0-9]{2})*$/i.test(code.value)) destinationHasCode = code.value !== "0x";
-    }
+    if (code.status === "fulfilled" && typeof code.value === "string" && /^0x(?:[a-f0-9]{2})*$/i.test(code.value)) destinationHasCode = code.value !== "0x";
 
     return {
       hash: txData.hash ?? hash,
@@ -181,6 +206,8 @@ export async function fetchTransaction(
       input: txData.input ?? "0x",
       blockNumber: txData.blockNumber ?? "pending",
       status: receiptData?.status,
+      inclusionStatus,
+      receiptIssue,
       receiptEvidence: summarizeReceipt(receiptData),
       destinationVerification: destinationHasCode === true ? destination?.verificationStatus ?? "unknown" : "unknown",
       destinationHasCode,

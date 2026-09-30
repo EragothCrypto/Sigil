@@ -20,6 +20,14 @@ function loadAnalyzer(create = async () => { throw new Error("unexpected AI call
 
 const verdict = { summary: "Public contract analysis.", verdict: "caution", verdictReason: "Caution: review permissions", riskScore: 40, warnings: ["Review permissions"], positives: [] };
 
+test('mined without receipt is not pending and curated hindsight is excluded from AI evidence', () => {
+  const api = loadAnalyzer();
+  const context = api.buildTransactionContext({ hash: 'hash', from: 'sender', to: 'target', value: '0x0', input: '0x', blockNumber: '0x1009f4c', inclusionStatus: 'mined', gasPrice: '0x1', receiptIssue: 'not_returned', historicalExample: { name: 'Euler exploit example', incidentSource: 'historical incident reference' } }, null, 'mainnet', 'hash').contextBlock;
+  assert.match(context, /Included in a block; execution outcome unknown/);
+  assert.doesNotMatch(context, /Pending\/Unknown|Euler exploit|historical incident reference/);
+  assert.match(context, /Receipt acquisition diagnostic: not_returned/);
+});
+
 test("AI contexts explicitly disclose evidence gaps and neutral native value", () => {
   const api = loadAnalyzer();
   const context = api.buildTransactionContext({ hash: '0xhash', from: 'sender', to: 'target', value: '0x0', input: '0x12345678', methodId: '0x12345678', blockNumber: '1', gasPrice: '0x1', destinationVerification: 'unknown', receiptEvidence: { status: 'unavailable', complete: false, transfers: [] } }, null, 'mainnet', 'hash').contextBlock;

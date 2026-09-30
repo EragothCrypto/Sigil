@@ -523,14 +523,16 @@ Method ID: ${tx.methodId ?? "0x (no selector)"}
 Method Name (local selector registry only, no public lookup): ${methodName ?? (tx.methodId ? "unknown method" : "no calldata")}
 Calldata (first 300 chars): ${tx.input && tx.input !== "0x" ? tx.input.substring(0, 300) : "none"}
 Block: ${tx.blockNumber}
-Status: ${tx.status === "0x1" ? "Success ✓" : tx.status === "0x0" ? "Failed ✗" : "Pending/Unknown"}
+Status: ${tx.status === "0x1" ? "Success ✓" : tx.status === "0x0" ? "Failed ✗" : tx.inclusionStatus === "mined" ? "Included in a block; execution outcome unknown (receipt unavailable), NOT pending" : tx.inclusionStatus === "pending" ? "No block assignment in RPC transaction; observed pending at lookup time" : "Inclusion and execution outcome unknown; do not assume pending"}
+Receipt acquisition diagnostic: ${tx.receiptIssue ?? "none"}
+Missing receipt does not mean this transaction could still execute. For mined transactions, only success/revert outcome and events are unavailable; never warn about future execution.
 Network: ${network}
 Destination source verification: ${tx.destinationVerification ?? "unknown"} (destination only; not spender/proxy verification)
 Destination bytecode at transaction block: ${tx.destinationHasCode === true ? "present" : tx.destinationHasCode === false ? "absent; source verification not applicable" : "unknown"}
 Receipt event evidence: ${JSON.stringify(tx.receiptEvidence ?? { status: "unavailable", complete: false, transfers: [] })}
 Coverage: complete refers only to bounded Transfer-shaped event decoding, not complete asset movement. Events can be emitted by arbitrary contracts; raw amounts have no inferred decimals. NFT token IDs are not amounts. Other event types are not decoded. No balance deltas or net losses are established.
 Internal call traces: not collected. Internal native transfers and full call paths are unknown.
-Curated historical context: ${tx.historicalExample ? JSON.stringify(tx.historicalExample) : "none"}`
+Curated example labels are displayed separately in the report, not supplied as technical evidence. Do not infer incident association, past malicious behavior, exploit identity or dollar losses from a transaction hash or your memory.`
     : `Transaction not found on network "${network}".
 Hash: ${rawInput}
 This usually means the wrong network was selected, the transaction is very recent/pending, or the hash is incorrect.`;
