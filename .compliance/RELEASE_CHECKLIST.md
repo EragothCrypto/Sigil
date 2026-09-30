@@ -2,6 +2,8 @@
 
 ## Must Pass Before Release
 
+- [ ] Deploy and live-test evidence-first transaction analysis: Euler curated example versus unrelated transaction, zero native value with receipt token transfers, missing/reverted receipt and explorer failure. Confirm coverage is visible and no unsupported safety/public-selector/compiler claims occur. Local regression verification is not production AI-quality sign-off; internal tracing remains unimplemented.
+
 - [x] Remove page-event wallet authorization; independently test provider preservation and bounded best-effort advisory observations. Hostile-page warning suppression remains an explicitly disclosed limitation.
 - [ ] Deploy the UUID/private-history migration and verify new analysis links, legacy-row denial, Hall of Shame numeric links and empty public history collection.
 - [x] Record supplied legal operator/controller and content responsible person: Kevin Kauper; implement in legal UI.
@@ -28,6 +30,8 @@
 
 ## Manual Product QA
 
+- [x] Operator screenshot confirms one mainnet example-contract analysis renders a complete verdict after the DeepSeek token-budget correction (2026-09-30). This is not an all-network or risk-accuracy pass; provider identity and metadata/claim quality remain open.
+- [x] Operator reports a completed Euler example transaction scan after the requested ZDR change. Rendering passes only; actual post-change endpoint policy and exploit/risk accuracy remain unverified. Source review identifies unsupported verification/selector claims and missing token/internal-call evidence for correction before risk-quality sign-off.
 - [ ] Analyze transaction hash and contract on each supported network.
 - [ ] Simulate raw calldata, JSON transaction, personal-sign and typed-data requests.
 - [ ] Verify provider result/error preservation, wallet-only approval/rejection, advisory dismissal/auto-close/queue behavior and hostile-page suppression limits with a real wallet/test dApp.

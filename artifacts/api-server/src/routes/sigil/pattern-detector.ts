@@ -127,14 +127,8 @@ const DRAINER_CONTEXT =
 const HONEYPOT_CONTEXT =
   "Honeypot tokens typically allow buys but block sells via hidden blacklist or require() conditions. Victims cannot exit their position.";
 
-const PERMIT_CONTEXT =
-  "The permit() function is the #1 vector used by phishing sites to drain wallets without the victim seeing an approval in their wallet history.";
-
 const RUG_CONTEXT =
   "Contracts with unrestricted minting or transferable ownership are the most common mechanism behind rug pull exit scams.";
-
-const FAKE_APPROVAL_CONTEXT =
-  "Unlimited approvals to unknown contracts are directly exploitable: the spender can drain your entire balance at any time with no further action needed from you.";
 
 // ── Main detection function ────────────────────────────────────────────────
 
@@ -172,14 +166,12 @@ export function detectPatterns(input: PatternDetectionInput): PatternMatch[] {
     if (highRisk && !isKnownTrusted) {
       matches.push({
         id: `selector-${methodId}`,
-        type: highRisk.pattern,
-        name: highRisk.pattern === "phishing" ? "Phishing Permit Attack" : "Known Exploit Selector",
-        confidence: "high",
-        description: highRisk.reason,
-        indicators: [`Method selector ${methodId} (${highRisk.label}) matches known exploit signatures`],
-        historicalContext:
-          highRisk.pattern === "phishing" ? PERMIT_CONTEXT : DRAINER_CONTEXT,
-        riskDelta: highRisk.pattern === "phishing" ? 25 : 20,
+        type: "suspicious",
+        name: "Security-sensitive selector candidate",
+        confidence: "low",
+        description: `Local selector mapping suggests ${highRisk.label}. Selectors can collide; calldata and executed behavior are not established. This alone does not demonstrate an attack or source verification status.`,
+        indicators: [`Local method selector mapping: ${methodId} (${highRisk.label})`, "No internal execution trace collected"],
+        riskDelta: 5,
       });
     }
 
@@ -189,37 +181,35 @@ export function detectPatterns(input: PatternDetectionInput): PatternMatch[] {
       if (condRisk.pattern === "fake_approval" && isUnlimitedApproval && !spenderKnown) {
         matches.push({
           id: "unlimited-approval-unknown",
-          type: "fake_approval",
-          name: "Unlimited Approval to Unknown Contract",
-          confidence: "high",
+          type: "suspicious",
+          name: "Large-value approval calldata",
+          confidence: "medium",
           description:
-            "You are granting unlimited spending rights of your tokens to an unverified contract. This is the primary vector used by wallet-draining scams.",
+            "Approval-compatible calldata contains a large raw value for an unrecognized spender. It may be an ERC20 amount or an NFT token ID. Failed/pending calls do not establish granted access; token semantics and executed allowance remain unknown.",
           indicators: [
             `approve() selector (${methodId}) detected`,
-            "Amount: unlimited (max uint256)",
+            "Raw value exceeds the large-value heuristic; ERC20/NFT semantics not established",
             "Spender is not a recognised protocol",
           ],
-          historicalContext: FAKE_APPROVAL_CONTEXT,
-          riskDelta: 28,
+          riskDelta: 10,
         });
       } else if (condRisk.pattern === "drainer" && methodId === "0xa22cb465") {
         // setApprovalForAll — always concerning unless to a known marketplace
         if (!isKnownTrusted) {
           matches.push({
             id: "set-approval-for-all-unknown",
-            type: "drainer",
-            name: "NFT Blanket Approval",
-            confidence: spenderKnown ? "medium" : "high",
+            type: "suspicious",
+            name: "NFT operator selector candidate",
+            confidence: "low",
             description:
-              "setApprovalForAll grants a third party unrestricted access to every NFT in your wallet, not just one. This is the primary tool used by NFT drainer kits.",
+              "Local selector mapping suggests setApprovalForAll. The operator, boolean argument, token standard and execution outcome were not validated; this may enable or revoke access. No granted NFT permission is established.",
             indicators: [
               "setApprovalForAll() detected",
               spenderKnown
                 ? "Spender is a known protocol — reduced risk"
-                : "Spender is an unverified contract",
+                : "Spender is not recognized by the local registry; verification unknown",
             ],
-            historicalContext: DRAINER_CONTEXT,
-            riskDelta: spenderKnown ? 8 : 22,
+            riskDelta: 5,
           });
         }
       } else if (condRisk.pattern === "rug_pull") {
@@ -227,7 +217,7 @@ export function detectPatterns(input: PatternDetectionInput): PatternMatch[] {
           matches.push({
             id: `rug-${methodId}`,
             type: "rug_pull",
-            name: methodId === "0xf2fde38b" ? "Ownership Transfer Detected" : "Unrestricted Minting",
+            name: methodId === "0xf2fde38b" ? "Ownership Transfer Selector" : "Mint Selector",
             confidence: "medium",
             description: condRisk.reason,
             indicators: [`${condRisk.label} called on contract`, "No known entity association"],
@@ -275,7 +265,7 @@ export function detectPatterns(input: PatternDetectionInput): PatternMatch[] {
 
   if (contract) {
     // 4. Honeypot: unverified token with suspicious ABI functions
-    if (!contract.isVerified && contract.isToken && !isKnownTrusted) {
+    if (contract.verificationStatus === "unverified" && contract.isToken && !isKnownTrusted) {
       const abi = contract.abi as string | null;
       const foundHoneypotFns = abi
         ? HONEYPOT_FUNCTION_NAMES.filter((fn) => abi.includes(fn))
@@ -333,7 +323,7 @@ export function detectPatterns(input: PatternDetectionInput): PatternMatch[] {
           indicators: [
             `Contract name: "${contract.contractName}"`,
             `Keyword "${suspiciousKeyword}" is overrepresented in scam contracts`,
-            !contract.isVerified ? "Source code unverified" : "",
+            contract.verificationStatus === "unverified" ? "Source code unverified" : "",
           ].filter(Boolean),
           riskDelta: 10,
         });

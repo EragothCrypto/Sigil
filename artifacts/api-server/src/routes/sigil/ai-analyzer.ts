@@ -226,7 +226,13 @@ Rules:
 - Include ONLY signals actually present in the data above — never invent or assume
 - Be specific and technical in "observation" (e.g. "Contract source code is not verified on Etherscan" not "suspicious contract")
 - "implication" should be plain English a non-technical user can understand
-- Include at least one signal of each type (risk and positive) — if everything is clean, include a positive; if nothing is clean, explain why
+- Either signal type may be empty. Never invent positives to balance warnings.
+- Unknown verification is missing evidence, not proof of unverified source. Destination verification does not verify a spender or proxy implementation.
+- Zero native value, normal gas, and successful execution are not safety indicators. Tokens, NFTs and internal transfers can move without native value.
+- Selectors come from a local registry, not a public database search. Do not claim searches, traces, simulation, source audits or compiler vulnerability checks that were not performed.
+- Compiler age alone does not establish a vulnerability. Token metadata failure does not establish an inconsistent token contract.
+- Receipt events are observations, not balances or proven losses. Do not invent decimals, prices, net losses or internal calls. Historical example labels are retrospective, not live exploit detection.
+- Approval calldata expresses attempted intent. Pending or failed transactions do not prove permissions were granted/revoked; approve(address,uint256) may refer to an NFT token ID.
 - Severity guide: critical = immediate fund loss risk, high = strong risk indicator, medium = notable concern, low = minor concern or uncertainty
 - SANCTIONS / OFAC RULE: If the context contains a "⚠ CRITICAL ALERT" block indicating an OFAC-sanctioned or dangerous entity, you MUST include this as a "critical" risk signal. Set estimatedBaseScore to 95. No positive signals can outweigh a sanctions designation.`;
 
@@ -236,6 +242,8 @@ function buildStep2StreamingPrompt(signals: string): string {
   return `You have now gathered the evidence. Here is what you observed:
 
 ${signals}
+
+Use only supplied evidence. Preserve uncertainty and coverage limitations. Zero native value and ordinary gas are not positives. Empty positives are valid. Historical labels are retrospective context, not technical confirmation of an exploit. Do not invent transfers, token decimals, losses, source audits or public selector searches.
 
 CRITICAL FORMATTING INSTRUCTIONS — follow this EXACTLY:
 
@@ -508,15 +516,21 @@ function buildTransactionContext(
     ? `Transaction Hash: ${tx.hash}
 From: ${tx.from}
 To: ${tx.to ?? "contract creation"}
-Value transferred: ${hexWeiToEth(tx.value)} ETH (raw hex: ${tx.value})
+Top-level native value: ${hexWeiToEth(tx.value)} (raw hex: ${tx.value}); not a safety indicator
 Gas Used: ${tx.gasUsed ?? "unknown"}
 Gas Price: ${tx.gasPrice}
-Method ID: ${tx.methodId ?? "0x (plain ETH transfer)"}
-Method Name: ${methodName ?? (tx.methodId ? "unknown method" : "plain ETH transfer — no calldata")}
-Calldata (first 300 chars): ${tx.input && tx.input !== "0x" ? tx.input.substring(0, 300) : "none (plain ETH transfer)"}
+Method ID: ${tx.methodId ?? "0x (no selector)"}
+Method Name (local selector registry only, no public lookup): ${methodName ?? (tx.methodId ? "unknown method" : "no calldata")}
+Calldata (first 300 chars): ${tx.input && tx.input !== "0x" ? tx.input.substring(0, 300) : "none"}
 Block: ${tx.blockNumber}
 Status: ${tx.status === "0x1" ? "Success ✓" : tx.status === "0x0" ? "Failed ✗" : "Pending/Unknown"}
-Network: ${network}`
+Network: ${network}
+Destination source verification: ${tx.destinationVerification ?? "unknown"} (destination only; not spender/proxy verification)
+Destination bytecode at transaction block: ${tx.destinationHasCode === true ? "present" : tx.destinationHasCode === false ? "absent; source verification not applicable" : "unknown"}
+Receipt event evidence: ${JSON.stringify(tx.receiptEvidence ?? { status: "unavailable", complete: false, transfers: [] })}
+Coverage: complete refers only to bounded Transfer-shaped event decoding, not complete asset movement. Events can be emitted by arbitrary contracts; raw amounts have no inferred decimals. NFT token IDs are not amounts. Other event types are not decoded. No balance deltas or net losses are established.
+Internal call traces: not collected. Internal native transfers and full call paths are unknown.
+Curated historical context: ${tx.historicalExample ? JSON.stringify(tx.historicalExample) : "none"}`
     : `Transaction not found on network "${network}".
 Hash: ${rawInput}
 This usually means the wrong network was selected, the transaction is very recent/pending, or the hash is incorrect.`;
@@ -529,9 +543,10 @@ This usually means the wrong network was selected, the transaction is very recen
 
   const approvalContext = approvalInfo
     ? `\n── APPROVAL DETECTED ──\nApproval type: ${approvalInfo.approvalType}
-Spender: ${approvalInfo.spender}${approvalInfo.spenderEntity ? ` = ${approvalInfo.spenderEntity.name} (${approvalInfo.spenderEntity.trustLevel})` : " (unknown / unverified contract)"}
-Amount: ${approvalInfo.amountFormatted}${approvalInfo.isUnlimited ? " — UNLIMITED (spender can drain ALL tokens of this type)" : ""}
-${approvalInfo.isRevoke ? "Note: this is a REVOKE — it removes a previously granted permission (a positive action)." : ""}\n`
+Spender: ${approvalInfo.spender}${approvalInfo.spenderEntity ? ` = ${approvalInfo.spenderEntity.name} (${approvalInfo.spenderEntity.trustLevel})` : " (not in local entity registry; source verification unknown)"}
+Amount: ${approvalInfo.amountFormatted}${approvalInfo.isUnlimited ? " — large raw calldata value; ERC20/NFT semantics and executed allowance are unknown" : ""}
+Approval semantics: attempted calldata intent only, not confirmed allowance state. ERC20/NFT semantics and decimals are not established by the selector. Failed/pending calls do not grant or revoke permission.
+${approvalInfo.isRevoke ? "Note: approve with zero may attempt a revoke; no post-transaction allowance state was checked." : ""}\n`
     : "";
 
   const notFoundHint = !tx
@@ -548,8 +563,8 @@ function buildContractContext(
   knownEntity?: KnownEntity | null,
 ): { contextBlock: string; step1Extra: string } {
   const contractContext = `Contract Address: ${contract.address}
-Contract Name: ${contract.contractName ?? "Unknown (source not verified)"}
-Verified on Etherscan: ${contract.isVerified ? "Yes — source code publicly available" : "No — source code is not available, behaviour cannot be confirmed"}
+Contract Name: ${contract.contractName ?? "Unknown"}
+Verified on Etherscan: ${contract.isVerified ? "Yes — source verification metadata available (not a security audit)" : contract.verificationStatus === "unverified" ? "Explicitly unverified according to explorer" : "Unknown — lookup unavailable or invalid; do not claim unverified source"}
 Token Name: ${contract.tokenName ?? "N/A"}
 Token Symbol: ${contract.tokenSymbol ?? "N/A"}
 Total Supply: ${contract.totalSupply ?? "N/A"}
@@ -565,7 +580,7 @@ Network: ${network}`;
     : "";
 
   const step1Extra = `\n── FOCUS AREAS FOR CONTRACT ANALYSIS ──
-Look specifically for: honeypot indicators (hidden _blacklist, _isExcluded, enableTrading gate, sell restrictions beyond standard tax), rug pull risks (unrestricted owner mint, transferable ownership without timelock, selfdestruct), phishing/impersonation contracts (misleading names claiming to be official airdrop/reward/claim contracts), proxy upgrade risks (unaudited upgradeability), and any positive signals (verified source, reputable deployer, standard audited token patterns).`;
+Only metadata is supplied here, not source-code bodies, execution traces or a security audit. Do not claim hidden blacklist logic, sell restrictions, unrestricted minting, confirmed compiler bugs or audited standard patterns from metadata alone. A failed token lookup means unknown token status, not inconsistent ERC20 metadata. Verification alone does not establish safety.`;
 
   const contextBlock = `── CONTRACT DATA ──\n${contractContext}\n${entityContext}`;
   return { contextBlock, step1Extra };

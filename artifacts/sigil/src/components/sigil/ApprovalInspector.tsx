@@ -64,10 +64,10 @@ export function ApprovalInspector({ info }: { info: ApprovalInfo }) {
     : <ShieldOff className="w-5 h-5 text-primary" />;
 
   const title = isRevoke
-    ? "Approval Revoke Detected"
+    ? "Zero-Value Approval Intent"
     : isUnlimited
-    ? "Unlimited Token Approval Detected"
-    : "Token Approval Detected";
+    ? "Large-Value Approval Intent"
+    : "Approval Calldata Detected";
 
   return (
     <div className={`rounded-3xl border ${scheme.bg} ${scheme.border} shadow-xl ${scheme.glow} overflow-hidden`}>
@@ -83,7 +83,7 @@ export function ApprovalInspector({ info }: { info: ApprovalInfo }) {
       <div className="px-8 py-6 space-y-6">
 
         {/* ── Dollar Value Banner — shown when we have a price ── */}
-        {!isRevoke && info.tokenPriceUsd && (
+        {!isRevoke && info.tokenPriceUsd && info.approvalUsdLabel && (
           <div className={`flex items-center gap-4 rounded-2xl px-5 py-4 border ${
             isUnlimited && !knownSpender
               ? "bg-red-500/6 border-red-500/20"
@@ -104,7 +104,7 @@ export function ApprovalInspector({ info }: { info: ApprovalInfo }) {
                   <p className={`text-sm font-display font-bold ${
                     !knownSpender ? "text-red-300" : "text-amber-300"
                   }`}>
-                    Granting access to your <span className="underline decoration-dotted">entire balance</span>
+                    Broad token access may be requested
                   </p>
                   <p className="text-xs text-white/40 mt-0.5 font-mono">
                     Token currently trading at{' '}
@@ -137,21 +137,21 @@ export function ApprovalInspector({ info }: { info: ApprovalInfo }) {
           {isRevoke ? (
             <div className="flex items-center gap-2">
               <span className="px-4 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 font-mono font-bold text-sm">
-                0 — Permission Revoked ✓
+                0 — Revoke not confirmed
               </span>
             </div>
           ) : isUnlimited ? (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 font-mono font-bold text-sm">
-                <Infinity className="w-4 h-4" /> UNLIMITED
+                <Infinity className="w-4 h-4" /> LARGE RAW VALUE
               </span>
               <span className="text-xs text-muted-foreground">
-                This spender can move <strong className="text-white">all tokens of this type</strong> from your wallet
+                ERC20 allowance or NFT token ID; executed permission not checked
               </span>
             </div>
           ) : (
             <span className="px-4 py-1.5 rounded-xl bg-white/8 border border-white/15 text-white font-mono font-semibold text-sm">
-              {info.amountFormatted} tokens
+              {info.amountFormatted}
             </span>
           )}
         </div>
@@ -210,7 +210,7 @@ export function ApprovalInspector({ info }: { info: ApprovalInfo }) {
           <div className="flex items-start gap-3 bg-emerald-500/8 border border-emerald-500/20 rounded-2xl px-5 py-4">
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
             <p className="text-sm text-emerald-200 leading-relaxed">
-              This transaction <strong>removes</strong> a previously granted approval. Revoking is a safe and recommended practice — it limits exposure if the spender is ever compromised.
+              The calldata contains a zero-value approval. This may attempt a revoke, but token semantics and the resulting allowance were not checked. A failed or pending call does not confirm removal.
             </p>
           </div>
         )}
@@ -225,8 +225,8 @@ export function ApprovalInspector({ info }: { info: ApprovalInfo }) {
             <AlertTriangle className={`w-5 h-5 shrink-0 mt-0.5 ${!knownSpender ? "text-red-400" : "text-amber-400"}`} />
             <p className={`text-sm leading-relaxed ${!knownSpender ? "text-red-200" : "text-amber-200"}`}>
               {knownSpender
-                ? <><JargonText text={`You are granting ${knownSpender.name} unlimited approval to spend this token. This is common for DEX interactions but consider approving only what you need.`} /></>
-                : <><JargonText text="You are granting an unknown contract unlimited approval to spend this token from your wallet. If this contract is malicious, it can drain your entire balance at any time." /></>
+                ? <><JargonText text={`The calldata requests a large raw value for ${knownSpender.name}. An executed ERC20 approval may grant broad access, but NFT token IDs and failed or pending calls have different meanings.`} /></>
+                : <><JargonText text="The requested spender is not in Sigil's local registry. A large raw value may represent broad ERC20 approval or an NFT token ID; executed permission and source verification are not established." /></>
               }
             </p>
           </div>

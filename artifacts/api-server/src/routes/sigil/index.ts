@@ -11,6 +11,9 @@ import {
   decodeMethodId,
   decodeApprovalCalldata,
   formatApprovalAmount,
+  isSupportedNetwork,
+  verifiedEvidence,
+  transactionEvidenceDetails,
 } from "./ethereum.js";
 import {
   AIAnalysisOutputError,
@@ -63,6 +66,10 @@ router.post("/analyze", async (req, res) => {
     return;
   }
   const inputType = detectInputType(trimmed);
+  if (!isSupportedNetwork(network)) {
+    res.status(400).json({ error: "unsupported_network", message: "Select a supported network" });
+    return;
+  }
   const key = cacheKey(trimmed, network);
 
   // ── Cache hit — return instantly without any API / AI calls ───────────────
@@ -147,6 +154,10 @@ router.post("/analyze", async (req, res) => {
         };
       }
 
+      Object.assign(details, transactionEvidenceDetails(tx));
+      Object.assign(details.rawData as Record<string, unknown>, { receiptEvidence: tx?.receiptEvidence, historicalExample: tx?.historicalExample });
+      isVerified = tx?.destinationVerification === "verified" ? true : tx?.destinationVerification === "unverified" ? false : undefined;
+
       // Fetch AI analysis and token price in parallel (price only needed for approvals)
       const pricePromise = (approval && tx?.to)
         ? fetchTokenPrice(tx.to, network)
@@ -160,11 +171,11 @@ router.post("/analyze", async (req, res) => {
 
       // Enrich approvalInfo with USD value now that both have resolved
       if (priceResult && approvalInfo) {
-        const usd = computeApprovalUsdValue(
+        const usd = approvalInfo.isUnlimited ? computeApprovalUsdValue(
           approvalInfo.amountFormatted,
           approvalInfo.isUnlimited ?? false,
           priceResult.priceUsd,
-        );
+        ) : null;
         approvalInfo = {
           ...approvalInfo,
           tokenPriceUsd: priceResult.priceUsd,
@@ -194,7 +205,7 @@ router.post("/analyze", async (req, res) => {
         calculateContractReputation(
           trimmed,
           network,
-          contract.isVerified,
+          verifiedEvidence(contract),
           contract.isToken ?? false,
           knownEntity,
         ),
@@ -209,11 +220,12 @@ router.post("/analyze", async (req, res) => {
       });
       patterns = mergePatterns(staticContractPatterns, contractAiResult.aiPatterns ?? []);
 
-      isVerified = contract.isVerified;
+      isVerified = verifiedEvidence(contract);
       details = {
         contractName: contract.contractName,
         tokenSymbol: contract.tokenSymbol,
-        isVerified: contract.isVerified,
+        isVerified: verifiedEvidence(contract),
+        sourceVerification: contract.verificationStatus,
         ...(knownEntity ? { protocol: knownEntity.name } : {}),
         rawData: {
           isToken: contract.isToken,
@@ -321,6 +333,10 @@ router.post("/analyze-stream", async (req, res) => {
   const key = cacheKey(trimmed, network);
 
   try {
+    if (!isSupportedNetwork(network)) {
+      res.status(400).json({ error: "unsupported_network", message: "Select a supported network" });
+      return;
+    }
     await ensureAnalysesSchema();
   } catch (err) {
     req.log.error({ err }, "Analysis schema check failed");
@@ -366,7 +382,9 @@ router.post("/analyze-stream", async (req, res) => {
     let isVerified: boolean | undefined = undefined;
 
     // Emit events from the AI analyser in real-time
-    const onEvent = (event: StreamEvent) => send(event as unknown as Record<string, unknown>);
+    const onEvent = (event: StreamEvent) => send(event.type === "result"
+      ? { ...event, result: { ...event.result, details } }
+      : event as unknown as Record<string, unknown>);
 
     if (inputType === "transaction") {
       stage = "fetch_transaction";
@@ -426,6 +444,10 @@ router.post("/analyze-stream", async (req, res) => {
         };
       }
 
+      Object.assign(details, transactionEvidenceDetails(tx));
+      Object.assign(details.rawData as Record<string, unknown>, { receiptEvidence: tx?.receiptEvidence, historicalExample: tx?.historicalExample });
+      isVerified = tx?.destinationVerification === "verified" ? true : tx?.destinationVerification === "unverified" ? false : undefined;
+
       // Fetch price in parallel while AI streams
       const pricePromise = approval && tx?.to ? fetchTokenPrice(tx.to, network) : Promise.resolve(null);
 
@@ -436,11 +458,11 @@ router.post("/analyze-stream", async (req, res) => {
       ]);
 
       if (priceResult && approvalInfo) {
-        const usd = computeApprovalUsdValue(
+        const usd = approvalInfo.isUnlimited ? computeApprovalUsdValue(
           approvalInfo.amountFormatted,
           approvalInfo.isUnlimited ?? false,
           priceResult.priceUsd,
-        );
+        ) : null;
         approvalInfo = {
           ...approvalInfo,
           tokenPriceUsd: priceResult.priceUsd,
@@ -530,23 +552,23 @@ router.post("/analyze-stream", async (req, res) => {
       const contract = await fetchContract(trimmed, network);
 
       stage = "ai_contract";
+      details = {
+        contractName: contract.contractName,
+        tokenSymbol: contract.tokenSymbol,
+        isVerified: verifiedEvidence(contract),
+        sourceVerification: contract.verificationStatus,
+        ...(knownEntity ? { protocol: knownEntity.name } : {}),
+        rawData: { isToken: contract.isToken, tokenName: contract.tokenName, totalSupply: contract.totalSupply },
+      };
       const [aiResult, contractReputation] = await Promise.all([
         analyzeContractStreaming(contract, network, onEvent, knownEntity),
-        calculateContractReputation(trimmed, network, contract.isVerified, contract.isToken ?? false, knownEntity),
+        calculateContractReputation(trimmed, network, verifiedEvidence(contract), contract.isToken ?? false, knownEntity),
       ]);
       reputation = contractReputation;
 
       const staticContractPatterns = detectPatterns({ contract, knownEntity });
       patterns = mergePatterns(staticContractPatterns, aiResult.aiPatterns ?? []);
-      isVerified = contract.isVerified;
-
-      details = {
-        contractName: contract.contractName,
-        tokenSymbol: contract.tokenSymbol,
-        isVerified: contract.isVerified,
-        ...(knownEntity ? { protocol: knownEntity.name } : {}),
-        rawData: { isToken: contract.isToken, tokenName: contract.tokenName, totalSupply: contract.totalSupply },
-      };
+      isVerified = verifiedEvidence(contract);
 
       const scoreFactors = computeScoreFactors({
         inputType: inputType as "transaction" | "contract" | "unknown",

@@ -153,7 +153,7 @@ async function fetchReputationData(address: string, network: string): Promise<{
 export async function calculateContractReputation(
   address: string,
   network: string,
-  isVerified: boolean,
+  isVerified: boolean | undefined,
   isToken: boolean,
   knownEntity: KnownEntity | null | undefined,
 ): Promise<ContractReputation> {
@@ -172,7 +172,7 @@ export async function calculateContractReputation(
       exploitInfo,
       factors: [
         { name: "Security History", earned: 0, max: 25, label: `Known exploit: ${exploitInfo.name}`, verdict: "negative" },
-        { name: "Verification", earned: isVerified ? 25 : 0, max: 25, label: isVerified ? "Source code verified" : "Unverified contract", verdict: isVerified ? "positive" : "negative" },
+        { name: "Verification", earned: isVerified ? 25 : 0, max: 25, label: isVerified ? "Source code verified" : isVerified === false ? "Unverified contract" : "Source verification unknown", verdict: isVerified ? "positive" : isVerified === false ? "negative" : "neutral" },
         { name: "Age", earned: 0, max: 30, label: "Exploit history overrides age score", verdict: "negative" },
         { name: "Activity", earned: 0, max: 20, label: "Flagged — do not interact", verdict: "negative" },
       ],
@@ -234,8 +234,8 @@ export async function calculateContractReputation(
     max: 25,
     label: isVerified
       ? "Source code verified and publicly auditable"
-      : "Source code NOT verified — cannot inspect the code",
-    verdict: isVerified ? "positive" : "negative",
+      : isVerified === false ? "Source code NOT verified — cannot inspect the code" : "Source verification unknown — lookup unavailable",
+    verdict: isVerified ? "positive" : isVerified === false ? "negative" : "neutral",
   });
 
   // ── Factor 3: Transaction Activity (0-20 pts) ─────────────────────────────
@@ -343,17 +343,17 @@ export async function calculateContractReputation(
 
   let summary = "";
   if (knownEntity?.trustLevel === "trusted") {
-    summary = `This is ${knownEntity.name}, one of the most trusted protocols in DeFi${repData.deployedAt ? `, deployed ${agePart}` : ""}. Its source code is public and audited.`;
+    summary = `This is ${knownEntity.name}, a recognized protocol in the local registry${repData.deployedAt ? `, deployed ${agePart}` : ""}. Registry recognition is not a source-code audit.`;
   } else if (score >= 80) {
-    summary = `This contract has a strong trust record — it is ${agePart}, source-verified, and has significant on-chain activity.`;
+    summary = `This contract has strong trust signals: ${agePart}, ${isVerified ? "source-verified" : isVerified === false ? "source unverified" : "verification unknown"}, with on-chain activity.`;
   } else if (score >= 60) {
-    summary = `This contract has a reasonable track record. It is ${agePart}${isVerified ? " with verified source code" : " but its source code is not verified"}${txCount > 0 ? ` and has been used ${txCount >= 200 ? "many" : txCount} times` : ""}.`;
+    summary = `This contract has a reasonable track record. It is ${agePart}${isVerified ? " with verified source code" : isVerified === false ? " but its source code is not verified" : " with unknown source verification"}${txCount > 0 ? ` and has been used ${txCount >= 200 ? "many" : txCount} times` : ""}.`;
   } else if (score >= 40) {
-    summary = `This contract is ${agePart} with limited trust history. ${isVerified ? "Its source code is verified" : "Its source code is not verified"}${txCount < 10 ? " and it has almost no transaction history" : ""}.`;
+    summary = `This contract is ${agePart} with limited trust history. ${isVerified ? "Its source code is verified" : isVerified === false ? "Its source code is not verified" : "Its source verification is unknown"}${txCount < 10 ? " and it has almost no transaction history" : ""}.`;
   } else if (score >= 20) {
-    summary = `This contract has low trust signals — it is ${agePart}${!isVerified ? ", unverified" : ""}${txCount < 5 ? ", and has minimal transaction history" : ""}. Exercise caution.`;
+    summary = `This contract has low trust signals — it is ${agePart}${isVerified === false ? ", unverified" : isVerified === undefined ? ", verification unknown" : ""}${txCount < 5 ? ", and has minimal transaction history" : ""}. Exercise caution.`;
   } else {
-    summary = `This contract is ${agePart}${!isVerified ? ", unverified" : ""}, and has no meaningful transaction history. It is essentially unknown — treat it as high risk.`;
+    summary = `This contract is ${agePart}${isVerified === false ? ", unverified" : isVerified === undefined ? ", verification unknown" : ""}, and has no meaningful transaction history. It is essentially unknown — treat it as high risk.`;
   }
 
   return {

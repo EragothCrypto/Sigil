@@ -12,12 +12,35 @@ function loadAnalyzer(create = async () => { throw new Error("unexpected AI call
   const context = vm.createContext({
     openai: { chat: { completions: { create } } },
     getSigilAiModel: () => model,
+    hexWeiToEth: () => "0 ETH",
   });
   vm.runInContext(stripTypeScriptTypes(source), context);
   return context;
 }
 
 const verdict = { summary: "Public contract analysis.", verdict: "caution", verdictReason: "Caution: review permissions", riskScore: 40, warnings: ["Review permissions"], positives: [] };
+
+test("AI contexts explicitly disclose evidence gaps and neutral native value", () => {
+  const api = loadAnalyzer();
+  const context = api.buildTransactionContext({ hash: '0xhash', from: 'sender', to: 'target', value: '0x0', input: '0x12345678', methodId: '0x12345678', blockNumber: '1', gasPrice: '0x1', destinationVerification: 'unknown', receiptEvidence: { status: 'unavailable', complete: false, transfers: [] } }, null, 'mainnet', 'hash').contextBlock;
+  assert.match(context, /Destination source verification: unknown/);
+  assert.match(context, /not a safety indicator/);
+  assert.match(context, /local selector registry only/);
+  assert.match(context, /Internal call traces: not collected/);
+  const contract = api.buildContractContext({ address: 'address', isVerified: false, verificationStatus: 'unknown' }, 'mainnet');
+  assert.match(contract.contextBlock, /Unknown.*lookup/i);
+  assert.doesNotMatch(contract.contextBlock, /No — source code is not available/);
+});
+
+test("failed and pending NFT-compatible approvals never assert unlimited spending access", () => {
+  const api = loadAnalyzer();
+  for (const status of ['0x0', undefined]) {
+    const context = api.buildTransactionContext({ hash: 'hash', from: 'sender', to: 'target', value: '0x0', input: '0x095ea7b3', methodId: '0x095ea7b3', blockNumber: 'pending', gasPrice: '0x1', status }, 'approve(address,uint256)', 'mainnet', 'hash', null, { isRevoke: false, isUnlimited: true, amountFormatted: 'large raw value', spender: 'spender', approvalType: 'approve' }).contextBlock;
+    assert.doesNotMatch(context, /spender can drain ALL|unknown \/ unverified contract/);
+    assert.match(context, /ERC20\/NFT semantics and executed allowance are unknown/);
+    assert.match(context, /Failed\/pending calls do not grant or revoke permission/);
+  }
+});
 
 test("malformed and incomplete AI verdicts fail instead of inventing a score", () => {
   const api = loadAnalyzer();

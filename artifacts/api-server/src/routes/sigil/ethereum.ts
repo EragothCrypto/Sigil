@@ -1,5 +1,6 @@
 import { logger } from "../../lib/logger.js";
 import { getEtherscanApiKey } from "./etherscan-api.js";
+import { summarizeReceipt, readContractMetadata, historicalExample, type ReceiptEvidence } from "./transaction-evidence.js";
 
 export function isTransactionHash(input: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/.test(input);
@@ -29,6 +30,10 @@ export interface TransactionData {
   blockNumber: string;
   status?: string;
   methodId?: string;
+  receiptEvidence?: ReceiptEvidence;
+  destinationVerification?: ContractData["verificationStatus"];
+  destinationHasCode?: boolean;
+  historicalExample?: ReturnType<typeof historicalExample>;
 }
 
 export interface ContractData {
@@ -37,6 +42,7 @@ export interface ContractData {
   compilerVersion?: string;
   abi?: string;
   isVerified: boolean;
+  verificationStatus?: "verified" | "unverified" | "unknown";
   tokenName?: string;
   tokenSymbol?: string;
   totalSupply?: string;
@@ -77,8 +83,29 @@ const PUBLIC_RPC: Record<string, string[]> = {
   sepolia:  ["https://ethereum-sepolia.publicnode.com"],
 };
 
+export function isSupportedNetwork(network: string): boolean {
+  return Object.hasOwn(PUBLIC_RPC, network);
+}
+
+export function verifiedEvidence(contract: ContractData): boolean | undefined {
+  return contract.verificationStatus === "unknown" ? undefined : contract.isVerified;
+}
+
+export function transactionEvidenceDetails(tx: TransactionData | null): Record<string, unknown> {
+  return {
+    sourceVerification: tx?.destinationVerification ?? "unknown",
+    destinationCode: tx?.destinationHasCode === true ? "present at transaction block"
+      : tx?.destinationHasCode === false ? "absent at transaction block; source verification not applicable" : "lookup unavailable",
+    transferCoverage: tx?.receiptEvidence?.status === "available"
+      ? `${tx.receiptEvidence.transfers.length} Transfer-shaped events recorded; ${tx.receiptEvidence.complete ? "bounded event scan complete" : "partial event scan"}; internal traces not collected`
+      : `${tx?.receiptEvidence?.status ?? "unavailable"}; asset movement not established`,
+    ...(tx?.historicalExample ? { historicalContext: `${tx.historicalExample.name} (curated retrospective example, not live exploit detection)` } : {}),
+  };
+}
+
 export async function rpcCall(network: string, method: string, params: unknown[]): Promise<unknown> {
-  const endpoints = PUBLIC_RPC[network] ?? PUBLIC_RPC.mainnet;
+  const endpoints = isSupportedNetwork(network) ? PUBLIC_RPC[network] : undefined;
+  if (!endpoints) throw new Error("Unsupported network");
   let lastErr: unknown;
 
   for (const url of endpoints) {
@@ -114,13 +141,33 @@ export async function fetchTransaction(
     ]);
 
     const txData = tx.status === "fulfilled" ? (tx.value as Record<string, string> | null) : null;
-    const receiptData = receipt.status === "fulfilled"
+    let receiptData = receipt.status === "fulfilled"
       ? (receipt.value as Record<string, string> | null)
       : null;
 
-    if (!txData) {
+    if (!txData || typeof txData.hash !== "string" || txData.hash.toLowerCase() !== hash.toLowerCase()
+      || typeof txData.from !== "string" || !isContractAddress(txData.from)
+      || (txData.to != null && (typeof txData.to !== "string" || !isContractAddress(txData.to)))
+      || typeof txData.input !== "string" || !/^0x(?:[a-f0-9]{2})*$/i.test(txData.input)
+      || typeof txData.value !== "string" || !/^0x[a-f0-9]+$/i.test(txData.value)) {
       logger.warn({ network }, "Transaction not found on any RPC endpoint");
       return null;
+    }
+
+    if (!receiptData || typeof receiptData.transactionHash !== "string"
+      || receiptData.transactionHash.toLowerCase() !== hash.toLowerCase()
+      || receiptData.blockNumber !== txData.blockNumber
+      || !txData.blockHash || receiptData.blockHash !== txData.blockHash) receiptData = null;
+    let destination: ContractData | undefined;
+    let destinationHasCode: boolean | undefined;
+    if (txData.to && isContractAddress(txData.to)) {
+      const blockTag = typeof txData.blockNumber === "string" && /^0x[a-f0-9]+$/i.test(txData.blockNumber) ? txData.blockNumber : undefined;
+      const [metadata, code] = await Promise.allSettled([
+        fetchContract(txData.to, network, false),
+        blockTag ? rpcCall(network, "eth_getCode", [txData.to, blockTag]) : Promise.resolve(undefined),
+      ]);
+      if (metadata.status === "fulfilled") destination = metadata.value;
+      if (code.status === "fulfilled" && typeof code.value === "string" && /^0x(?:[a-f0-9]{2})*$/i.test(code.value)) destinationHasCode = code.value !== "0x";
     }
 
     return {
@@ -134,6 +181,10 @@ export async function fetchTransaction(
       input: txData.input ?? "0x",
       blockNumber: txData.blockNumber ?? "pending",
       status: receiptData?.status,
+      receiptEvidence: summarizeReceipt(receiptData),
+      destinationVerification: destinationHasCode === true ? destination?.verificationStatus ?? "unknown" : "unknown",
+      destinationHasCode,
+      historicalExample: historicalExample(hash, network),
       methodId: (txData.input ?? "0x").length >= 10
         ? (txData.input as string).substring(0, 10)
         : undefined,
@@ -170,7 +221,8 @@ const ETHERSCAN_CHAIN_IDS: Record<string, string> = {
 
 export async function etherscanFetch(network: string, params: Record<string, string>): Promise<unknown> {
   const apiKey = getEtherscanApiKey();
-  const chainId = ETHERSCAN_CHAIN_IDS[network] ?? "1";
+  const chainId = Object.hasOwn(ETHERSCAN_CHAIN_IDS, network) ? ETHERSCAN_CHAIN_IDS[network] : undefined;
+  if (!chainId) throw new Error("Unsupported network");
 
   // Use V2 unified API endpoint
   const url = new URL("https://api.etherscan.io/v2/api");
@@ -183,34 +235,18 @@ export async function etherscanFetch(network: string, params: Record<string, str
   return res.json();
 }
 
-export async function fetchContract(address: string, network: string): Promise<ContractData> {
-  const result: ContractData = { address, isVerified: false };
+export async function fetchContract(address: string, network: string, includeTokenInfo = true): Promise<ContractData> {
+  let result: ContractData = { address, isVerified: false, verificationStatus: "unknown" };
 
   try {
     const [sourceRes, tokenRes] = await Promise.allSettled([
       etherscanFetch(network, { module: "contract", action: "getsourcecode", address }),
-      etherscanFetch(network, { module: "account", action: "tokeninfo", contractaddress: address }),
+      includeTokenInfo ? etherscanFetch(network, { module: "account", action: "tokeninfo", contractaddress: address }) : Promise.resolve(undefined),
     ]);
 
-    if (sourceRes.status === "fulfilled") {
-      const source = (sourceRes.value as Record<string, Record<string, string>[]>)?.result?.[0];
-      if (source?.ContractName) {
-        result.contractName = source.ContractName;
-        result.compilerVersion = source.CompilerVersion;
-        result.abi = source.ABI;
-        result.isVerified = source.ABI !== "Contract source code not verified";
-      }
-    }
-
-    if (tokenRes.status === "fulfilled") {
-      const token = (tokenRes.value as Record<string, Record<string, string>[]>)?.result?.[0];
-      if (token) {
-        result.tokenName = token.tokenName;
-        result.tokenSymbol = token.symbol;
-        result.totalSupply = token.totalSupply;
-        result.isToken = true;
-      }
-    }
+    result = readContractMetadata(address,
+      sourceRes.status === "fulfilled" ? sourceRes.value : undefined,
+      tokenRes.status === "fulfilled" ? tokenRes.value : undefined);
   } catch (err) {
     logger.warn({ err, network }, "Failed to fetch contract metadata");
   }
@@ -261,7 +297,7 @@ export function decodeApprovalCalldata(calldata: string): ApprovalDecoded | null
   if (!decoded) return null;
 
   const isUnlimited = decoded.amount >= UNLIMITED_THRESHOLD;
-  const isRevoke    = decoded.amount === BigInt(0);
+  const isRevoke    = type === "approve" && decoded.amount === BigInt(0);
 
   return {
     type,
@@ -273,9 +309,10 @@ export function decodeApprovalCalldata(calldata: string): ApprovalDecoded | null
   };
 }
 
-export function formatApprovalAmount(decoded: ApprovalDecoded, tokenDecimals = 18): string {
-  if (decoded.isRevoke)    return "0 (Revoke — removes all access)";
-  if (decoded.isUnlimited) return "Unlimited (max uint256)";
+export function formatApprovalAmount(decoded: ApprovalDecoded, tokenDecimals?: number): string {
+  if (decoded.isRevoke)    return "0 (attempted revoke; allowance state not checked)";
+  if (decoded.isUnlimited) return "Unlimited-sized raw value (token semantics not established)";
+  if (tokenDecimals === undefined) return `${decoded.amountDecimal.toString()} raw units (decimals unknown)`;
   try {
     const divisor = BigInt(10 ** tokenDecimals);
     const whole   = decoded.amountDecimal / divisor;

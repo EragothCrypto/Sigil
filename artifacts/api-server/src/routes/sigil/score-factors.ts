@@ -65,27 +65,27 @@ export function computeScoreFactors(inputs: FactorInputs): ScoreFactor[] {
   if (approvalInfo?.isApproval) {
     if (approvalInfo.isRevoke) {
       factors.push({
-        label: "Approval revoke",
-        delta: -30,
-        severity: "positive",
+        label: "Zero-value approval intent",
+        delta: 0,
+        severity: "medium",
         category: "approval",
-        detail: "This transaction removes a previously granted spending permission",
+        detail: "Calldata contains zero; token semantics and post-transaction allowance state were not checked. No confirmed revoke or safety credit.",
       });
     } else if (approvalInfo.isUnlimited) {
       factors.push({
-        label: "Unlimited token approval",
+        label: "Large-value approval intent",
         delta: 40,
         severity: "critical",
         category: "approval",
-        detail: "Grants the spender the ability to take any amount of your tokens at any time",
+        detail: "Calldata contains a large raw value. If this is an executed ERC20 approval it may grant broad access; NFT token IDs and failed/pending calls differ.",
       });
     } else {
       factors.push({
-        label: "Exact-amount approval",
-        delta: -8,
-        severity: "positive",
+        label: "Bounded-value approval intent",
+        delta: 0,
+        severity: "medium",
         category: "approval",
-        detail: "Approval is limited to a specific amount — safer than unlimited",
+        detail: "Raw calldata value is below the large-value heuristic; token decimals, NFT semantics and executed permission state are unknown.",
       });
     }
 
@@ -105,7 +105,7 @@ export function computeScoreFactors(inputs: FactorInputs): ScoreFactor[] {
         delta: 25,
         severity: "high",
         category: "approval",
-        detail: "The address receiving spend permission is not a known protocol",
+        detail: "The requested spender is not in the local protocol registry; granted permission is not established",
       });
     }
   }
