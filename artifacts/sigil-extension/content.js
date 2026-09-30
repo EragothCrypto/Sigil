@@ -276,6 +276,7 @@
     const { observationId, method, target } = eventDetail;
     const url = window.location.href;
     const settings = await loadSettings();
+    if (activeRequest !== eventDetail) return;
     const input = core.getAnalysisInput(target);
     const localResult = core.localPreScreen({ method, target, url, settings });
 
@@ -296,7 +297,7 @@
 
     try {
       const apiResult = await callSigilApi(settings, input);
-      if (activeRequest?.observationId !== observationId) return;
+      if (activeRequest !== eventDetail) return;
       const analysisPath = apiResult.id ? `/analysis/${encodeURIComponent(apiResult.id)}` : `/?q=${encodeURIComponent(input?.value || "")}`;
       const fullUrl = `${settings.apiUrl}${analysisPath}`;
       const result = { ...localResult, ...apiResult };
@@ -304,7 +305,7 @@
       activeRequest.sessionPayload = { method, url, target, input, result };
       await saveHistory(core.createHistoryEntry({ method, url, input, result }), settings);
     } catch (error) {
-      if (activeRequest?.observationId !== observationId) return;
+      if (activeRequest !== eventDetail) return;
       const fallback = {
         ...localResult,
         verdict: localResult.verdict === "safe" ? "caution" : localResult.verdict,

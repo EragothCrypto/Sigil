@@ -419,6 +419,45 @@ test("rejects non-plain typed-data arrays and normalizes accepted arrays without
   assert.equal(Object.getPrototypeOf(accepted.observation.target.data), null);
 });
 
+test("rejects reentrant observations before admission state can be bypassed", () => {
+  const gate = core.createObservationGate({ now: () => 1_000_000 });
+  const nestedResults = [];
+  let attempted = false;
+  const proxied = new Proxy(observation(), {
+    getPrototypeOf(target) {
+      if (!attempted) {
+        attempted = true;
+        nestedResults.push(gate.accept(observation({ observationId: uuidFor(99) })));
+      }
+      return Reflect.getPrototypeOf(target);
+    },
+  });
+
+  assert.equal(gate.accept(proxied).accepted, true);
+  assert.equal(nestedResults.length, 1);
+  assert.equal(nestedResults[0].accepted, false);
+  assert.equal(nestedResults[0].reason, "reentrant");
+});
+
+test("rejects numeric-looking array properties that are not canonical indexes", () => {
+  let getterCalled = false;
+  const data = [];
+  Object.defineProperty(data, "4294967295", {
+    enumerable: true,
+    get() {
+      getterCalled = true;
+      throw new Error("must not run");
+    },
+  });
+
+  const result = accepts(observation({
+    method: "eth_signTypedData_v1",
+    target: { type: "typed_data", data, from: FROM },
+  }));
+  assert.equal(result.accepted, false);
+  assert.equal(getterCalled, false);
+});
+
 function nestedObject(depth) {
   let value = "leaf";
   for (let index = 0; index < depth; index += 1) value = { child: value };

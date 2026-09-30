@@ -25,8 +25,11 @@ function observation(index = 0, overrides = {}) {
 
 function createHarness({ holdStorage = false, requiresApi = false } = {}) {
   const listeners = new Map();
+  const nodeListeners = new Map();
   let storageHeld = holdStorage;
   const pendingStorage = [];
+  const pendingFetches = [];
+  let current = 1_000_000;
   const effects = {
     storageReads: 0,
     storageWrites: 0,
@@ -36,7 +39,6 @@ function createHarness({ holdStorage = false, requiresApi = false } = {}) {
     decisions: 0,
     processed: 0,
   };
-  let resolveFetch;
   const storageArea = {
     get(defaults, callback) {
       effects.storageReads += 1;
@@ -54,7 +56,7 @@ function createHarness({ holdStorage = false, requiresApi = false } = {}) {
     location: { href: "https://example.test/app" },
     SigilExtensionCore: {
       ...realCore,
-      createObservationGate: () => realCore.createObservationGate({ now: () => 1_000_000 }),
+      createObservationGate: () => realCore.createObservationGate({ now: () => current }),
       normalizeSettings: (value) => value,
       getAnalysisInput: () => ({ kind: "simulation", value: "hello" }),
       localPreScreen: () => {
@@ -85,7 +87,9 @@ function createHarness({ holdStorage = false, requiresApi = false } = {}) {
   const createNode = (id = "") => ({
     id,
     classList: { add() {}, remove() {} },
-    addEventListener() {},
+    addEventListener(name, listener) {
+      nodeListeners.set(`${id}:${name}`, listener);
+    },
     remove() {},
     set innerHTML(_value) {
       if (id === "content") effects.renders += 1;
@@ -122,13 +126,13 @@ function createHarness({ holdStorage = false, requiresApi = false } = {}) {
     chrome: { storage: { local: storageArea, sync: storageArea } },
     fetch: () => {
       effects.fetches += 1;
-      return new Promise((resolve) => { resolveFetch = resolve; });
+      return new Promise((resolve) => { pendingFetches.push(resolve); });
     },
     URL,
     CustomEvent: class CustomEvent {
       constructor(type, init) { this.type = type; this.detail = init?.detail; }
     },
-    Date: class extends Date { static now() { return 1_000_000; } },
+    Date: class extends Date { static now() { return current; } },
     Math,
     setTimeout: () => 0,
     clearTimeout: () => {},
@@ -144,12 +148,19 @@ function createHarness({ holdStorage = false, requiresApi = false } = {}) {
     reset() {
       for (const key of Object.keys(effects)) effects[key] = 0;
     },
-    resolveFetch(payload = { id: "analysis-id", verdict: "safe", warnings: [] }) {
-      resolveFetch?.({ ok: true, json: async () => payload });
+    resolveFetch(index = 0, payload = { id: "analysis-id", verdict: "safe", warnings: [] }) {
+      const resolve = pendingFetches[index];
+      if (resolve) resolve({ ok: true, json: async () => payload });
     },
     releaseStorage() {
       storageHeld = false;
       while (pendingStorage.length > 0) pendingStorage.shift()();
+    },
+    advanceTime(milliseconds) {
+      current += milliseconds;
+    },
+    click(id) {
+      nodeListeners.get(`${id}:click`)?.();
     },
   };
 }
@@ -233,12 +244,31 @@ test("matching observation id allows a deferred API result to update the active 
   assert.equal(harness.effects.fetches, 1);
   assert.equal(harness.effects.renders, 1);
 
-  harness.resolveFetch();
+  harness.resolveFetch(0);
   await new Promise((resolve) => setImmediate(resolve));
   await new Promise((resolve) => setImmediate(resolve));
 
   assert.equal(harness.effects.renders, 2);
   assert.ok(harness.effects.storageWrites > 0);
+});
+
+test("an old async result cannot update a newer observation that reuses the same id", async () => {
+  const harness = createHarness({ requiresApi: true });
+  harness.dispatch(observation());
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(harness.effects.renders, 1);
+
+  harness.click("proceedBtn");
+  harness.advanceTime(realCore.OBSERVATION_LIMITS.seenTtlMs);
+  harness.dispatch(observation(0, { observedAt: 1_000_000 + realCore.OBSERVATION_LIMITS.seenTtlMs }));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(harness.effects.renders, 2);
+  assert.equal(harness.effects.fetches, 2);
+
+  harness.resolveFetch(0, { id: "stale-analysis", verdict: "safe", warnings: [] });
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(harness.effects.renders, 2);
 });
 
 test("source gates observations before queueing and never queues raw event detail", () => {

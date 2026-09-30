@@ -126,7 +126,13 @@
       if (value.length > 128) throw new TypeError("Observation array limit exceeded");
       const descriptors = Object.getOwnPropertyDescriptors(value);
       const keys = Reflect.ownKeys(descriptors);
-      if (keys.some((key) => typeof key !== "string" || (key !== "length" && !ARRAY_INDEX_PATTERN.test(key)))) {
+      if (keys.length !== value.length + 1 || keys.some((key) => {
+        if (typeof key !== "string") return true;
+        if (key === "length") return false;
+        if (!ARRAY_INDEX_PATTERN.test(key)) return true;
+        const index = Number(key);
+        return !Number.isSafeInteger(index) || index >= value.length || String(index) !== key;
+      })) {
         throw new TypeError("Unsupported observation array key");
       }
       const copy = [];
@@ -195,6 +201,7 @@
     const configuredLimits = Object.freeze({ ...OBSERVATION_LIMITS, ...limits });
     const seen = new Map();
     let acceptedAt = [];
+    let accepting = false;
 
     function reject(reason) {
       return { accepted: false, reason, observation: null };
@@ -202,61 +209,67 @@
 
     return {
       accept(detail, { queueLength = 0 } = {}) {
-        const current = Number(now());
-        if (!Number.isFinite(current)) return reject("invalid_clock");
-
-        for (const [id, timestamp] of seen) {
-          if (current - timestamp >= configuredLimits.seenTtlMs) seen.delete(id);
-        }
-        acceptedAt = acceptedAt.filter((timestamp) => current - timestamp < configuredLimits.rateWindowMs);
-
-        if (queueLength >= configuredLimits.maxQueued) return reject("queue_full");
-        if (acceptedAt.length >= configuredLimits.maxAcceptedPerWindow) return reject("rate_limited");
-
-        let descriptors;
+        if (accepting) return reject("reentrant");
+        accepting = true;
         try {
-          descriptors = readExactDataProperties(detail, OBSERVATION_KEYS);
-        } catch (_error) {
-          return reject("malformed");
+          const current = Number(now());
+          if (!Number.isFinite(current)) return reject("invalid_clock");
+
+          for (const [id, timestamp] of seen) {
+            if (current - timestamp >= configuredLimits.seenTtlMs) seen.delete(id);
+          }
+          acceptedAt = acceptedAt.filter((timestamp) => current - timestamp < configuredLimits.rateWindowMs);
+
+          if (queueLength >= configuredLimits.maxQueued) return reject("queue_full");
+          if (acceptedAt.length >= configuredLimits.maxAcceptedPerWindow) return reject("rate_limited");
+
+          let descriptors;
+          try {
+            descriptors = readExactDataProperties(detail, OBSERVATION_KEYS);
+          } catch (_error) {
+            return reject("malformed");
+          }
+          if (!descriptors) return reject("malformed");
+
+          const version = descriptors.version.value;
+          const observationId = descriptors.observationId.value;
+          const method = descriptors.method.value;
+          const observedAt = descriptors.observedAt.value;
+          if (version !== 1) return reject("version");
+          if (typeof observationId !== "string" || !UUID_V4_PATTERN.test(observationId)) return reject("observation_id");
+          if (typeof method !== "string" || !SIGN_METHODS.has(method)) return reject("method");
+          if (!Number.isFinite(observedAt) || !Number.isInteger(observedAt)) return reject("observed_at");
+          if (current - observedAt > configuredLimits.maxAgeMs) return reject("stale");
+          if (observedAt - current > configuredLimits.maxFutureSkewMs) return reject("future");
+          if (seen.has(observationId)) return reject("duplicate");
+
+          let target;
+          try {
+            target = cloneJsonValue(descriptors.target.value, { nodes: 0, seen: new WeakSet() }, 0);
+          } catch (_error) {
+            return reject("target");
+          }
+          if (!targetMatchesMethod(method, target)) return reject("target");
+
+          const observation = Object.create(null);
+          observation.version = version;
+          observation.observationId = observationId;
+          observation.method = method;
+          observation.observedAt = observedAt;
+          observation.target = target;
+          try {
+            if (serializedBytes(observation) > configuredLimits.maxSerializedTargetBytes) return reject("serialized_size");
+          } catch (_error) {
+            return reject("serialized_size");
+          }
+
+          seen.set(observationId, current);
+          while (seen.size > configuredLimits.maxSeenIds) seen.delete(seen.keys().next().value);
+          acceptedAt.push(current);
+          return { accepted: true, reason: "accepted", observation };
+        } finally {
+          accepting = false;
         }
-        if (!descriptors) return reject("malformed");
-
-        const version = descriptors.version.value;
-        const observationId = descriptors.observationId.value;
-        const method = descriptors.method.value;
-        const observedAt = descriptors.observedAt.value;
-        if (version !== 1) return reject("version");
-        if (typeof observationId !== "string" || !UUID_V4_PATTERN.test(observationId)) return reject("observation_id");
-        if (typeof method !== "string" || !SIGN_METHODS.has(method)) return reject("method");
-        if (!Number.isFinite(observedAt) || !Number.isInteger(observedAt)) return reject("observed_at");
-        if (current - observedAt > configuredLimits.maxAgeMs) return reject("stale");
-        if (observedAt - current > configuredLimits.maxFutureSkewMs) return reject("future");
-        if (seen.has(observationId)) return reject("duplicate");
-
-        let target;
-        try {
-          target = cloneJsonValue(descriptors.target.value, { nodes: 0, seen: new WeakSet() }, 0);
-        } catch (_error) {
-          return reject("target");
-        }
-        if (!targetMatchesMethod(method, target)) return reject("target");
-
-        const observation = Object.create(null);
-        observation.version = version;
-        observation.observationId = observationId;
-        observation.method = method;
-        observation.observedAt = observedAt;
-        observation.target = target;
-        try {
-          if (serializedBytes(observation) > configuredLimits.maxSerializedTargetBytes) return reject("serialized_size");
-        } catch (_error) {
-          return reject("serialized_size");
-        }
-
-        seen.set(observationId, current);
-        while (seen.size > configuredLimits.maxSeenIds) seen.delete(seen.keys().next().value);
-        acceptedAt.push(current);
-        return { accepted: true, reason: "accepted", observation };
       },
     };
   }
