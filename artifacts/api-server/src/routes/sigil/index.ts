@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
+import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import { analysesTable } from "@workspace/db/schema";
-import { desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { AnalyzeInputBody } from "@workspace/api-zod";
 import {
   detectInputType,
@@ -258,6 +259,7 @@ router.post("/analyze", async (req, res) => {
     const [saved] = await db
       .insert(analysesTable)
       .values({
+        publicId: randomUUID(),
         input: trimmed,
         inputType,
         network,
@@ -273,7 +275,7 @@ router.post("/analyze", async (req, res) => {
       .returning();
 
     const result = {
-      id: String(saved.id),
+      id: saved.publicId!,
       input: saved.input,
       inputType: saved.inputType,
       network: saved.network,
@@ -484,6 +486,7 @@ router.post("/analyze-stream", async (req, res) => {
       const [saved] = await db
         .insert(analysesTable)
         .values({
+          publicId: randomUUID(),
           input: trimmed,
           inputType,
           network,
@@ -499,7 +502,7 @@ router.post("/analyze-stream", async (req, res) => {
         .returning();
 
       const result = {
-        id: String(saved.id),
+        id: saved.publicId!,
         input: saved.input,
         inputType: saved.inputType,
         network: saved.network,
@@ -565,6 +568,7 @@ router.post("/analyze-stream", async (req, res) => {
       const [saved] = await db
         .insert(analysesTable)
         .values({
+          publicId: randomUUID(),
           input: trimmed,
           inputType,
           network,
@@ -580,7 +584,7 @@ router.post("/analyze-stream", async (req, res) => {
         .returning();
 
       const result = {
-        id: String(saved.id),
+        id: saved.publicId!,
         input: saved.input,
         inputType: saved.inputType,
         network: saved.network,
@@ -613,6 +617,7 @@ router.post("/analyze-stream", async (req, res) => {
     const [saved] = await db
       .insert(analysesTable)
       .values({
+        publicId: randomUUID(),
         input: trimmed,
         inputType,
         network,
@@ -626,7 +631,7 @@ router.post("/analyze-stream", async (req, res) => {
         details: {},
       })
       .returning();
-    send({ type: "done", id: String(saved.id) });
+    send({ type: "done", id: saved.publicId! });
     res.end();
   } catch (err) {
     req.log.error({ err }, "Streaming analysis failed");
@@ -682,13 +687,9 @@ router.get("/hall-of-shame", async (_req, res) => {
 router.get("/history", async (req, res) => {
   await ensureAnalysesSchema();
 
-  const requestedId = typeof req.query.id === "string" ? parseInt(req.query.id) : NaN;
-  if (!isNaN(requestedId)) {
-    const [record] = await db
-      .select()
-      .from(analysesTable)
-      .where(eq(analysesTable.id, requestedId))
-      .limit(1);
+  const requestedId = typeof req.query.id === "string" ? req.query.id : "";
+  if (requestedId) {
+    const record = await findPublicAnalysis(requestedId);
 
     if (!record) {
       res.status(404).json({ error: "not_found", message: "Analysis not found" });
@@ -699,48 +700,14 @@ router.get("/history", async (req, res) => {
     return;
   }
 
-  let parsedLimit = parseInt(String(req.query.limit ?? "20"), 10);
-  if (isNaN(parsedLimit)) parsedLimit = 20;
-  const limit = Math.max(1, Math.min(parsedLimit, 100));
-  const records = await db
-    .select()
-    .from(analysesTable)
-    .where(ne(analysesTable.hallOfShame, true))
-    .orderBy(desc(analysesTable.createdAt))
-    .limit(limit);
-
-  res.json(
-    records.map((r) => ({
-      id: String(r.id),
-      input: r.input,
-      inputType: r.inputType,
-      network: r.network,
-      summary: r.summary,
-      verdict: r.verdict,
-      verdictReason: r.verdictReason,
-      riskScore: r.riskScore,
-      riskLevel: r.riskLevel,
-      warnings: r.warnings as string[],
-      positives: r.positives as string[],
-      createdAt: r.createdAt.toISOString(),
-    })),
-  );
+  // User-submitted scans are private by default and never form a public feed.
+  res.json([]);
 });
 
 router.get("/history/:id", async (req, res) => {
   await ensureAnalysesSchema();
 
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    res.status(404).json({ error: "not_found", message: "Analysis not found" });
-    return;
-  }
-
-  const [record] = await db
-    .select()
-    .from(analysesTable)
-    .where(eq(analysesTable.id, id))
-    .limit(1);
+  const record = await findPublicAnalysis(req.params.id);
 
   if (!record) {
     res.status(404).json({ error: "not_found", message: "Analysis not found" });
@@ -754,7 +721,7 @@ export default router;
 
 function formatAnalysisRecord(record: typeof analysesTable.$inferSelect) {
   return {
-    id: String(record.id),
+    id: record.hallOfShame ? String(record.id) : record.publicId!,
     input: record.input,
     inputType: record.inputType,
     network: record.network,
@@ -768,4 +735,26 @@ function formatAnalysisRecord(record: typeof analysesTable.$inferSelect) {
     details: record.details as Record<string, unknown>,
     createdAt: record.createdAt.toISOString(),
   };
+}
+
+async function findPublicAnalysis(id: string) {
+  if (/^[0-9]+$/.test(id)) {
+    const [record] = await db
+      .select()
+      .from(analysesTable)
+      .where(and(eq(analysesTable.id, Number(id)), eq(analysesTable.hallOfShame, true)))
+      .limit(1);
+    return record;
+  }
+
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    return undefined;
+  }
+
+  const [record] = await db
+    .select()
+    .from(analysesTable)
+    .where(eq(analysesTable.publicId, id))
+    .limit(1);
+  return record;
 }

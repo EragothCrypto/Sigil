@@ -32,7 +32,7 @@ function LegalShell({
       <div className="mb-8">
         <p className="text-xs font-mono uppercase tracking-widest text-primary/55 mb-3">{eyebrow}</p>
         <h1 className="text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight">{title}</h1>
-        <p className="mt-4 text-sm text-white/40">Last updated: May 17, 2026</p>
+        <p className="mt-4 text-sm text-white/40">Last updated: September 28, 2026</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-8 items-start">
@@ -114,13 +114,6 @@ export function ImpressumPage() {
         </p>
       </Section>
 
-      <Section title="Pending Business Information">
-        <p>
-          If {OPERATOR.brand} is registered as a company, the legal form, register court, register number, authorised
-          representative, and VAT ID should be added here before launch. If no such registration or VAT ID exists, keep
-          this page aligned with the actual legal status of the operator.
-        </p>
-      </Section>
     </LegalShell>
   );
 }
@@ -160,21 +153,45 @@ export function PrivacyPage() {
 
       <Section title="Hosting, APIs, and Processors">
         <p>
-          The app is intended to be hosted on Vercel. Vercel may process technical access logs, IP addresses, and request
-          metadata to provide hosting, security, and delivery services.
+          Sigil is hosted on Vercel and stores analysis records in a Neon PostgreSQL database. These providers may process
+          IP addresses, request metadata, technical logs, and submitted analysis records to provide hosting, delivery,
+          database, security, and reliability services.
         </p>
         <p>
-          Sigil uses external blockchain data providers and AI infrastructure to analyze submitted inputs. Submitted
-          transaction data, contract information, and prompts may be transmitted to these providers when required for the
-          analysis. Processor agreements and international transfer safeguards should be confirmed before production launch.
+          Sigil sends relevant transaction, contract, wallet, or signing data to OpenRouter and the selected model provider
+          for AI-assisted analysis. Provider logging, retention, and model-training practices can vary by routed model and
+          account privacy settings. Do not submit seed phrases, private keys, passwords, or confidential off-chain content.
+        </p>
+        <p>
+          Etherscan, CoinGecko, and public EVM RPC operators receive the blockchain identifiers required for lookups. If you
+          enable Settings Sync in the extension, Google Chrome Sync processes preferences and trusted-site or trusted-contract
+          lists. Analysis and dApp session history are not included in Settings Sync.
+        </p>
+        <p>
+          Some providers and their subprocessors may process data outside the European Economic Area. Where required, such
+          transfers must be covered by an adequacy decision or appropriate safeguards such as standard contractual clauses.
         </p>
       </Section>
 
       <Section title="Retention">
         <p>
-          Sigil keeps analysis data only as long as needed for the service, caching, security, debugging, and legal
-          obligations. The current product includes server-side caching for repeated analyses and local browser history in
-          the extension. You can clear extension history from the extension popup.
+          Normal server-side analysis records are scheduled for automatic deletion after 30 days. Short-lived in-memory
+          analysis results are cached for up to 30 minutes. Curated public threat-intelligence records may be kept longer
+          while they remain relevant and accurate.
+        </p>
+        <p>
+          Extension analysis and dApp session history remain on your device until you clear them or remove the extension.
+          Web-app onboarding state and locally watched public addresses remain in browser storage until you clear site data.
+          Infrastructure and external-provider logs follow the provider retention periods configured for the service.
+        </p>
+      </Section>
+
+      <Section title="Analysis Links and AI Assistance">
+        <p>
+          Submitted analyses are not published in a global feed. A result is retrievable through an unguessable link identifier;
+          anyone you share that link with can view the result. Sigil uses AI-generated explanations together with deterministic
+          checks and third-party data. Treat every result as decision support, verify high-value actions independently, and never
+          rely on a verdict as a guarantee of safety.
         </p>
       </Section>
 
@@ -182,7 +199,8 @@ export function PrivacyPage() {
         <p>
           Subject to the GDPR requirements, you may request access, rectification, erasure, restriction of processing,
           data portability, and objection to processing. You may also lodge a complaint with a competent data protection
-          supervisory authority.
+          supervisory authority, including the Hamburg Commissioner for Data Protection and Freedom of Information when it is
+          the competent authority.
         </p>
         <p>
           Send requests to <a className="text-primary hover:text-primary/80" href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>.

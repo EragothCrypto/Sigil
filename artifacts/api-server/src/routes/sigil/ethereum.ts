@@ -119,7 +119,7 @@ export async function fetchTransaction(
       : null;
 
     if (!txData) {
-      logger.warn({ hash, network }, "Transaction not found on any RPC endpoint");
+      logger.warn({ network }, "Transaction not found on any RPC endpoint");
       return null;
     }
 
@@ -139,7 +139,7 @@ export async function fetchTransaction(
         : undefined,
     };
   } catch (err) {
-    logger.warn({ err, hash, network }, "Failed to fetch transaction via RPC");
+    logger.warn({ err, network }, "Failed to fetch transaction via RPC");
     return null;
   }
 }
@@ -212,7 +212,7 @@ export async function fetchContract(address: string, network: string): Promise<C
       }
     }
   } catch (err) {
-    logger.warn({ err, address, network }, "Failed to fetch contract metadata");
+    logger.warn({ err, network }, "Failed to fetch contract metadata");
   }
 
   return result;

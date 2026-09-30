@@ -181,7 +181,7 @@ export default function ExtensionPage() {
           {[
             { icon: "🦊", label: "You click\nConfirm" },
             { icon: "🔀", label: "Sigil\nintercepts" },
-            { icon: "🤖", label: "AI analyzes\nin <2s" },
+            { icon: "🤖", label: "AI-assisted\nrisk analysis" },
             { icon: "⚠️", label: "Risk overlay\nappears" },
             { icon: "✅", label: "You decide\nto proceed" },
           ].map((step, i, arr) => (

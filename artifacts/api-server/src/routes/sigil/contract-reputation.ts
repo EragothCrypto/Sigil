@@ -113,7 +113,7 @@ async function fetchReputationData(address: string, network: string): Promise<{
       }
     }
   } catch (err) {
-    logger.warn({ err, address }, "Could not fetch contract creation info");
+    logger.warn({ err, network }, "Could not fetch contract creation info");
   }
 
   try {
@@ -143,7 +143,7 @@ async function fetchReputationData(address: string, network: string): Promise<{
       result.hasRecentActivity = ts > thirtyDaysAgo;
     }
   } catch (err) {
-    logger.warn({ err, address }, "Could not estimate tx count");
+    logger.warn({ err, network }, "Could not estimate tx count");
   }
 
   return result;

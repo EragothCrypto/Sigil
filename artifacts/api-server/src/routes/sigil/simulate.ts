@@ -99,7 +99,7 @@ Verdict guidelines:
       const cleaned = content.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
       parsed = JSON.parse(cleaned);
     } catch {
-      req.log.warn({ content }, "Failed to parse AI simulation response as JSON");
+      req.log.warn("Failed to parse AI simulation response as JSON");
       res.status(500).json({ error: "parse_failed", message: "Failed to parse simulation result" });
       return;
     }

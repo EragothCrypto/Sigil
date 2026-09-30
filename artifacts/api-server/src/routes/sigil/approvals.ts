@@ -93,7 +93,7 @@ router.get("/approvals/health", async (req, res) => {
       revokeUrl: revokeUrl(network, wallet),
     });
   } catch (err) {
-    req.log.warn({ err, network, wallet }, "Approval health scan unavailable");
+    req.log.warn({ err, network }, "Approval health scan unavailable");
     return res.json({
       wallet,
       network,

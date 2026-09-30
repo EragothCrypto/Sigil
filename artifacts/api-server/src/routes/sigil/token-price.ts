@@ -57,7 +57,7 @@ export async function fetchTokenPrice(
 
     return { priceUsd: entry.usd };
   } catch (err) {
-    logger.warn({ err, contractAddress, network }, "Token price fetch failed");
+    logger.warn({ err, network }, "Token price fetch failed");
     return null;
   }
 }

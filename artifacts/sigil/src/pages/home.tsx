@@ -73,7 +73,7 @@ const HOW_IT_WORKS = [
     step: '02',
     icon: ScanSearch,
     title: 'AI scans on-chain signals',
-    desc: "Sigil's two-step AI decodes bytecode, checks 50+ risk patterns, and cross-references OFAC sanctions lists — in real time.",
+    desc: "Sigil combines deterministic checks, public blockchain data, and AI-assisted explanations to surface transaction and contract risk.",
   },
   {
     step: '03',

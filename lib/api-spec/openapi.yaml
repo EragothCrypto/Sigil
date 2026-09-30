@@ -80,7 +80,8 @@ paths:
     get:
       operationId: getAnalysisHistory
       tags: [sigil]
-      summary: Get recent analysis history
+      summary: Get public analysis history
+      description: User-submitted analyses are private by default, so this collection is empty unless an explicit public-sharing feature is introduced.
       parameters:
         - name: limit
           in: query
@@ -101,7 +102,7 @@ paths:
     get:
       operationId: getAnalysisById
       tags: [sigil]
-      summary: Get a specific analysis by ID
+      summary: Get an analysis through its unguessable public link ID
       parameters:
         - name: id
           in: path

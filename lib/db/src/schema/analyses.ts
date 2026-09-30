@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 
 export const analysesTable = pgTable("analyses", {
   id: serial("id").primaryKey(),
+  publicId: text("public_id").unique(),
   input: text("input").notNull(),
   inputType: text("input_type").notNull().default("unknown"),
   network: text("network").notNull().default("mainnet"),
