@@ -173,12 +173,14 @@
     }, 320);
   }
 
-  function finish(action, requestId = activeRequest?.requestId) {
+  function finish(action, observationId = activeRequest?.observationId) {
     const sessionPayload = activeRequest?.sessionPayload;
     if (sessionPayload) {
       saveSessionEvent(sessionPayload, action).catch(() => {});
     }
-    window.dispatchEvent(new CustomEvent("sigil:decision", { detail: { requestId, action } }));
+    window.dispatchEvent(new CustomEvent("sigil:decision", {
+      detail: { requestId: observationId, action },
+    }));
     hidePanel();
     activeRequest = null;
     processNextRequest();
@@ -271,7 +273,7 @@
   async function handleIntercept(eventDetail) {
     currentRiskConfirmed = false;
 
-    const { observationId: requestId, method, target } = eventDetail;
+    const { observationId, method, target } = eventDetail;
     const url = window.location.href;
     const settings = await loadSettings();
     const input = core.getAnalysisInput(target);
@@ -280,7 +282,7 @@
     if (localResult.action === "proceed" && !localResult.requiresApi) {
       await saveHistory(core.createHistoryEntry({ method, url, input, result: localResult }), settings);
       await saveSessionEvent({ method, url, target, input, result: localResult }, "proceed");
-      finish("proceed", requestId);
+      finish("proceed", observationId);
       return;
     }
 
@@ -294,7 +296,7 @@
 
     try {
       const apiResult = await callSigilApi(settings, input);
-      if (activeRequest?.requestId !== requestId) return;
+      if (activeRequest?.observationId !== observationId) return;
       const analysisPath = apiResult.id ? `/analysis/${encodeURIComponent(apiResult.id)}` : `/?q=${encodeURIComponent(input?.value || "")}`;
       const fullUrl = `${settings.apiUrl}${analysisPath}`;
       const result = { ...localResult, ...apiResult };
@@ -302,7 +304,7 @@
       activeRequest.sessionPayload = { method, url, target, input, result };
       await saveHistory(core.createHistoryEntry({ method, url, input, result }), settings);
     } catch (error) {
-      if (activeRequest?.requestId !== requestId) return;
+      if (activeRequest?.observationId !== observationId) return;
       const fallback = {
         ...localResult,
         verdict: localResult.verdict === "safe" ? "caution" : localResult.verdict,
@@ -322,7 +324,7 @@
     activeRequest = requestQueue.shift();
     handleIntercept(activeRequest).catch(async () => {
       window.dispatchEvent(new CustomEvent("sigil:decision", {
-        detail: { requestId: activeRequest?.requestId, action: "cancel" },
+        detail: { requestId: activeRequest?.observationId, action: "cancel" },
       }));
       activeRequest = null;
       hidePanel();

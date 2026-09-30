@@ -191,7 +191,8 @@
     return new TextEncoder().encode(JSON.stringify(value)).byteLength;
   }
 
-  function createObservationGate({ now = () => Date.now() } = {}) {
+  function createObservationGate({ now = () => Date.now(), limits = OBSERVATION_LIMITS } = {}) {
+    const configuredLimits = Object.freeze({ ...OBSERVATION_LIMITS, ...limits });
     const seen = new Map();
     let acceptedAt = [];
 
@@ -205,12 +206,12 @@
         if (!Number.isFinite(current)) return reject("invalid_clock");
 
         for (const [id, timestamp] of seen) {
-          if (current - timestamp >= OBSERVATION_LIMITS.seenTtlMs) seen.delete(id);
+          if (current - timestamp >= configuredLimits.seenTtlMs) seen.delete(id);
         }
-        acceptedAt = acceptedAt.filter((timestamp) => current - timestamp < OBSERVATION_LIMITS.rateWindowMs);
+        acceptedAt = acceptedAt.filter((timestamp) => current - timestamp < configuredLimits.rateWindowMs);
 
-        if (queueLength >= OBSERVATION_LIMITS.maxQueued) return reject("queue_full");
-        if (acceptedAt.length >= OBSERVATION_LIMITS.maxAcceptedPerWindow) return reject("rate_limited");
+        if (queueLength >= configuredLimits.maxQueued) return reject("queue_full");
+        if (acceptedAt.length >= configuredLimits.maxAcceptedPerWindow) return reject("rate_limited");
 
         let descriptors;
         try {
@@ -228,8 +229,8 @@
         if (typeof observationId !== "string" || !UUID_V4_PATTERN.test(observationId)) return reject("observation_id");
         if (typeof method !== "string" || !SIGN_METHODS.has(method)) return reject("method");
         if (!Number.isFinite(observedAt) || !Number.isInteger(observedAt)) return reject("observed_at");
-        if (current - observedAt > OBSERVATION_LIMITS.maxAgeMs) return reject("stale");
-        if (observedAt - current > OBSERVATION_LIMITS.maxFutureSkewMs) return reject("future");
+        if (current - observedAt > configuredLimits.maxAgeMs) return reject("stale");
+        if (observedAt - current > configuredLimits.maxFutureSkewMs) return reject("future");
         if (seen.has(observationId)) return reject("duplicate");
 
         let target;
@@ -247,13 +248,13 @@
         observation.observedAt = observedAt;
         observation.target = target;
         try {
-          if (serializedBytes(observation) > OBSERVATION_LIMITS.maxSerializedTargetBytes) return reject("serialized_size");
+          if (serializedBytes(observation) > configuredLimits.maxSerializedTargetBytes) return reject("serialized_size");
         } catch (_error) {
           return reject("serialized_size");
         }
 
         seen.set(observationId, current);
-        while (seen.size > OBSERVATION_LIMITS.maxSeenIds) seen.delete(seen.keys().next().value);
+        while (seen.size > configuredLimits.maxSeenIds) seen.delete(seen.keys().next().value);
         acceptedAt.push(current);
         return { accepted: true, reason: "accepted", observation };
       },

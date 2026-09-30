@@ -545,11 +545,18 @@ test("expires the rolling rate window and duplicate TTL at their boundaries", ()
 
 test("keeps the seen-id cap fixed at 128 with deterministic oldest-first pruning", () => {
   assert.equal(core.OBSERVATION_LIMITS.maxSeenIds, 128);
-  let current = 1_000_000;
-  const gate = core.createObservationGate({ now: () => current });
+  const current = 1_000_000;
+  const gate = core.createObservationGate({
+    now: () => current,
+    limits: Object.freeze({
+      ...core.OBSERVATION_LIMITS,
+      maxAcceptedPerWindow: 256,
+      seenTtlMs: 10 * core.OBSERVATION_LIMITS.seenTtlMs,
+    }),
+  });
   for (let index = 0; index < 129; index += 1) {
-    if (index > 0 && index % 12 === 0) current += core.OBSERVATION_LIMITS.rateWindowMs;
     assert.equal(gate.accept(observation({ observationId: uuidFor(index), observedAt: current })).accepted, true);
   }
+  assert.equal(gate.accept(observation({ observationId: uuidFor(0), observedAt: current })).accepted, true);
   assert.equal(gate.accept(observation({ observationId: uuidFor(128), observedAt: current })).reason, "duplicate");
 });

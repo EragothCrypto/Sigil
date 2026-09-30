@@ -23,9 +23,17 @@ function observation(index = 0, overrides = {}) {
   };
 }
 
-function createHarness({ holdStorage = false } = {}) {
+function createHarness({ holdStorage = false, requiresApi = false } = {}) {
   const listeners = new Map();
-  const effects = { storageReads: 0, storageWrites: 0, fetches: 0, dom: 0, decisions: 0 };
+  const effects = {
+    storageReads: 0,
+    storageWrites: 0,
+    fetches: 0,
+    dom: 0,
+    renders: 0,
+    decisions: 0,
+  };
+  let resolveFetch;
   const storageArea = {
     get(defaults, callback) {
       effects.storageReads += 1;
@@ -43,7 +51,12 @@ function createHarness({ holdStorage = false } = {}) {
       createObservationGate: () => realCore.createObservationGate({ now: () => 1_000_000 }),
       normalizeSettings: (value) => value,
       getAnalysisInput: () => ({ kind: "simulation", value: "hello" }),
-      localPreScreen: () => ({ action: "proceed", requiresApi: false, verdict: "safe", warnings: [] }),
+      localPreScreen: () => ({
+        action: requiresApi ? "show" : "proceed",
+        requiresApi,
+        verdict: "caution",
+        warnings: [],
+      }),
       createHistoryEntry: (value) => value,
       trimHistory: (value) => value,
       createSessionEvent: (value) => value,
@@ -59,24 +72,49 @@ function createHarness({ holdStorage = false } = {}) {
       return true;
     },
   };
+  const nodes = new Map();
+  const createNode = (id = "") => ({
+    id,
+    classList: { add() {}, remove() {} },
+    addEventListener() {},
+    remove() {},
+    set innerHTML(_value) {
+      if (id === "content") effects.renders += 1;
+    },
+  });
+  const shadow = {
+    set innerHTML(_value) {},
+    getElementById(id) {
+      if (!nodes.has(id)) nodes.set(id, createNode(id));
+      return nodes.get(id);
+    },
+  };
   const document = {};
   Object.defineProperty(document, "createElement", {
     get() {
       effects.dom += 1;
-      return () => { throw new Error("unexpected DOM render"); };
+      return () => ({
+        id: "",
+        style: { cssText: "" },
+        attachShadow: () => shadow,
+        remove() {},
+      });
     },
   });
   Object.defineProperty(document, "documentElement", {
     get() {
       effects.dom += 1;
-      return null;
+      return { appendChild() {} };
     },
   });
   const context = vm.createContext({
     window,
     document,
     chrome: { storage: { local: storageArea, sync: storageArea } },
-    fetch: async () => { effects.fetches += 1; throw new Error("unexpected fetch"); },
+    fetch: () => {
+      effects.fetches += 1;
+      return new Promise((resolve) => { resolveFetch = resolve; });
+    },
     URL,
     CustomEvent: class CustomEvent {
       constructor(type, init) { this.type = type; this.detail = init?.detail; }
@@ -97,11 +135,21 @@ function createHarness({ holdStorage = false } = {}) {
     reset() {
       for (const key of Object.keys(effects)) effects[key] = 0;
     },
+    resolveFetch(payload = { id: "analysis-id", verdict: "safe", warnings: [] }) {
+      resolveFetch?.({ ok: true, json: async () => payload });
+    },
   };
 }
 
 function assertNoIntakeEffects(effects) {
-  assert.deepEqual(effects, { storageReads: 0, storageWrites: 0, fetches: 0, dom: 0, decisions: 0 });
+  assert.deepEqual(effects, {
+    storageReads: 0,
+    storageWrites: 0,
+    fetches: 0,
+    dom: 0,
+    renders: 0,
+    decisions: 0,
+  });
 }
 
 test("invalid UUID, stale, and oversized observations stop before every side effect", () => {
@@ -158,10 +206,26 @@ test("one accepted observation reaches the first settings storage read", () => {
   assert.equal(harness.effects.dom, 0);
 });
 
+test("matching observation id allows a deferred API result to update the active advisory", async () => {
+  const harness = createHarness({ requiresApi: true });
+  harness.dispatch(observation());
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(harness.effects.fetches, 1);
+  assert.equal(harness.effects.renders, 1);
+
+  harness.resolveFetch();
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(harness.effects.renders, 2);
+  assert.ok(harness.effects.storageWrites > 0);
+});
+
 test("source gates observations before queueing and never queues raw event detail", () => {
   assert.match(contentSource, /addEventListener\("sigil:observation"/);
   assert.doesNotMatch(contentSource, /addEventListener\("sigil:intercept"/);
   assert.doesNotMatch(contentSource, /requestQueue\.push\(event\.detail\)/);
   assert.match(contentSource, /const decision = observationGate\.accept[\s\S]*requestQueue\.push\(decision\.observation\)/);
   assert.ok(contentSource.indexOf("observationGate.accept") < contentSource.indexOf("requestQueue.push"));
+  assert.doesNotMatch(contentSource, /activeRequest\?\.requestId/);
 });
