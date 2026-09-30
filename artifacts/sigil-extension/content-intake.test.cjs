@@ -25,6 +25,8 @@ function observation(index = 0, overrides = {}) {
 
 function createHarness({ holdStorage = false, requiresApi = false } = {}) {
   const listeners = new Map();
+  let storageHeld = holdStorage;
+  const pendingStorage = [];
   const effects = {
     storageReads: 0,
     storageWrites: 0,
@@ -32,16 +34,20 @@ function createHarness({ holdStorage = false, requiresApi = false } = {}) {
     dom: 0,
     renders: 0,
     decisions: 0,
+    processed: 0,
   };
   let resolveFetch;
   const storageArea = {
     get(defaults, callback) {
       effects.storageReads += 1;
-      if (!holdStorage) callback(defaults);
+      if (storageHeld) pendingStorage.push(() => callback(defaults));
+      else callback(defaults);
     },
     set(_value, callback) {
       effects.storageWrites += 1;
-      if (callback) callback();
+      if (!callback) return;
+      if (storageHeld) pendingStorage.push(callback);
+      else callback();
     },
   };
   const window = {
@@ -51,12 +57,15 @@ function createHarness({ holdStorage = false, requiresApi = false } = {}) {
       createObservationGate: () => realCore.createObservationGate({ now: () => 1_000_000 }),
       normalizeSettings: (value) => value,
       getAnalysisInput: () => ({ kind: "simulation", value: "hello" }),
-      localPreScreen: () => ({
-        action: requiresApi ? "show" : "proceed",
-        requiresApi,
-        verdict: "caution",
-        warnings: [],
-      }),
+      localPreScreen: () => {
+        effects.processed += 1;
+        return {
+          action: requiresApi ? "show" : "proceed",
+          requiresApi,
+          verdict: "caution",
+          warnings: [],
+        };
+      },
       createHistoryEntry: (value) => value,
       trimHistory: (value) => value,
       createSessionEvent: (value) => value,
@@ -138,6 +147,10 @@ function createHarness({ holdStorage = false, requiresApi = false } = {}) {
     resolveFetch(payload = { id: "analysis-id", verdict: "safe", warnings: [] }) {
       resolveFetch?.({ ok: true, json: async () => payload });
     },
+    releaseStorage() {
+      storageHeld = false;
+      while (pendingStorage.length > 0) pendingStorage.shift()();
+    },
   };
 }
 
@@ -149,6 +162,7 @@ function assertNoIntakeEffects(effects) {
     dom: 0,
     renders: 0,
     decisions: 0,
+    processed: 0,
   });
 }
 
@@ -178,12 +192,18 @@ test("duplicate observation stops before storage, fetch, DOM, and queue work", a
   assertNoIntakeEffects(harness.effects);
 });
 
-test("queue saturation rejects the ninth observation before side effects", () => {
+test("queue saturation rejects the ninth observation before side effects or later queue work", async () => {
   const harness = createHarness({ holdStorage: true });
   for (let index = 0; index < 8; index += 1) harness.dispatch(observation(index));
   harness.reset();
   harness.dispatch(observation(8));
   assertNoIntakeEffects(harness.effects);
+
+  harness.releaseStorage();
+  for (let index = 0; index < 20; index += 1) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  assert.equal(harness.effects.processed, 8);
 });
 
 test("rate saturation rejects the thirteenth observation before side effects", async () => {
