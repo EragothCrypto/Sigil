@@ -292,6 +292,10 @@
     if (!isActive(eventDetail, token)) return;
     const input = core.getAnalysisInput(target);
     const localResult = core.localPreScreen({ method, target, url, settings });
+    if (localResult.reason === "disabled") {
+      finishAdvisory(eventDetail, token);
+      return;
+    }
     const sessionPayload = { method, url, target, input, result: localResult };
     eventDetail.sessionPayload = sessionPayload;
     eventDetail.sessionStatus = "observed";
@@ -300,19 +304,18 @@
 
     if (localResult.display === "skip" && !localResult.requiresApi) {
       await saveHistory(core.createHistoryEntry({ method, url, input, result: localResult }), settings, eventDetail, token);
-      if (!isActive(eventDetail, token)) return;
-      eventDetail.sessionStatus = "reviewed";
-      await saveSessionEvent(sessionPayload, "reviewed", eventDetail, token);
       finishAdvisory(eventDetail, token);
       return;
     }
 
+    if (!localResult.requiresApi) {
+      eventDetail.sessionStatus = "reviewed";
+    }
     render({ method, url, result: localResult, input, loading: localResult.requiresApi }, settings, eventDetail, token);
 
     if (!localResult.requiresApi) {
       await saveHistory(core.createHistoryEntry({ method, url, input, result: localResult }), settings, eventDetail, token);
       if (!isActive(eventDetail, token)) return;
-      eventDetail.sessionStatus = "reviewed";
       await saveSessionEvent(sessionPayload, "reviewed", eventDetail, token);
       return;
     }
@@ -341,10 +344,10 @@
       };
       const failedPayload = { method, url, target, input, result: fallback };
       eventDetail.sessionPayload = failedPayload;
-      eventDetail.sessionStatus = "analysis_failed";
+      eventDetail.sessionStatus = "reviewed";
       render({ method, url, result: fallback, input, error: true }, settings, eventDetail, token);
       await saveHistory(core.createHistoryEntry({ method, url, input, result: fallback }), settings, eventDetail, token);
-      await saveSessionEvent(failedPayload, "analysis_failed", eventDetail, token);
+      await saveSessionEvent(failedPayload, "reviewed", eventDetail, token);
     }
   }
 
@@ -355,7 +358,11 @@
     const token = Object.freeze({ observationId: eventDetail.observationId });
     activeLifecycle = { token, timer: null };
     activeLifecycle.timer = setTimeout(() => finishAdvisory(eventDetail, token), ADVISORY_TIMEOUT_MS);
-    handleObservation(eventDetail, token).catch(() => {
+    handleObservation(eventDetail, token).catch(async () => {
+      if (isActive(eventDetail, token) && eventDetail.sessionPayload) {
+        eventDetail.sessionStatus = "analysis_failed";
+        await saveSessionEvent(eventDetail.sessionPayload, "analysis_failed", eventDetail, token);
+      }
       finishAdvisory(eventDetail, token);
     });
   }

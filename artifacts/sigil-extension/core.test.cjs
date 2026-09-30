@@ -299,6 +299,27 @@ test("counts analysis failures and keeps legacy decision records readable", () =
   assert.equal(sessions[0].summary.eventCount, 3);
 });
 
+test("preserves dismissal as orthogonal lifecycle state during later upserts", () => {
+  const base = {
+    observationId: "00000000-0000-4000-8000-000000000003",
+    sessionId: "session-dismissed",
+    method: "personal_sign",
+    url: "https://app.example",
+    target: { type: "personal_sign", data: "hello" },
+    input: { kind: "simulation", value: "hello" },
+    result: { verdict: "caution", riskScore: 42, warnings: [] },
+    status: "reviewed",
+  };
+  const dismissed = core.createSessionEvent({ ...base, dismissedAt: "2026-09-30T12:00:00.000Z" });
+  const laterUpdate = core.createSessionEvent(base);
+  const sessions = core.recordSessionEvent(core.recordSessionEvent([], dismissed, 8), laterUpdate, 8);
+
+  assert.equal(sessions[0].events.length, 1);
+  assert.equal(sessions[0].events[0].dismissedAt, "2026-09-30T12:00:00.000Z");
+  assert.equal(sessions[0].summary.dismissed, 1);
+  assert.equal(sessions[0].summary.reviewed, 1);
+});
+
 test("classifies pasted addresses, hashes, calldata, URLs, and typed data", () => {
   assert.equal(core.classifyPastedInput("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48").kind, "address");
   assert.equal(

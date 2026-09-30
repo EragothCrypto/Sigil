@@ -18,16 +18,20 @@ function observation(index) {
   };
 }
 
-function createHarness() {
+function createHarness({ localResult, deferHistory = false } = {}) {
   const windowListeners = new Map();
   const nodeListeners = new Map();
   const fetchResolvers = [];
   const timers = new Map();
   let timerId = 0;
-  const effects = { processed: 0, fetches: 0, renders: 0, writes: 0 };
+  const pendingHistoryReads = [];
+  const effects = { processed: 0, fetches: 0, renders: 0, writes: 0, sessionStatuses: [] };
 
   const storage = {
-    get(defaults, callback) { callback(defaults); },
+    get(defaults, callback) {
+      if (deferHistory && Object.hasOwn(defaults, "history")) pendingHistoryReads.push(() => callback(defaults));
+      else callback(defaults);
+    },
     set(_value, callback) {
       effects.writes += 1;
       callback?.();
@@ -53,7 +57,11 @@ function createHarness() {
       createObservationGate: () => realCore.createObservationGate({ now: () => 1_000_000 }),
       localPreScreen: () => {
         effects.processed += 1;
-        return { display: "show", requiresApi: true, verdict: "caution", riskScore: 40, warnings: [] };
+        return localResult || { display: "show", requiresApi: true, verdict: "caution", riskScore: 40, warnings: [] };
+      },
+      createSessionEvent: (value) => {
+        effects.sessionStatuses.push({ status: value.status, dismissedAt: value.dismissedAt });
+        return realCore.createSessionEvent(value);
       },
     },
     addEventListener(name, listener) { windowListeners.set(name, listener); },
@@ -103,6 +111,8 @@ function createHarness() {
     resolveFetch(index, payload = { id: `analysis-${index}`, verdict: "safe", riskScore: 5, warnings: [] }) {
       fetchResolvers[index]?.({ ok: true, json: async () => payload });
     },
+    rejectFetch(index) { fetchResolvers[index]?.(Promise.reject(new Error("offline"))); },
+    releaseHistory() { while (pendingHistoryReads.length > 0) pendingHistoryReads.shift()(); },
     fireTimer(id) { timers.get(id)?.callback(); },
     timer(id) { return timers.get(id); },
     listener(id) { return nodeListeners.get(`${id}:click`); },
@@ -151,4 +161,57 @@ test("stale API and timer callbacks cannot mutate or close the next advisory", a
   await secondDismiss();
   await settle();
   assert.equal(harness.effects.processed, 3);
+});
+
+test("disabled alerts stop without history, sessions, fetch, or UI", async () => {
+  const harness = createHarness({
+    localResult: { display: "skip", reason: "disabled", requiresApi: false, verdict: "safe", warnings: [] },
+  });
+  harness.dispatch(observation(1));
+  await settle();
+
+  assert.equal(harness.effects.processed, 1);
+  assert.equal(harness.effects.writes, 0);
+  assert.equal(harness.effects.fetches, 0);
+  assert.equal(harness.effects.renders, 0);
+  assert.deepEqual(harness.effects.sessionStatuses, []);
+});
+
+test("hidden skip paths remain observed instead of claiming user review", async () => {
+  const harness = createHarness({
+    localResult: { display: "skip", reason: "trusted_site", requiresApi: false, verdict: "safe", warnings: [] },
+  });
+  harness.dispatch(observation(1));
+  await settle();
+
+  assert.equal(harness.effects.renders, 0);
+  assert.deepEqual(harness.effects.sessionStatuses.map((entry) => entry.status), ["observed"]);
+});
+
+test("a displayed API fallback is reviewed", async () => {
+  const harness = createHarness();
+  harness.dispatch(observation(1));
+  await settle();
+  harness.rejectFetch(0);
+  await settle();
+
+  assert.equal(harness.effects.renders, 2);
+  assert.equal(harness.effects.sessionStatuses.at(-1).status, "reviewed");
+});
+
+test("dismissal during deferred history keeps reviewed and dismissed truth", async () => {
+  const harness = createHarness({
+    localResult: { display: "show", reason: "site_reputation", requiresApi: false, verdict: "dangerous", warnings: [] },
+    deferHistory: true,
+  });
+  harness.dispatch(observation(1));
+  await settle();
+  const dismiss = harness.listener("dismissBtn");
+  await dismiss();
+  await settle();
+  harness.releaseHistory();
+  await settle();
+
+  const dismissed = harness.effects.sessionStatuses.find((entry) => entry.dismissedAt);
+  assert.equal(dismissed.status, "reviewed");
 });

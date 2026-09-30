@@ -882,7 +882,9 @@
       ? currentEvents.findIndex((item) => item.observationId === event.observationId)
       : -1;
     const events = existingIndex >= 0
-      ? currentEvents.map((item, index) => index === existingIndex ? { ...item, ...event, id: item.id } : item)
+      ? currentEvents.map((item, index) => index === existingIndex
+        ? { ...item, ...event, id: item.id, dismissedAt: event.dismissedAt || item.dismissedAt || null }
+        : item)
       : [...currentEvents, event].slice(-40);
     const timestamp = event.timestamp || Date.now();
     const session = {
