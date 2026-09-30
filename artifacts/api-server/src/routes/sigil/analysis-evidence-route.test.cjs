@@ -4,12 +4,16 @@ const vm = require('node:vm');
 const ts = require('../../../../../node_modules/typescript');
 const { test } = require('node:test');
 
-function routesFor(tx, inputType = 'transaction') {
+function routesFor(tx, inputType = 'transaction', options = {}) {
   const handlers = new Map();
   const saved = [];
   let aiCalls = 0;
   let cacheWrites = 0;
-  const verdict = { summary: 'Evidence summary', verdict: 'caution', verdictReason: 'Review evidence', riskScore: 40, riskLevel: 'medium', warnings: [], positives: [] };
+  let reputationCalls = 0;
+  class OutputError extends Error { constructor() { super('Analysis unreliable'); this.code = 'analysis_unreliable'; } }
+  function analyze() { aiCalls++; if (options.rejectAI) throw new OutputError(); return verdict; }
+  const report = { version: 'findings-v1', scorePolicy: 'max-floor-v1', findings: [{ id: 'f:traces_missing', code: 'traces_missing', category: 'limitation', text: 'Traces not collected.', evidenceRefs: ['e:traces_missing'] }] };
+  const verdict = { summary: 'Evidence summary', verdict: 'caution', verdictReason: 'Review evidence', riskScore: 40, riskLevel: 'medium', warnings: [], positives: [], validatedReport: report };
   const modules = {
     express: { Router: () => ({ get() {}, post: (path, handler) => handlers.set(path, handler) }) },
     'node:crypto': require('node:crypto'),
@@ -23,24 +27,58 @@ function routesFor(tx, inputType = 'transaction') {
       transactionEvidenceDetails: data => ({ sourceVerification: data?.destinationVerification ?? 'unknown', transferCoverage: 'partial' }),
     },
     './ai-analyzer.js': {
-      AIAnalysisOutputError: class extends Error {},
-      analyzeTransaction: async () => { aiCalls++; return verdict; },
-      analyzeTransactionStreaming: async (_tx, _method, _network, _input, emit) => { aiCalls++; emit({ type: 'result', result: verdict }); return verdict; },
-      analyzeContractStreaming: async (_contract, _network, emit) => { emit({ type: 'result', result: verdict }); return verdict; },
+      AIAnalysisOutputError: OutputError,
+      analyzeTransaction: async () => analyze(),
+      analyzeContract: async () => analyze(),
+      analyzeTransactionStreaming: async (_tx, _method, _network, _input, emit) => { const result = analyze(); emit({ type: 'result', result }); return result; },
+      analyzeContractStreaming: async (_contract, _network, emit) => { const result = analyze(); emit({ type: 'result', result }); return result; },
     },
     './known-entities.js': { lookupEntity: () => null },
-    './contract-reputation.js': { calculateContractReputation: async () => ({ tier: 'unproven', trustScore: 0, isExploited: false }) },
-    './pattern-detector.js': { detectPatterns: () => [], mergePatterns: () => [] },
-    './score-factors.js': { computeScoreFactors: () => [] },
-    './analysis-cache.js': { cacheKey: () => 'test', analysisCache: { get() {}, set() { cacheWrites++; } } },
+    './contract-reputation.js': { calculateContractReputation: async () => { reputationCalls++; return { tier: 'unproven', trustScore: 0, isExploited: false }; } },
+    './pattern-detector.js': { detectPatterns: () => [{ description: 'unsupported inflation', confidence: 'confirmed' }], mergePatterns: patterns => patterns },
+    './score-factors.js': { computeScoreFactors: () => [{ label: 'unsupported source credit', delta: -15 }] },
+    './analysis-cache.js': { cacheKey: () => 'test', analysisCache: { get() { return options.cached; }, set() { cacheWrites++; } } },
     './analysis-schema.js': { ensureAnalysesSchema: async () => {} },
   };
   const source = ts.transpileModule(readFileSync(`${__dirname}/index.ts`, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   vm.runInNewContext(source, { exports: {}, require: name => modules[name] ?? {}, process: { env: {} } });
-  return { handlers, saved, get aiCalls() { return aiCalls; }, get cacheWrites() { return cacheWrites; } };
+  return { handlers, saved, get reputationCalls() { return reputationCalls; }, get aiCalls() { return aiCalls; }, get cacheWrites() { return cacheWrites; } };
 }
+
+function responseFor(events = []) {
+  return { code: 200, status(code) { this.code = code; return this; }, json(body) { this.body = body; }, setHeader() {}, flushHeaders() {}, end() {}, write(line) { events.push(JSON.parse(line.slice(6))); } };
+}
+test('invalid selections fail closed in JSON and SSE without persistence or cache', async () => {
+  for (const type of ['transaction', 'contract']) for (const path of ['/analyze', '/analyze-stream']) {
+    const api = routesFor({to: 'target', from: 'sender', input: '0x', value: '0x0'}, type, {rejectAI: true});
+    const events = []; const response = responseFor(events);
+    await api.handlers.get(path)({body: {input: 'hash', network: 'mainnet', fresh: true}, log: {error() {}}}, response);
+    if (path === '/analyze') assert.equal(response.body.error, 'analysis_unreliable', `${type}: ${JSON.stringify(response.body)}`);
+    else { assert.equal(events.find(e => e.type === 'error').code, 'analysis_unreliable'); assert.equal(events.some(e => ['result', 'done', 'cached', 'metadata'].includes(e.type)), false); }
+    assert.equal(api.saved.length, 0); assert.equal(api.cacheWrites, 0); assert.equal(api.reputationCalls, 0);
+  }
+});
+test('legacy cache cannot bypass new validation; contract routes skip legacy reputation', async () => {
+  for (const path of ['/analyze', '/analyze-stream']) {
+    const api = routesFor(null, 'contract', {cached: {riskScore: 0, details: {}}});
+    const events = []; const response = responseFor(events);
+    await api.handlers.get(path)({body: {input: 'address', network: 'mainnet'}, log: {error() {}}}, response);
+    assert.equal(api.aiCalls, 1); assert.equal(api.reputationCalls, 0); assert.equal(api.saved.length, 1);
+    assert.equal(api.saved[0].details.validatedReport.version, 'findings-v1');
+    assert.equal(events.some(e => e.type === 'cached'), false);
+  }
+});
+test('unknown input is rejected before AI or storage in both routes', async () => {
+  const api = routesFor(null, 'unknown');
+  for (const path of ['/analyze', '/analyze-stream']) {
+    const response = responseFor();
+    await api.handlers.get(path)({body: {input: 'invalid', network: 'mainnet'}, log: {error() {}}}, response);
+    assert.equal(response.code, 400);
+  }
+  assert.equal(api.aiCalls, 0); assert.equal(api.saved.length, 0); assert.equal(api.cacheWrites, 0);
+});
 
 test('missing transaction data stops both routes before AI, persistence, cache or a verdict', async () => {
   const api = routesFor(null);
@@ -71,13 +109,20 @@ test('both analysis routes persist bounded evidence and SSE exposes the same det
     const response = { status() { return this; }, json(body) { this.body = body; }, setHeader() {}, flushHeaders() {}, end() {}, write(line) { events.push(JSON.parse(line.slice(6))); } };
     await handlers.get(path)({ body: { input: 'hash', network: 'mainnet', fresh: true }, log: { error() {} } }, response);
     const details = saved.at(-1).details;
+    assert.equal(details.validatedReport?.version, 'findings-v1');
     assert.equal(details.sourceVerification, 'unknown');
     assert.equal(details.rawData.receiptEvidence.status, 'unavailable');
     assert.equal(details.rawData.historicalExample.name, 'curated example');
     if (path === '/analyze-stream') {
       assert.equal(events.find(event => event.type === 'result').result.details.sourceVerification, 'unknown');
       assert.ok(events.some(event => event.type === 'done'));
-    } else assert.equal(response.body.details.sourceVerification, 'unknown');
+      assert.equal(events.find(event => event.type === 'result').result.details.validatedReport.version, 'findings-v1');
+    } else {
+      assert.equal(response.body.details.sourceVerification, 'unknown');
+      assert.equal(response.body.patterns, undefined);
+      assert.equal(response.body.scoreFactors, undefined);
+      assert.equal(response.body.knownEntity, undefined);
+    }
   }
 });
 

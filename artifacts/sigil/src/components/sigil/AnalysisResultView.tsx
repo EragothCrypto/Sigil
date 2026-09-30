@@ -10,6 +10,7 @@ import { ContractDiffView } from './ContractDiffView';
 import { RiskScoreBreakdown } from './RiskScoreBreakdown';
 import { JargonText } from './JargonTooltip';
 import { useToast } from '@/hooks/use-toast';
+import { parseValidatedReport } from '@/lib/validated-report';
 
 const CATEGORY_ICONS: Record<string, string> = {
   "DEX": "⚡",
@@ -60,7 +61,7 @@ function KnownEntityBadge({ entity }: { entity: KnownEntity }) {
 const VERDICT_CONFIG = {
   safe: {
     icon: CheckCircle,
-    label: 'Safe to Sign',
+    label: 'No Concrete Warning Signs Detected',
     bg: 'bg-emerald-500/8',
     border: 'border-emerald-500/20',
     text: 'text-emerald-400',
@@ -92,6 +93,7 @@ const VERDICT_CONFIG = {
 
 export function AnalysisResultView({ data }: { data: AnalysisResult }) {
   const { toast } = useToast();
+  const validatedReport = parseValidatedReport(data.details);
   const verdict = (data.verdict ?? 'caution') as keyof typeof VERDICT_CONFIG;
   const config = VERDICT_CONFIG[verdict] || VERDICT_CONFIG.caution;
   const VerdictIcon = config.icon;
@@ -101,8 +103,18 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
     toast({ title: "Copied", description: "Address copied to clipboard" });
   };
 
+  if (data.details && typeof data.details === 'object' && 'validatedReport' in data.details && !validatedReport) {
+    return <p role="alert" className="border-l-2 border-amber-400 pl-4 py-3 text-sm text-amber-200">Analysis unavailable: this report's evidence could not be validated. Run a fresh analysis. No risk verdict or score is shown.</p>;
+  }
+
   return (
     <div className="w-full space-y-5 animate-in fade-in duration-500">
+
+      {!validatedReport && (
+        <p role="status" className="border-l-2 border-amber-400 pl-4 py-2 text-sm text-amber-200/80">
+          Legacy report: these statements were not checked by the current finding validator. Run a fresh analysis before relying on them.
+        </p>
+      )}
 
       {/* ── VERDICT BANNER ── */}
       <div className={`relative overflow-hidden rounded-2xl border ${config.bg} ${config.border} p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-5`}>
@@ -130,10 +142,10 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
       <ShareButton data={data} />
 
       {/* ── KNOWN ENTITY ── */}
-      {data.knownEntity && <KnownEntityBadge entity={data.knownEntity} />}
+      {!validatedReport && data.knownEntity && <KnownEntityBadge entity={data.knownEntity} />}
 
       {/* ── APPROVAL INSPECTOR ── */}
-      {data.approvalInfo?.isApproval && <ApprovalInspector info={data.approvalInfo} />}
+      {!validatedReport && data.approvalInfo?.isApproval && <ApprovalInspector info={data.approvalInfo} />}
 
       {/* ── HEADER PANEL ── */}
       <div
@@ -174,25 +186,63 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
       </div>
 
       {/* ── SCORE BREAKDOWN ── */}
-      {data.scoreFactors && data.scoreFactors.length > 0 && (
+      {!validatedReport && data.scoreFactors && data.scoreFactors.length > 0 && (
         <RiskScoreBreakdown factors={data.scoreFactors} riskScore={data.riskScore} />
       )}
 
       {/* ── PATTERN DETECTION ── */}
-      {data.patterns && data.patterns.length > 0 && (
+      {!validatedReport && data.patterns && data.patterns.length > 0 && (
         <PatternDetectionCard patterns={data.patterns} />
       )}
 
       {/* ── CONTRACT REPUTATION ── */}
-      {data.reputation && <ContractReputationCard data={data.reputation} />}
+      {!validatedReport && data.reputation && <ContractReputationCard data={data.reputation} />}
 
       {/* ── UPGRADE DIFF ── */}
-      {data.inputType === 'contract' && (
+      {!validatedReport && data.inputType === 'contract' && (
         <ContractDiffView address={data.input} network={data.network.toLowerCase()} />
       )}
 
       {/* ── STRUCTURED BREAKDOWN ── */}
-      {data.breakdown ? (
+      {validatedReport ? (
+        <section className="space-y-5 border-y border-white/10 py-6">
+          <p className="text-xs text-white/50">Assessed evidence only, not signing clearance. Score policy: maximum evidence floor v1; a product heuristic, not a loss probability.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+            {([
+              { category: 'risk', label: 'Risk Findings', icon: ShieldAlert, color: 'text-rose-400', empty: 'No concrete risk findings in the acquired data.' },
+              { category: 'limitation', label: 'Analysis Limits', icon: AlertTriangle, color: 'text-amber-300', empty: 'No additional recorded limitations.' },
+              { category: 'observation', label: 'Observations', icon: CheckCircle2, color: 'text-white/70', empty: 'No observations recorded.' },
+              { category: 'supported_indicator', label: 'Supporting Evidence', icon: ShieldCheck, color: 'text-emerald-300', empty: 'No supporting indicators established.' },
+            ] as const).map(group => {
+              const entries = validatedReport.findings.filter(f => f.category === group.category);
+              const Icon = group.icon;
+              return (
+                <div key={group.category} className="min-w-0 space-y-3">
+                  <h3 className={`flex items-center gap-2 text-sm font-semibold ${group.color}`}><Icon className="w-4 h-4 shrink-0" />{group.label}</h3>
+                  {entries.length ? <ul className="divide-y divide-white/5">{entries.map(f => {
+                    const evidence = validatedReport.evidence.find(e => e.id === f.evidenceRefs[0])!;
+                    return <li key={f.id} className="py-3 text-sm leading-relaxed text-white/75 break-words">
+                      {f.text}
+                      <details className="mt-2 text-xs text-white/50">
+                        <summary className="cursor-pointer hover:text-white/80">Recorded evidence</summary>
+                        <dl className="mt-2 space-y-1 break-all">
+                          <div><dt className="inline text-white/35">Subject: </dt><dd className="inline font-mono">{evidence.subject}</dd></div>
+                          <div><dt className="inline text-white/35">Observation: </dt><dd className="inline">{evidence.value}</dd></div>
+                        </dl>
+                        {evidence.transfers && evidence.transfers.length > 0 && <ul className="mt-2 divide-y divide-white/10">{evidence.transfers.map((transfer, index) => <li key={index} className="py-2 space-y-1 font-mono break-all">
+                          <p>{transfer.kind} · emitter {transfer.token}</p>
+                          <p>From {transfer.from}</p><p>To {transfer.to}</p>
+                          <p>{transfer.amountRaw !== undefined ? `Raw amount: ${transfer.amountRaw}` : `Raw token ID: ${transfer.tokenIdRaw}`}</p>
+                        </li>)}</ul>}
+                      </details>
+                    </li>;
+                  })}</ul> : <p className="text-sm text-white/40">{group.empty}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : data.breakdown ? (
         <TransactionBreakdown data={data.breakdown} />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -242,7 +292,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
           <h3 className="font-display text-sm font-bold text-white/50 uppercase tracking-widest mb-5">Execution Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(data.details).map(([key, value]) => {
-              if (value === undefined || value === null || key === 'rawData' || key === 'reputation') return null;
+              if (value === undefined || value === null || key === 'rawData' || key === 'reputation' || key === 'validatedReport') return null;
               return (
                 <div key={key} className="space-y-1 pb-3 border-b border-white/5 last:border-0">
                   <span className="text-[10px] text-white/25 font-mono uppercase tracking-widest">{key}</span>

@@ -35,6 +35,12 @@ import { ensureAnalysesSchema, runAnalysisRetentionCleanup } from "./analysis-sc
 
 const router: IRouter = Router();
 const TRANSACTION_DATA_UNAVAILABLE = "Analysis unavailable: transaction data could not be retrieved. Check the network and hash, then retry. No risk verdict was produced.";
+const networkEntity = (address: string, network: string) => network === "mainnet" ? lookupEntity(address) : null;
+function validatedCacheEntry(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const details = (value as { details?: { validatedReport?: { version?: string } } }).details;
+  return details?.validatedReport?.version === "findings-v1";
+}
 
 router.get("/maintenance/retention", async (req, res) => {
   const cronSecret = process.env.CRON_SECRET;
@@ -67,6 +73,10 @@ router.post("/analyze", async (req, res) => {
     return;
   }
   const inputType = detectInputType(trimmed);
+  if (inputType === "unknown") {
+    res.status(400).json({ error: "validation_error", message: "Enter a complete transaction hash or contract address. No risk verdict was produced." });
+    return;
+  }
   if (!isSupportedNetwork(network)) {
     res.status(400).json({ error: "unsupported_network", message: "Select a supported network" });
     return;
@@ -76,7 +86,7 @@ router.post("/analyze", async (req, res) => {
   // ── Cache hit — return instantly without any API / AI calls ───────────────
   if (!fresh) {
     const hit = analysisCache.get(key);
-    if (hit) {
+    if (hit && validatedCacheEntry(hit)) {
       res.json({ ...(hit as object), cached: true });
       return;
     }
@@ -102,13 +112,13 @@ router.post("/analyze", async (req, res) => {
       }
       const methodName = tx?.methodId ? decodeMethodId(tx.methodId) : null;
       // Check both `to` and common proxy addresses for known entity
-      if (tx?.to) knownEntity = lookupEntity(tx.to);
+      if (tx?.to) knownEntity = networkEntity(tx.to, network);
 
       // ── Approval Inspector ────────────────────────────────────────────────
       const approval = tx?.input ? decodeApprovalCalldata(tx.input) : null;
       if (approval && tx) {
-        const spenderEntity = lookupEntity(approval.spender);
-        const tokenEntity   = lookupEntity(tx.to);
+        const spenderEntity = networkEntity(approval.spender, network);
+        const tokenEntity   = networkEntity(tx.to, network);
         const amountFormatted = formatApprovalAmount(approval);
 
         // Risk level: revoke = low, exact amount = medium, unlimited to unknown = critical
@@ -190,7 +200,7 @@ router.post("/analyze", async (req, res) => {
       }
 
       // Static pattern detection for transactions
-      const staticPatterns = detectPatterns({
+      const staticPatterns = aiResult.validatedReport ? [] : detectPatterns({
         tx: tx ?? undefined,
         methodId: tx?.methodId ?? undefined,
         calldata: tx?.input ?? undefined,
@@ -201,25 +211,14 @@ router.post("/analyze", async (req, res) => {
       });
       patterns = mergePatterns(staticPatterns, aiResult.aiPatterns ?? []);
     } else if (inputType === "contract") {
-      knownEntity = lookupEntity(trimmed);
+      knownEntity = networkEntity(trimmed, network);
       const contract = await fetchContract(trimmed, network);
 
-      // Run AI analysis and reputation scoring in parallel
-      const [contractAiResult, contractReputation] = await Promise.all([
-        analyzeContract(contract, network, knownEntity),
-        calculateContractReputation(
-          trimmed,
-          network,
-          verifiedEvidence(contract),
-          contract.isToken ?? false,
-          knownEntity,
-        ),
-      ]);
+      const contractAiResult = await analyzeContract(contract, network, knownEntity);
       aiResult = contractAiResult;
-      reputation = contractReputation;
 
       // Static pattern detection for contracts
-      const staticContractPatterns = detectPatterns({
+      const staticContractPatterns = aiResult.validatedReport ? [] : detectPatterns({
         contract,
         knownEntity,
       });
@@ -242,7 +241,8 @@ router.post("/analyze", async (req, res) => {
       aiResult = await analyzeUnknown(trimmed, network);
     }
 
-    const scoreFactors = computeScoreFactors({
+    if (aiResult.validatedReport) details.validatedReport = aiResult.validatedReport;
+    const scoreFactors = aiResult.validatedReport ? [] : computeScoreFactors({
       inputType: inputType as "transaction" | "contract" | "unknown",
       isVerified,
       knownEntity,
@@ -255,13 +255,7 @@ router.post("/analyze", async (req, res) => {
             spenderEntity: approvalInfo.spenderEntity,
           }
         : null,
-      reputation: reputation
-        ? {
-            tier: reputation.tier,
-            trustScore: reputation.trustScore,
-            isExploited: reputation.isExploited,
-          }
-        : null,
+      reputation: null,
       patterns,
       riskScore: aiResult.riskScore,
     });
@@ -296,8 +290,8 @@ router.post("/analyze", async (req, res) => {
       riskLevel: saved.riskLevel,
       warnings: saved.warnings as string[],
       positives: saved.positives as string[],
-      knownEntity: knownEntity ?? undefined,
-      approvalInfo: approvalInfo ?? undefined,
+      knownEntity: aiResult.validatedReport ? undefined : knownEntity ?? undefined,
+      approvalInfo: aiResult.validatedReport ? undefined : approvalInfo ?? undefined,
       breakdown: aiResult.breakdown ?? undefined,
       reputation: reputation ?? undefined,
       patterns: patterns.length > 0 ? patterns : undefined,
@@ -335,6 +329,10 @@ router.post("/analyze-stream", async (req, res) => {
     return;
   }
   const inputType = detectInputType(trimmed);
+  if (inputType === "unknown") {
+    res.status(400).json({ error: "validation_error", message: "Enter a complete transaction hash or contract address. No risk verdict was produced." });
+    return;
+  }
   const key = cacheKey(trimmed, network);
 
   try {
@@ -370,7 +368,7 @@ router.post("/analyze-stream", async (req, res) => {
   // ── Cache hit — emit a cached event with the existing result ────────────
   if (!fresh) {
     const hit = analysisCache.get(key) as ({ id?: string } & Record<string, unknown>) | undefined;
-    if (hit) {
+    if (hit && validatedCacheEntry(hit)) {
       send({ type: "cached", id: hit.id, ...hit });
       res.end();
       return;
@@ -388,7 +386,7 @@ router.post("/analyze-stream", async (req, res) => {
 
     // Emit events from the AI analyser in real-time
     const onEvent = (event: StreamEvent) => send(event.type === "result"
-      ? { ...event, result: { ...event.result, details } }
+      ? { ...event, result: { ...event.result, details: { ...details, ...(event.result.validatedReport ? { validatedReport: event.result.validatedReport } : {}) } } }
       : event as unknown as Record<string, unknown>);
 
     if (inputType === "transaction") {
@@ -400,13 +398,13 @@ router.post("/analyze-stream", async (req, res) => {
         return;
       }
       const methodName = tx?.methodId ? decodeMethodId(tx.methodId) : null;
-      if (tx?.to) knownEntity = lookupEntity(tx.to);
+      if (tx?.to) knownEntity = networkEntity(tx.to, network);
 
       // Approval inspection
       const approval = tx?.input ? decodeApprovalCalldata(tx.input) : null;
       if (approval && tx) {
-        const spenderEntity = lookupEntity(approval.spender);
-        const tokenEntity = lookupEntity(tx.to);
+        const spenderEntity = networkEntity(approval.spender, network);
+        const tokenEntity = networkEntity(tx.to, network);
         const amountFormatted = formatApprovalAmount(approval);
 
         let approvalRisk: "low" | "medium" | "high" | "critical" = "medium";
@@ -481,7 +479,8 @@ router.post("/analyze-stream", async (req, res) => {
         };
       }
 
-      const staticPatterns = detectPatterns({
+      if (aiResult.validatedReport) details.validatedReport = aiResult.validatedReport;
+      const staticPatterns = aiResult.validatedReport ? [] : detectPatterns({
         tx: tx ?? undefined,
         methodId: tx?.methodId ?? undefined,
         calldata: tx?.input ?? undefined,
@@ -492,7 +491,7 @@ router.post("/analyze-stream", async (req, res) => {
       });
       patterns = mergePatterns(staticPatterns, aiResult.aiPatterns ?? []);
 
-      const scoreFactors = computeScoreFactors({
+      const scoreFactors = aiResult.validatedReport ? [] : computeScoreFactors({
         inputType: inputType as "transaction" | "contract" | "unknown",
         isVerified,
         knownEntity,
@@ -541,8 +540,8 @@ router.post("/analyze-stream", async (req, res) => {
         riskLevel: saved.riskLevel,
         warnings: saved.warnings as string[],
         positives: saved.positives as string[],
-        knownEntity: knownEntity ?? undefined,
-        approvalInfo: approvalInfo ?? undefined,
+        knownEntity: aiResult.validatedReport ? undefined : knownEntity ?? undefined,
+        approvalInfo: aiResult.validatedReport ? undefined : approvalInfo ?? undefined,
         breakdown: aiResult.breakdown ?? undefined,
         patterns: patterns.length > 0 ? patterns : undefined,
         scoreFactors: scoreFactors.length > 0 ? scoreFactors : undefined,
@@ -558,7 +557,7 @@ router.post("/analyze-stream", async (req, res) => {
 
     if (inputType === "contract") {
       stage = "fetch_contract";
-      knownEntity = lookupEntity(trimmed);
+      knownEntity = networkEntity(trimmed, network);
       const contract = await fetchContract(trimmed, network);
 
       stage = "ai_contract";
@@ -570,24 +569,19 @@ router.post("/analyze-stream", async (req, res) => {
         ...(knownEntity ? { protocol: knownEntity.name } : {}),
         rawData: { isToken: contract.isToken, tokenName: contract.tokenName, totalSupply: contract.totalSupply },
       };
-      const [aiResult, contractReputation] = await Promise.all([
-        analyzeContractStreaming(contract, network, onEvent, knownEntity),
-        calculateContractReputation(trimmed, network, verifiedEvidence(contract), contract.isToken ?? false, knownEntity),
-      ]);
-      reputation = contractReputation;
+      const aiResult = await analyzeContractStreaming(contract, network, onEvent, knownEntity);
+      if (aiResult.validatedReport) details.validatedReport = aiResult.validatedReport;
 
-      const staticContractPatterns = detectPatterns({ contract, knownEntity });
+      const staticContractPatterns = aiResult.validatedReport ? [] : detectPatterns({ contract, knownEntity });
       patterns = mergePatterns(staticContractPatterns, aiResult.aiPatterns ?? []);
       isVerified = verifiedEvidence(contract);
 
-      const scoreFactors = computeScoreFactors({
+      const scoreFactors = aiResult.validatedReport ? [] : computeScoreFactors({
         inputType: inputType as "transaction" | "contract" | "unknown",
         isVerified,
         knownEntity,
         approvalInfo: null,
-        reputation: reputation
-          ? { tier: reputation.tier, trustScore: reputation.trustScore, isExploited: reputation.isExploited }
-          : null,
+        reputation: null,
         patterns,
         riskScore: aiResult.riskScore,
       });
@@ -623,7 +617,7 @@ router.post("/analyze-stream", async (req, res) => {
         riskLevel: saved.riskLevel,
         warnings: saved.warnings as string[],
         positives: saved.positives as string[],
-        knownEntity: knownEntity ?? undefined,
+        knownEntity: aiResult.validatedReport ? undefined : knownEntity ?? undefined,
         breakdown: aiResult.breakdown ?? undefined,
         reputation: reputation ?? undefined,
         patterns: patterns.length > 0 ? patterns : undefined,
@@ -663,7 +657,7 @@ router.post("/analyze-stream", async (req, res) => {
     res.end();
   } catch (err) {
     req.log.error({ err }, "Streaming analysis failed");
-    send({ type: "error", message: err instanceof AIAnalysisOutputError
+    send({ type: "error", code: err instanceof AIAnalysisOutputError ? err.code : "analysis_failed", message: err instanceof AIAnalysisOutputError
       ? err.message
       : `Failed to analyze input — please try again. (${stage})` });
     res.end();

@@ -183,11 +183,14 @@ export default function Home() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let lineBuffer = '';
+      let terminalEvent = false;
 
       const handleEvent = (event: Record<string, unknown>) => {
+        if (terminalEvent) return;
         const type = event.type as string;
 
         if (type === 'cached') {
+          terminalEvent = true;
           toast({
             title: '⚡ Instant result',
             description: 'Served from cache — no new AI call needed.',
@@ -203,44 +206,22 @@ export default function Home() {
           if (step === 1) {
             setPhase({ kind: 'step1', label });
           } else {
-            setPhase((prev) => {
-              if (prev.kind === 'streaming') return { ...prev, stepLabel: label };
-              return { kind: 'streaming', estimatedScore: 50, signalCount: 0, riskSignals: [], summaryText: '', stepLabel: label };
-            });
+            setPhase({ kind: 'validating', label });
           }
           return;
         }
 
-        if (type === 'metadata') {
-          const estimatedScore = event.estimatedScore as number;
-          const signalCount = event.signalCount as number;
-          const riskSignals = (event.riskSignals as string[]) ?? [];
-          setPhase((prev) => ({
-            kind: 'streaming',
-            estimatedScore,
-            signalCount,
-            riskSignals,
-            summaryText: '',
-            stepLabel: prev.kind === 'streaming' ? prev.stepLabel : 'Generating verdict…',
-          }));
-          return;
-        }
-
-        if (type === 'token') {
-          const text = event.text as string;
-          setPhase((prev) => {
-            if (prev.kind !== 'streaming') return prev;
-            return { ...prev, summaryText: prev.summaryText + text };
-          });
-          return;
-        }
+        // Legacy preview events are not validated findings.
+        if (type === 'metadata' || type === 'token') return;
 
         if (type === 'done') {
+          terminalEvent = true;
           setLocation(`/analysis/${event.id}`);
           return;
         }
 
         if (type === 'error') {
+          terminalEvent = true;
           setPhase({ kind: 'error', message: (event.message as string) || 'Analysis failed' });
         }
       };
@@ -265,6 +246,7 @@ export default function Home() {
           }
         }
       }
+      if (!terminalEvent) setPhase({ kind: 'error', message: 'Analysis stream ended before validation completed. No risk verdict was produced. Please retry.' });
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       setPhase({ kind: 'error', message: 'Connection failed — please try again.' });
@@ -469,6 +451,7 @@ export default function Home() {
               {/* Error state */}
               {phase.kind === 'error' && (
                 <motion.div
+                  role="alert"
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-center gap-3 p-4 bg-destructive/8 border border-destructive/20 rounded-xl text-destructive/90 font-mono text-sm"

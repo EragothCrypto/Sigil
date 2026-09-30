@@ -1,0 +1,31 @@
+const assert = require('node:assert/strict');
+const { readFileSync } = require('node:fs');
+const { stripTypeScriptTypes } = require('node:module');
+const vm = require('node:vm');
+const { test } = require('node:test');
+test('client distinguishes validated reports from malformed or legacy details', () => {
+  const api = vm.createContext({});
+  vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/src/lib/validated-report.ts`, 'utf8').replace(/export /g, '')), api);
+  const report = { version: 'findings-v1', scorePolicy: 'max-floor-v1', findings: [{ id: 'f:traces_missing', code: 'traces_missing', category: 'limitation', text: 'Traces were not collected.', evidenceRefs: ['e:traces_missing'] }], evidence: [{id: 'e:traces_missing', kind: 'traces_missing', subject: 'mainnet:0x0000000000000000000000000000000000000001', value: 'not collected'}] };
+  assert.ok(api.parseValidatedReport({ validatedReport: report }));
+  assert.equal(api.parseValidatedReport({validatedReport: {...report, evidence: []}}), null);
+  assert.equal(api.parseValidatedReport({validatedReport: {...report, evidence: [report.evidence[0], report.evidence[0]]}}), null);
+  assert.equal(api.parseValidatedReport({validatedReport: {...report, evidence: [{...report.evidence[0], transfers: [{kind: 'erc20', token: 'bad', from: 'bad', to: 'bad'}]}]}}), null);
+  for (const details of [{}, null, { validatedReport: {} }, { validatedReport: { ...report, findings: [{ ...report.findings[0], category: 'trust' }] } }, { validatedReport: { ...report, findings: Array(33).fill(report.findings[0]) } }, { validatedReport: { ...report, findings: [report.findings[0], report.findings[0]] } }]) assert.equal(api.parseValidatedReport(details), null);
+});
+test('web report separates limits, avoids unconditional clearance and labels legacy results', () => {
+  const source = readFileSync(`${__dirname}/src/components/sigil/AnalysisResultView.tsx`, 'utf8');
+  assert.doesNotMatch(source, /label: 'Safe to Sign'/);
+  assert.match(source, /Analysis Limits/);
+  assert.match(source, /Legacy report/);
+  assert.match(source, /parseValidatedReport/);
+  assert.match(source, /'validatedReport' in data.details && !validatedReport/);
+  assert.match(source, /!validatedReport && data.inputType === 'contract'/);
+  assert.match(source, /validatedReport.evidence.find/);
+  assert.match(source, /Raw amount:/);
+  const streaming = readFileSync(`${__dirname}/src/components/sigil/StreamingAnalysisView.tsx`, 'utf8');
+  const home = readFileSync(`${__dirname}/src/pages/home.tsx`, 'utf8');
+  assert.doesNotMatch(streaming + home, /estimatedScore|phase\.summaryText|ScoreRing/);
+  assert.match(home, /type === 'metadata' \|\| type === 'token'\) return/);
+  assert.match(home, /if \(!terminalEvent\) setPhase/);
+});

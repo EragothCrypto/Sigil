@@ -56,14 +56,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Link>
 
           {/* Nav */}
-          <nav className="flex items-center gap-1">
+          <nav aria-label="Main navigation" className="flex min-w-0 items-center gap-1 overflow-x-auto">
             {NAV_ITEMS.map(({ href, label, icon: Icon, pulse }) => {
               const isActive = location === href;
               return (
                 <Link
                   key={href}
                   href={href}
-                  className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer group
+                  aria-label={label}
+                  title={label}
+                  className={`relative flex shrink-0 items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer group
                     ${isActive
                       ? 'bg-primary/12 text-primary border border-primary/20'
                       : 'text-white/50 hover:text-white/90 hover:bg-white/5 border border-transparent'

@@ -67,7 +67,7 @@ test('fresh cache namespace cannot reuse legacy missing-evidence verdicts', () =
   const api = load('analysis-cache', { setInterval() {} });
   const oldKey = 'evidence-v2:mainnet:hash';
   vm.runInContext(`analysisCache.set('${oldKey}', { riskScore: 35 })`, api);
-  assert.equal(api.cacheKey('HASH', 'MAINNET'), 'evidence-v3:mainnet:hash');
+  assert.equal(api.cacheKey('HASH', 'MAINNET'), 'findings-v1:mainnet:hash');
   assert.equal(vm.runInContext("analysisCache.get(cacheKey('hash', 'mainnet'))", api), null);
 });
 
