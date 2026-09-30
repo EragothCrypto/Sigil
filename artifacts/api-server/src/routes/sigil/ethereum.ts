@@ -158,19 +158,25 @@ function receiptIssueFor(tx: Record<string, unknown>, value: unknown): Transacti
   return undefined;
 }
 
+function validTransaction(value: unknown, hash: string): value is Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const tx = value as Record<string, unknown>;
+  return typeof tx.hash === "string" && tx.hash.toLowerCase() === hash.toLowerCase()
+    && typeof tx.from === "string" && isContractAddress(tx.from)
+    && (tx.to == null || (typeof tx.to === "string" && isContractAddress(tx.to)))
+    && typeof tx.input === "string" && /^0x(?:[a-f0-9]{2})*$/i.test(tx.input)
+    && typeof tx.value === "string" && /^0x[a-f0-9]+$/i.test(tx.value);
+}
+
 export async function fetchTransaction(
   hash: string,
   network: string,
 ): Promise<TransactionData | null> {
   try {
-    const txData = await rpcCall(network, "eth_getTransactionByHash", [hash]) as Record<string, string> | null;
+    const txData = await rpcCall(network, "eth_getTransactionByHash", [hash], value => validTransaction(value, hash));
 
-    if (!txData || typeof txData.hash !== "string" || txData.hash.toLowerCase() !== hash.toLowerCase()
-      || typeof txData.from !== "string" || !isContractAddress(txData.from)
-      || (txData.to != null && (typeof txData.to !== "string" || !isContractAddress(txData.to)))
-      || typeof txData.input !== "string" || !/^0x(?:[a-f0-9]{2})*$/i.test(txData.input)
-      || typeof txData.value !== "string" || !/^0x[a-f0-9]+$/i.test(txData.value)) {
-      logger.warn({ network }, "Transaction not found on any RPC endpoint");
+    if (!validTransaction(txData, hash)) {
+      logger.warn({ network }, "Transaction data unavailable after RPC fallback");
       return null;
     }
 
@@ -216,8 +222,8 @@ export async function fetchTransaction(
         ? (txData.input as string).substring(0, 10)
         : undefined,
     };
-  } catch (err) {
-    logger.warn({ err, network }, "Failed to fetch transaction via RPC");
+  } catch {
+    logger.warn({ network, diagnostic: "transaction_data_unavailable" }, "Transaction data unavailable after RPC fallback");
     return null;
   }
 }

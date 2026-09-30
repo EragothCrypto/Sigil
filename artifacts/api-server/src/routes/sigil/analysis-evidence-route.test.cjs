@@ -7,6 +7,8 @@ const { test } = require('node:test');
 function routesFor(tx, inputType = 'transaction') {
   const handlers = new Map();
   const saved = [];
+  let aiCalls = 0;
+  let cacheWrites = 0;
   const verdict = { summary: 'Evidence summary', verdict: 'caution', verdictReason: 'Review evidence', riskScore: 40, riskLevel: 'medium', warnings: [], positives: [] };
   const modules = {
     express: { Router: () => ({ get() {}, post: (path, handler) => handlers.set(path, handler) }) },
@@ -18,27 +20,48 @@ function routesFor(tx, inputType = 'transaction') {
       detectInputType: () => inputType, isSupportedNetwork: network => network === 'mainnet',
       fetchContract: async () => ({ address: 'address', isVerified: false, verificationStatus: 'unknown' }), verifiedEvidence: () => undefined,
       fetchTransaction: async () => tx, decodeMethodId: () => null, decodeApprovalCalldata: () => null,
-      transactionEvidenceDetails: data => ({ sourceVerification: data.destinationVerification, transferCoverage: 'partial' }),
+      transactionEvidenceDetails: data => ({ sourceVerification: data?.destinationVerification ?? 'unknown', transferCoverage: 'partial' }),
     },
     './ai-analyzer.js': {
       AIAnalysisOutputError: class extends Error {},
-      analyzeTransaction: async () => verdict,
-      analyzeTransactionStreaming: async (_tx, _method, _network, _input, emit) => { emit({ type: 'result', result: verdict }); return verdict; },
+      analyzeTransaction: async () => { aiCalls++; return verdict; },
+      analyzeTransactionStreaming: async (_tx, _method, _network, _input, emit) => { aiCalls++; emit({ type: 'result', result: verdict }); return verdict; },
       analyzeContractStreaming: async (_contract, _network, emit) => { emit({ type: 'result', result: verdict }); return verdict; },
     },
     './known-entities.js': { lookupEntity: () => null },
     './contract-reputation.js': { calculateContractReputation: async () => ({ tier: 'unproven', trustScore: 0, isExploited: false }) },
     './pattern-detector.js': { detectPatterns: () => [], mergePatterns: () => [] },
     './score-factors.js': { computeScoreFactors: () => [] },
-    './analysis-cache.js': { cacheKey: () => 'test', analysisCache: { get() {}, set() {} } },
+    './analysis-cache.js': { cacheKey: () => 'test', analysisCache: { get() {}, set() { cacheWrites++; } } },
     './analysis-schema.js': { ensureAnalysesSchema: async () => {} },
   };
   const source = ts.transpileModule(readFileSync(`${__dirname}/index.ts`, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   vm.runInNewContext(source, { exports: {}, require: name => modules[name] ?? {}, process: { env: {} } });
-  return { handlers, saved };
+  return { handlers, saved, get aiCalls() { return aiCalls; }, get cacheWrites() { return cacheWrites; } };
 }
+
+test('missing transaction data stops both routes before AI, persistence, cache or a verdict', async () => {
+  const api = routesFor(null);
+  for (const path of ['/analyze', '/analyze-stream']) {
+    const events = [];
+    const response = { code: 200, ended: false, status(code) { this.code = code; return this; }, json(body) { this.body = body; }, setHeader() {}, flushHeaders() {}, end() { this.ended = true; }, write(line) { events.push(JSON.parse(line.slice(6))); } };
+    await api.handlers.get(path)({ body: { input: 'hash', network: 'mainnet', fresh: true }, log: { error() {} } }, response);
+    if (path === '/analyze') {
+      assert.equal(response.code, 503);
+      assert.equal(response.body.error, 'transaction_data_unavailable');
+      assert.equal(response.body.riskScore, undefined);
+    } else {
+      assert.equal(events.find(event => event.type === 'error')?.code, 'transaction_data_unavailable');
+      assert.equal(events.some(event => ['result', 'metadata', 'done', 'cached'].includes(event.type)), false);
+      assert.equal(response.ended, true);
+    }
+    assert.equal(api.aiCalls, 0);
+    assert.equal(api.saved.length, 0);
+    assert.equal(api.cacheWrites, 0);
+  }
+});
 
 test('both analysis routes persist bounded evidence and SSE exposes the same details', async () => {
   const tx = { hash: 'hash', from: 'sender', to: 'target', input: '0x', value: '0x0', blockNumber: '1', destinationVerification: 'unknown', receiptEvidence: { status: 'unavailable', complete: false, transfers: [] }, historicalExample: { name: 'curated example' } };

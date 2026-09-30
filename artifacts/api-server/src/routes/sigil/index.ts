@@ -34,6 +34,7 @@ import { analysisCache, cacheKey } from "./analysis-cache.js";
 import { ensureAnalysesSchema, runAnalysisRetentionCleanup } from "./analysis-schema.js";
 
 const router: IRouter = Router();
+const TRANSACTION_DATA_UNAVAILABLE = "Analysis unavailable: transaction data could not be retrieved. Check the network and hash, then retry. No risk verdict was produced.";
 
 router.get("/maintenance/retention", async (req, res) => {
   const cronSecret = process.env.CRON_SECRET;
@@ -95,6 +96,10 @@ router.post("/analyze", async (req, res) => {
 
     if (inputType === "transaction") {
       const tx = await fetchTransaction(trimmed, network);
+      if (!tx) {
+        res.status(503).json({ error: "transaction_data_unavailable", message: TRANSACTION_DATA_UNAVAILABLE });
+        return;
+      }
       const methodName = tx?.methodId ? decodeMethodId(tx.methodId) : null;
       // Check both `to` and common proxy addresses for known entity
       if (tx?.to) knownEntity = lookupEntity(tx.to);
@@ -389,6 +394,11 @@ router.post("/analyze-stream", async (req, res) => {
     if (inputType === "transaction") {
       stage = "fetch_transaction";
       const tx = await fetchTransaction(trimmed, network);
+      if (!tx) {
+        send({ type: "error", code: "transaction_data_unavailable", message: TRANSACTION_DATA_UNAVAILABLE });
+        res.end();
+        return;
+      }
       const methodName = tx?.methodId ? decodeMethodId(tx.methodId) : null;
       if (tx?.to) knownEntity = lookupEntity(tx.to);
 

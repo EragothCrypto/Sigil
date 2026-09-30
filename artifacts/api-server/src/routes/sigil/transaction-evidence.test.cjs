@@ -3,9 +3,9 @@ const { readFileSync } = require('node:fs');
 const { stripTypeScriptTypes } = require('node:module');
 const vm = require('node:vm');
 const { test } = require('node:test');
-function load(file) {
-  const context = vm.createContext({});
-  vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/${file}.ts`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '')), context);
+function load(file, globals = {}) {
+  const context = vm.createContext(globals);
+  vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/${file}.ts`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, ''), { mode: 'transform' }), context);
   return context;
 }
 function loadEthereum(tx, receipt, explorer = { status: '0', result: 'NOTOK' }, code = '0x6000') {
@@ -19,6 +19,57 @@ function loadEthereum(tx, receipt, explorer = { status: '0', result: 'NOTOK' }, 
   vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/ethereum.ts`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '')), api);
   return api;
 }
+
+test('transaction lookup falls back after null, malformed and mismatched results', async () => {
+  const hash = `0x${'aa'.repeat(32)}`;
+  const tx = { hash, from: address, to: address, value: '0x0', input: '0x', blockNumber: '0x1', blockHash: hash };
+  for (const first of [null, [], {}, { ...tx, hash: `0x${'bb'.repeat(32)}` }, { ...tx, input: 'invalid' }]) {
+    const api = loadEthereum(tx, null);
+    const fetch = api.fetch;
+    let calls = 0;
+    api.fetch = async (url, options) => {
+      if (options?.body && JSON.parse(options.body).method === 'eth_getTransactionByHash' && ++calls === 1) return { ok: true, json: async () => ({ result: first }) };
+      return fetch(url, options);
+    };
+    const result = await api.fetchTransaction(hash, 'mainnet');
+    assert.equal(result?.hash, hash);
+    assert.equal(calls, 2);
+  }
+});
+
+test('unavailable transaction tries only existing endpoints and never queries receipt or explorer', async () => {
+  const api = loadEthereum(null, null);
+  const methods = [];
+  api.fetch = async (_url, options) => {
+    methods.push(options?.body ? JSON.parse(options.body).method : 'explorer');
+    return { ok: true, json: async () => ({ result: null }) };
+  };
+  assert.equal(await api.fetchTransaction(`0x${'aa'.repeat(32)}`, 'mainnet'), null);
+  assert.equal(methods.length, 4);
+  assert.ok(methods.every(method => method === 'eth_getTransactionByHash'));
+});
+
+test('valid contract creation is accepted and does not request destination metadata', async () => {
+  const hash = `0x${'aa'.repeat(32)}`;
+  const tx = { hash, from: address, to: null, value: '0x0', input: '0x6000', blockNumber: '0x1', blockHash: hash };
+  const receipt = { transactionHash: hash, blockNumber: '0x1', blockHash: hash, status: '0x1', logs: [] };
+  const api = loadEthereum(tx, receipt);
+  const fetch = api.fetch;
+  const methods = [];
+  api.fetch = async (url, options) => { methods.push(options?.body ? JSON.parse(options.body).method : 'explorer'); return fetch(url, options); };
+  const result = await api.fetchTransaction(hash, 'mainnet');
+  assert.equal(result.to, 'contract creation');
+  assert.equal(result.status, '0x1');
+  assert.deepEqual(methods, ['eth_getTransactionByHash', 'eth_getTransactionReceipt']);
+});
+
+test('fresh cache namespace cannot reuse legacy missing-evidence verdicts', () => {
+  const api = load('analysis-cache', { setInterval() {} });
+  const oldKey = 'evidence-v2:mainnet:hash';
+  vm.runInContext(`analysisCache.set('${oldKey}', { riskScore: 35 })`, api);
+  assert.equal(api.cacheKey('HASH', 'MAINNET'), 'evidence-v3:mainnet:hash');
+  assert.equal(vm.runInContext("analysisCache.get(cacheKey('hash', 'mainnet'))", api), null);
+});
 
 test('mined transaction recovers receipt from a fallback after an empty response', async () => {
   const hash = `0x${'aa'.repeat(32)}`;

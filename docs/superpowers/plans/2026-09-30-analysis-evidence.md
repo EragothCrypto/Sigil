@@ -24,6 +24,14 @@ Approval corrections include intent-only web copy, no automatic revoke/exact-amo
 
 ## Live Follow-Up
 
+### Transaction Lookup Follow-Up (2026-09-30)
+
+The Aave operator screenshot renders a plausible deposit report without an inflation accusation, but the Uniswap screenshot produces score35 despite no transaction data. The example exists on mainnet; two existing public RPCs independently returned it. This does not identify which error occurred in Vercel.
+
+New failing regressions reproduce null/malformed/mismatched first transaction responses ending fallback and a missing transaction reaching AI and persistence. Validated transaction results now gate each existing RPC endpoint attempt. Both routes stop on unavailable transaction data before AI, score generation, persistence and cache writes; JSON returns503, SSE sends a sanitized error and ends. Unavailability is not claimed as proven nonexistence. Contract creation remains supported. Cache namespacev3 avoids legacy cached verdicts; stored reports are not rewritten/deleted.
+
+All 113 selected regressions, API typecheck/build and independent scoped review pass. Real corrected acquisition of the public Uniswap example with Explorer deliberately disabled returns mined/success, four receipt logs, two observed transfers and complete bounded event scan. No paid AI/database operation or new provider; TLS verification retained. Next: fresh production Uniswap scan after deployment, plus Aave/WETH controls. Old saved score35 reports are not evidence of current behavior. AI semantic correctness and overall release sign-off remain open.
+
 ### Receipt Interpretation Follow-Up (2026-09-30)
 
 Operator screenshot 171059 establishes one complete live result with mined/success status and 20 bounded Transfer-shaped observations, but not score calibration or confirmed exploit mechanics. Shared rules now explicitly forbid interpreting unknown raw magnitudes as large economic amounts, zero-address events as proof of inflation/manipulation, event order as internal routing or recipient control, and remembered token symbols as verified emitter metadata. Normal protocol mint/burn is neither automatic danger nor safety; correlated evidence gaps must not become independent critical threats. Existing raw input, scoring algorithm, completion budgets and privacy routing are unchanged.
