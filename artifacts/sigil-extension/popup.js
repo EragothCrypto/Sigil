@@ -1,9 +1,9 @@
 const core = window.SigilExtensionCore;
 
 const MODE_COPY = {
-  quiet: "Only interrupts suspicious approvals, typed data, and contract calls.",
-  standard: "Balanced daily protection with local checks and Sigil API analysis.",
-  strict: "Reviews every signing request and adds extra confirmation for risk.",
+  quiet: "Fewer alerts: focus on suspicious approvals, typed data, and contract calls.",
+  standard: "Normal alerts: balanced local checks and Sigil API analysis.",
+  strict: "More alerts: review every compatible signing request Sigil observes.",
 };
 
 const NOTIFICATION_COPY = {
@@ -210,15 +210,18 @@ function renderSessions() {
 
     const meta = document.createElement("div");
     meta.className = "history-meta";
+    const legacyActions = safeNumber(summary.legacyProceeded) + safeNumber(summary.legacyCancelled);
     meta.textContent =
-      `${safeNumber(summary.eventCount)} requests - ${safeNumber(summary.proceeded)} proceeded - ${safeNumber(summary.cancelled)} cancelled`;
+      `${safeNumber(summary.eventCount)} requests - ${safeNumber(summary.reviewed)} reviewed - ` +
+      `${safeNumber(summary.dismissed)} dismissed - ${safeNumber(summary.analysisFailed)} failed` +
+      (legacyActions ? ` - Legacy extension actions: ${legacyActions}` : "");
 
     const grid = document.createElement("div");
     grid.className = "session-grid";
     [
-      ["Appr", summary.approvals],
-      ["Sign", summary.signatures],
-      ["Tx", summary.transactions],
+      ["Reviewed", summary.reviewed],
+      ["Dismissed", summary.dismissed],
+      ["Failed", summary.analysisFailed],
       ["Risk", summary.maxRiskScore],
     ].forEach(([label, value]) => {
       const stat = document.createElement("div");
@@ -392,7 +395,7 @@ elements.notificationPolicyInput.addEventListener("change", async () => {
 
 elements.enabledToggle.addEventListener("change", async () => {
   settings.enabled = elements.enabledToggle.checked;
-  await saveSettings(settings.enabled ? "Guard enabled" : "Guard paused");
+  await saveSettings(settings.enabled ? "Request alerts enabled" : "Request alerts paused");
 });
 
 elements.syncEnabledToggle.addEventListener("change", async () => {
@@ -404,7 +407,7 @@ elements.modeGrid.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-mode]");
   if (!button) return;
   settings.protectionMode = button.dataset.mode;
-  await saveSettings("Mode updated");
+  await saveSettings("Alert sensitivity updated");
 });
 
 elements.addSiteBtn.addEventListener("click", async () => {

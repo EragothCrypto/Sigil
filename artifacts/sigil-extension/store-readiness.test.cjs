@@ -119,3 +119,23 @@ test("content UI is advisory-only and cannot claim wallet authority", () => {
   assert.match(content, /Trust this site/);
   assert.match(content, /wallet remains the only place/i);
 });
+
+test("popup names advisory controls and keeps legacy actions separate", () => {
+  const popup = read("popup.js");
+  const popupHtml = read("popup.html");
+  assert.match(popupHtml, /Wallet Request Alerts/);
+  assert.match(popupHtml, /Alert Sensitivity/);
+  assert.match(popup, /fewer alerts/i);
+  assert.match(popup, /normal alerts/i);
+  assert.match(popup, /more alerts/i);
+  assert.match(popup, /summary\.reviewed/);
+  assert.match(popup, /summary\.dismissed/);
+  assert.match(popup, /summary\.analysisFailed/);
+  assert.match(popup, /Legacy extension actions/);
+  assert.match(popup, /Request alerts enabled/);
+  assert.match(popup, /Alert sensitivity updated/);
+  assert.doesNotMatch(popupHtml, /Transaction Guard/);
+  assert.doesNotMatch(popupHtml, /Intercept signing requests/i);
+  assert.doesNotMatch(popupHtml, /Protection Mode/);
+  assert.doesNotMatch(popup, /Guard enabled/);
+});
