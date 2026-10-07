@@ -90,6 +90,8 @@ Latest operator evidence: both USDC and aToken remain unavailable with `token_ab
 
 Expected: either qualified block-bound contract-reported state or a fixed code distinguishing source/transport failure, missing/invalid/over-budget ABI, unverified source or token interface validation. Examples: `etherscan_rate_limited`, `etherscan_auth_failed`, `etherscan_abi_missing`, `etherscan_abi_limit`, `etherscan_timeout`, `token_abi_validation_failed`. These are possible diagnostics, not confirmed production findings. No raw provider messages or credentials; no signing or safety clearance. If metadata is unavailable, token capability must remain unavailable and no decimals/balance may be invented.
 
+Operator diagnostic retest after `a27014d`: both USDC and aToken at `0x1706d45` report `etherscan_rate_limited`; no usable token responses, no invented decimals/balances. This establishes observed provider rate-limit rejection, not the account's exact quota or sole cause of aggregate traffic. Local investigation found repeated destination metadata acquisition and no shared metadata cache/request pacing. A bounded metadata cache/coalescing and cancellable pacing design is proposed; implementation and live token success remain pending. Per-instance coordination alone would not establish account-wide coordination across Vercel instances.
+
 Chrome Web Store listing:
 
 https://chromewebstore.google.com/detail/sigil-web3-trust-layer/klogkofhnlifhakklkjmoofhfopnhnkg
