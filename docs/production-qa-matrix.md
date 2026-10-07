@@ -16,6 +16,21 @@ Run fresh analyses in a private window and preserve the full hash, network, resu
 
 Record all outcomes before changing the rollout gate. These operator checks have not been performed by this implementation session.
 
+### Operator-Screenshots: 2026-10-07
+
+Vier vom Operator bereitgestellte Screenshots zeigen Mainnet-**Contract**-Analysen, keine Transaktionsanalysen. Die sichtbaren gekuerzten Eingaben passen zu den unten aufgefuehrten Adresskontrollen. Vollstaendige Ergebnis-URLs, API-Payloads, Deploy-SHA und aufgeklappte Belege wurden nicht mitgeliefert; dies ist eine visuelle Teilpruefung, keine unabhaengige End-to-End-Verifikation.
+
+| Kontrolle / Screenshot | Sichtbares Ergebnis | Einordnung |
+| --- | --- | --- |
+| WETH / `Screenshot 2026-10-07 204953.jpg` | Keine konkreten Risiken; Unsicherheit0, Decision5, Coverage Partial; Metadaten/Registry und Verifikation als unterstuetzende Evidenz | Entspricht der aktuellen Contract-Metadaten-Policy, nicht dem Nachweis einer Deposit-Transaktion. |
+| Aave / `Screenshot 2026-10-07 205051.jpg` | Keine konkreten Risiken; Unsicherheit0, Decision5, Coverage Partial; Metadaten/Registry und Verifikation | Entspricht der Metadaten-Policy. Proxy-/historische Implementierung sowie Supply/aToken-Effekte bleiben durch diesen Screenshot ungeprueft. |
+| Uniswap / `Screenshot 2026-10-07 205125.jpg` | Keine konkreten Risiken; Unsicherheit0, Decision5, Coverage Partial; Metadaten/Registry und Verifikation | Entspricht der Metadaten-Policy, kein Swap-/Multicall-Nachweis. |
+| Euler-Beispiel-Destination / `Screenshot 2026-10-07 205338.jpg` | Keine konkreten Risiken etabliert; Unsicherheit40, Decision40, Caution; Source unverified | Entspricht dem 40er-Datenlueckenfloor. Kein Incident-Treffer aus der Adresse allein; exakter Exploit-Transaktionshash ist weiterhin separat zu testen. |
+
+UX-Follow-up: Unsicherheit0 plus gruener Banner kann trotz ausschliesslicher Metadatenpruefung zu vollstaendig wirken. Der Wert bedeutet hier nur, dass keine score-erhoehende Unsicherheitsregel angewendet wurde, nicht vollstaendige Kenntnis. Ebenso bedeutet `Source verification: Available`, dass der Verifikationsstatus ermittelt wurde; die Euler-Quelle ist laut Befund unverified. Eine klarere Trennung zwischen ermitteltem Status und verifiziertem Code ist noch zu pruefen. Keine Scoring-/UI-Aenderung oder Release-Freigabe aus diesen Screenshots abgeleitet.
+
+Weiterhin offen: exakte Euler-Transaktions-/Rollenchecks, echte WETH/Aave/Uniswap-Transaktionshashes, ABI-/Token-/Permission-Nachweise, Read-only Check, Fehler-/Wrong-network-Faelle und installiertes Extension-/Wallet-Verhalten.
+
 ### Konkrete Contract-Eingaben
 
 Fuer alle folgenden Adressen im Sigil-Netzwerkselektor **Ethereum / Mainnet** waehlen (Chain-ID `1`, API-Netzwerk `mainnet`). Die Adresse im Scanner einfuegen und eine neue Contract-Analyse starten. Nur lesen/analysieren: keine Wallet verbinden, keine Freigabe erteilen und keine echte Transaktion senden.
