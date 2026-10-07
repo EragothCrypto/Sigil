@@ -1,7 +1,7 @@
 /**
  * Sigil — Analysis Cache
  * In-memory LRU + TTL cache for analysis results.
- * Key: `${network}:${input}` (both lower-cased)
+ * Key: versioned policy namespace + `${network}:${input}` (both lower-cased)
  * Avoids redundant Etherscan + AI roundtrips for identical inputs.
  */
 
@@ -68,7 +68,7 @@ export const analysisCache = new AnalysisCache();
 
 /** Build the canonical cache key for an (input, network) pair */
 export function cacheKey(input: string, network: string): string {
-  return `findings-v2:${network.toLowerCase()}:${input.toLowerCase()}`;
+  return `findings-v2:token-state-v2:${network.toLowerCase()}:${input.toLowerCase()}`;
 }
 
 // Purge expired entries every 10 minutes to prevent memory accumulation

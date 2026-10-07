@@ -77,18 +77,55 @@ export async function collectAnalysisEvidence(tx: TransactionData, network: stri
     const state: TokenState = {address, blockTag, status: 'unavailable', authority: 'contract_reported_interface'};
     tokenStates.push(state);
     try {
-      if (signal.aborted || !ADDRESS.test(tx.from)) throw new Error();
+      if (signal.aborted) { state.reason = 'token_state_cancelled'; continue; }
+      if (!ADDRESS.test(tx.from)) { state.reason = 'token_caller_invalid'; continue; }
       if (transfers.some(t => t.token.toLowerCase() === address && t.kind === 'erc721-shaped')) { state.reason = 'nft_semantics'; continue; }
+      state.reason = 'token_metadata_unavailable';
       const contract = await metadata(address);
-      const tokenAbi = parsedAbi(contract);
-      if (!tokenAbi || !erc20Candidate(tokenAbi) || contract.isProxy) { state.reason = 'token_interface_not_established'; continue; }
-      const code = await rpc.call('eth_getCode', [address, blockTag], v => typeof v === 'string' && CODE.test(v));
-      if (typeof code !== 'string' || !CODE.test(code)) throw new Error();
-      const decimals = await rpc.call('eth_call', [{to: address, data: encodeFunctionData({abi: tokenAbi, functionName: 'decimals'})}, blockTag], v => typeof v === 'string' && WORD.test(v));
-      const balance = await rpc.call('eth_call', [{to: address, data: encodeFunctionData({abi: tokenAbi, functionName: 'balanceOf', args: [tx.from]})}, blockTag], v => typeof v === 'string' && WORD.test(v));
-      if (typeof decimals !== 'string' || !WORD.test(decimals) || typeof balance !== 'string' || !WORD.test(balance) || BigInt(decimals) > 36n) throw new Error();
+      let tokenAbi = parsedAbi(contract);
+      if (contract.isProxy) {
+        // A current ABI only defines the response shape; reads stay on the token at the requested block.
+        if (!limits.includes('token_proxy_current_abi_not_historical')) limits.push('token_proxy_current_abi_not_historical');
+        if (contract.verificationStatus !== 'verified') { state.reason = 'token_proxy_abi_unavailable'; continue; }
+        const implementation = contract.implementation;
+        if (!implementation || !ADDRESS.test(implementation) || /^0x0{40}$/i.test(implementation) || implementation.toLowerCase() === address) {
+          state.reason = 'token_proxy_implementation_unavailable'; continue;
+        }
+        state.reason = 'token_proxy_metadata_unavailable';
+        const implementationContract = await metadata(implementation);
+        if (implementationContract.isProxy !== false) { state.reason = 'token_proxy_nested_unsupported'; continue; }
+        tokenAbi = parsedAbi(implementationContract);
+        if (!tokenAbi) { state.reason = 'token_proxy_abi_unavailable'; continue; }
+      }
+      if (!tokenAbi) { state.reason = 'token_abi_unavailable'; continue; }
+      if (!erc20Candidate(tokenAbi)) { state.reason = 'token_erc20_interface_not_established'; continue; }
+      if (signal.aborted) { state.reason = 'token_state_cancelled'; continue; }
+      state.reason = 'token_state_rpc_unavailable';
+      const code = await rpc.call('eth_getCode', [address, blockTag], v => {
+        const valid = typeof v === 'string' && CODE.test(v);
+        if (!valid) state.reason = 'token_code_not_established';
+        return valid;
+      });
+      if (typeof code !== 'string' || !CODE.test(code)) { state.reason = 'token_code_not_established'; continue; }
+      const acceptWord = (v: unknown) => {
+        const valid = typeof v === 'string' && WORD.test(v);
+        if (!valid) state.reason = 'token_state_response_invalid';
+        return valid;
+      };
+      state.reason = 'token_state_rpc_unavailable';
+      const decimals = await rpc.call('eth_call', [{to: address, data: encodeFunctionData({abi: tokenAbi, functionName: 'decimals'})}, blockTag], acceptWord);
+      state.reason = 'token_state_rpc_unavailable';
+      const balance = await rpc.call('eth_call', [{to: address, data: encodeFunctionData({abi: tokenAbi, functionName: 'balanceOf', args: [tx.from]})}, blockTag], acceptWord);
+      if (typeof decimals !== 'string' || !WORD.test(decimals) || typeof balance !== 'string' || !WORD.test(balance) || BigInt(decimals) > 36n) {
+        state.reason = 'token_state_response_invalid'; continue;
+      }
       state.decimals = Number(BigInt(decimals)); state.balanceRaw = BigInt(balance).toString(); state.status = 'available';
-    } catch { state.reason ??= 'token_state_unavailable'; }
+      if (contract.isProxy) state.reason = 'current_proxy_abi_only';
+      else delete state.reason;
+    } catch {
+      if (signal.aborted) state.reason = 'token_state_cancelled';
+      else state.reason ??= 'token_state_unavailable';
+    }
   }
   const permissionStates: PermissionState[] = [];
   try {

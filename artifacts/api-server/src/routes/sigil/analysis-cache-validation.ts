@@ -80,6 +80,10 @@ export function validatedCacheEntry(value: unknown, input: string, network: stri
       blockTag = typeof rawData.blockNumber === 'string' && /^0x[\da-f]+$/i.test(rawData.blockNumber) ? rawData.blockNumber : 'latest';
     } else if (record.inputType !== 'contract') return false;
     const subject = `${network}:${destination.toLowerCase()}`;
+    const transfers = report.evidence.filter(e => e.kind === 'transfer_observations').flatMap(e => e.transfers ?? []);
+    const emitters = new Set(transfers.map(transfer => transfer.token.toLowerCase()));
+    const tokenAddresses = new Set<string>();
+    let tokenStateAvailable = false;
     for (const evidence of report.evidence) {
       if (evidence.incident) {
         const incident = lookupIncident(input, network);
@@ -87,8 +91,18 @@ export function validatedCacheEntry(value: unknown, input: string, network: stri
       } else if (evidence.subject !== subject) return false;
       if (evidence.input && !cacheInputBound(evidence.input, destination, network, blockTag)) return false;
       if (blockTag !== undefined && evidence.tokenStates?.some(s => s.blockTag !== blockTag)) return false;
+      for (const state of evidence.tokenStates ?? []) {
+        const address = state.address.toLowerCase();
+        if (record.inputType !== 'transaction' || !emitters.has(address) || tokenAddresses.has(address)) return false;
+        tokenAddresses.add(address);
+        if (state.status === 'available') {
+          if (transfers.some(transfer => transfer.token.toLowerCase() === address && transfer.kind === 'erc721-shaped')) return false;
+          tokenStateAvailable = true;
+        }
+      }
       if (evidence.permissionStates?.some(s => s.token.toLowerCase() !== destination.toLowerCase() || blockTag !== undefined && s.blockTag !== blockTag)) return false;
     }
+    if (report.capabilities.reportedTokenState !== tokenStateAvailable) return false;
     const warnings = report.findings.filter(f => f.category === 'risk' || f.category === 'limitation').map(f => f.category === 'limitation' ? `Analysis limit: ${f.text}` : f.text);
     const positives = report.findings.filter(f => f.category === 'supported_indicator').map(f => f.text);
     if (JSON.stringify(record.warnings) !== JSON.stringify(warnings) || JSON.stringify(record.positives) !== JSON.stringify(positives)) return false;

@@ -70,6 +70,8 @@ function transactionFixture(blockNumber='0x1') {
  addFinding(value,'abi_historical_uncertain','limitation');
  addFinding(value,'decoded_intent','observation').input={...input(blockTag),subcalls:[input(blockTag)]};
  addFinding(value,'reported_token_state','observation').tokenStates=[{address,status:'available',blockTag,authority:'contract_reported_interface',decimals:6,balanceRaw:'1'}];
+ addFinding(value,'transfer_observations','observation').transfers=[{kind:'erc20-shaped',token:address,from:address,to:address,amountRaw:'1'}];
+ value.details.validatedReport.capabilities.reportedTokenState=true;
  addFinding(value,'reported_permission_state','observation').permissionStates=[{token:address,owner:address,spender:address,blockTag,kind:'erc20_allowance',rawValue:'1',authority:'contract_reported_interface'}];
  sync(value,null,35);return value;
 }
@@ -91,6 +93,21 @@ test('transaction top/recursive input and token/permission blocks bind to raw ac
  const uppercase=transactionFixture();uppercase.details.rawData.hash=hash.toUpperCase().replace('0X','0x');
  assert.equal(context.validatedCacheEntry(uppercase,hash,'mainnet'),true);
  assert.equal(context.validatedCacheEntry(fixture(),address,'mainnet'),true,'contract baseline needs no transaction raw data');
+});
+
+test('cached token states retain emitter identity, uniqueness, shape and capability consistency',()=>{
+ const value=transactionFixture();assert.equal(context.validatedCacheEntry(value,hash,'mainnet'),true);
+ const changes=[
+  v=>v.details.validatedReport.capabilities.reportedTokenState=false,
+  v=>v.details.validatedReport.evidence.find(e=>e.tokenStates).tokenStates[0].address='0x'+'3'.repeat(40),
+  v=>{const s=v.details.validatedReport.evidence.find(e=>e.tokenStates).tokenStates;s.push({...s[0]});},
+  v=>v.details.validatedReport.evidence.find(e=>e.transfers).transfers[0].kind='erc721-shaped',
+  v=>delete v.details.validatedReport.evidence.find(e=>e.transfers).transfers,
+ ];
+ for(const change of changes){const modified=JSON.parse(JSON.stringify(value));change(modified);assert.equal(context.validatedCacheEntry(modified,hash,'mainnet'),false);}
+ const unavailable=transactionFixture();const state=unavailable.details.validatedReport.evidence.find(e=>e.tokenStates).tokenStates[0];
+ state.status='unavailable';delete state.decimals;delete state.balanceRaw;state.reason='token_proxy_abi_unavailable';unavailable.details.validatedReport.capabilities.reportedTokenState=false;
+ assert.equal(context.validatedCacheEntry(unavailable,hash,'mainnet'),true);
 });
 
 test('historical incident role controls exact risk floor and category',()=>{

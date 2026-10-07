@@ -68,6 +68,20 @@ Das ist eine read-only `deposit()`-Call-Kontrolle mit Wert0, keine ETH-Einzahlun
 
 Read-only-Routing-Checkpoint 2026-10-07: Der Operator meldete `Remote execution check unavailable`. Ein direkter POST desselben WETH-JSONs an die Live-Route `/api/sigil/simulate-v2` reproduzierte HTTP405, nicht einen strukturierten RPC-unavailable-Report. Beide Vercel-Layouts erhalten eine explizite v2-Rewrite auf die bestehende Simulation-Funktion; der Wrapper unterscheidet v2 vom weiterhin deaktivierten Legacy-Endpunkt. Keine zusaetzliche Serverless-Funktion, keine KI-Anfrage, keine Wallet-Transaktion. Lokale Routing-/Wrapper-Pruefung ersetzt keine Deployment-Verifikation. Nach Vercel Ready dieselbe JSON-Eingabe erneut testen: HTTP200 mit `execution-check-v2` und explizitem Call-/Unavailable-Status erwartet; Legacy `/simulate` bleibt HTTP422.
 
+### Operator-Follow-up: Read-only und Aave
+
+Vom Operator gemeldete Live-Ausgaben nach dem Routing-Fix: WETH `deposit()` value0 mit Provider-Default-Caller und explizitem Caller `0x000000000000000000000000000000000000dEaD` jeweils Call-Erfolg (Bloecke `0x18ee753` / `0x18ee794`), ohne Signing-Freigabe. Plaintext und Calldata ohne Ziel liefern advisory_only. Ungueltige Zieladresse/value liefern generische Fehleranzeige ohne Outcome; HTTP400 wurde dabei nicht unabhaengig erfasst. Fehlerhafter Hash, unbekannter Null-Hash und Euler-Hash im falschen Netzwerk liefern kein Risikourteil. Das ist keine unabhaengige Netzwerk-/Wallet-Verifikation; echter RPC-Ausfall und Store-QA bleiben offen.
+
+**Naechster Retest: Scanner, Ethereum / Mainnet, neue Analyse:**
+
+```text
+0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac
+```
+
+[Etherscan Aave-Testfall](https://etherscan.io/tx/0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac). Operator-Screenshot `Screenshot 2026-10-07 213611.jpg` und expandierter Text zeigen Aave-Pool, `supplyWithPermit`, Asset USDC und Rohbetrag500000000; Unsicherheit/Decision35, kein konkretes Risiko, aktuelle ABI nicht historisch gebunden. Mint/burn-shaped bleibt Beobachtung. Beide Token waren unavailable mit `token_interface_not_established`; der positive Query-Text war irrefuehrend.
+
+Nach dem Proxy-Token-Follow-up unter **Token state / Recorded evidence** beide Token pruefen: USDC `0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48` und aToken `0x98c23e9d8f34fefb1b7bd6a91b7ff122f4e16f5c`, jeweils Block `0x1706d45`. Erwartet sind reale blockgebundene contract-reported decimals/balance oder ein genauer unavailable-Grund. Ein-Hop-Proxy-Abfragen behalten `current_proxy_abi_only`; heutige ABI beweist keine historische Implementierung. Bei allen fehlenden Antworten muss der Beobachtungstext explizit keine verwertbaren Token-State-Antworten melden; bei gemischtem Status teilweise fehlende Checks nennen. Keine erfundenen Einheiten, Transfers, effektiven Rechte oder Sicherheitsfreigabe. Live-Token-Erfolg nach diesem Follow-up ist noch nicht bestaetigt. Nur analysieren, nichts signieren.
+
 Current contract: Sigil reviews compatible wallet requests through best-effort observations. The original wallet provider runs independently exactly once per wrapped request, without waiting for Sigil UI or analysis. Sigil has no blocking, proceed, or cancel authority; the wallet remains the only place that approves or rejects a request. A hostile page may suppress or forge observations. Analysis may finish after the wallet prompt or confirmation, with no latency guarantee. Before-you-sign positioning is a review goal, not guaranteed pre-prompt coverage.
 
 Chrome Web Store listing:

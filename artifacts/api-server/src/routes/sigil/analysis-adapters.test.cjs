@@ -76,3 +76,117 @@ test('emitter cap and pending input explicitly bound acquisition',async()=>{
   const result=await api.collectAnalysisEvidence({to:address,from:owner,input:'0x',blockNumber:'pending',receiptEvidence:{transfers}},'mainnet',{rpc:{attempts:0,call:async()=>{throw Error('unavailable');}},fetchContract:async()=>{fetches++;return {address,verificationStatus:'unknown'};}});
   assert.equal(result.tokenStates.length,8);assert.ok(result.limits.includes('token_emitter_cap'));assert.equal(result.blockTag,'latest');assert.ok(fetches<=9);
 });
+
+test('one-hop proxy token reads use original address/block and never establish historical semantics or rights',async()=>{
+ const api=load(); const implementation='0x'+'4'.repeat(40); const requests=[];
+ const input=viem.encodeFunctionData({abi:viem.parseAbi(['function approve(address,uint256)']),functionName:'approve',args:[owner,1n]});
+ const result=await api.collectAnalysisEvidence({to:address,from:owner,input,blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
+  rpc:{attempts:0,async call(method,params){requests.push([method,params]);return method==='eth_getCode'?'0x6000':'0x'+(params[0].data.startsWith('0x313ce567')?'6':'123').padStart(64,'0');}},
+  fetchContract:async key=>({address:key,abi:JSON.stringify(key===address?[]:abi),verificationStatus:'verified',isProxy:key===address,...(key===address?{implementation}:{})})});
+ assert.equal(result.tokenStates[0].status,'available');assert.equal(result.tokenStates[0].decimals,6);
+ assert.equal(result.tokenStates[0].reason,'current_proxy_abi_only');
+ assert.ok(result.limits.includes('token_proxy_current_abi_not_historical'));
+ assert.equal(result.permissionStates.length,0);assert.equal(result.capabilities.reportedTokenState,true);
+ assert.equal(requests.length,3);assert.ok(requests.every(([method,params])=>params[1]==='0x9'&&(method==='eth_getCode'?params[0]:params[0].to)===address));
+});
+
+test('proxy metadata failures have precise reasons and never attempt token state RPC',async()=>{
+ const api=load();const implementation='0x'+'4'.repeat(40);const other='0x'+'5'.repeat(40);
+ for(const [change,reason] of [
+  [{implementation:undefined},'token_proxy_implementation_unavailable'],
+  [{implementation:address},'token_proxy_implementation_unavailable'],
+  [{implementation:'0x'+'0'.repeat(40)},'token_proxy_implementation_unavailable'],
+  [{verificationStatus:'unverified'},'token_proxy_abi_unavailable'],
+  [{impl:{verificationStatus:'unverified'}},'token_proxy_abi_unavailable'],
+  [{impl:{isProxy:true}},'token_proxy_nested_unsupported'],
+  [{impl:{isProxy:undefined}},'token_proxy_nested_unsupported'],
+  [{impl:{address:other}},'token_proxy_metadata_unavailable'],
+  [{impl:{abi:JSON.stringify([])}},'token_erc20_interface_not_established'],
+ ]){
+  let reads=0;const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
+   rpc:{attempts:0,call:async()=>{reads++;throw Error('must not call');}},
+   fetchContract:async key=>key===address?{address:key,verificationStatus:'verified',isProxy:true,implementation,...change}:{address:key,verificationStatus:'verified',isProxy:false,abi:JSON.stringify(abi),...(key===implementation?change.impl:{})}});
+  assert.equal(reads,0);assert.equal(result.tokenStates[0].reason,reason);assert.equal(result.tokenStates[0].decimals,undefined);assert.equal(result.capabilities.reportedTokenState,false);
+ }
+});
+
+test('proxy emitter metadata deduplicates while reads remain bound to each emitter and caller',async()=>{
+ const api=load();const implementation='0x'+'4'.repeat(40);const second='0x'+'5'.repeat(40);const calls=[];const fetches=[];
+ const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[address,second].map(token=>({token,kind:'erc20-shaped'}))}},'mainnet',{
+  fetchContract:async key=>{fetches.push(key);return {address:key,verificationStatus:'verified',isProxy:key!==implementation,implementation,abi:JSON.stringify(key===implementation?abi:[])};},
+  rpc:{attempts:0,async call(method,params){calls.push([method,params]);return method==='eth_getCode'?'0x6000':'0x'+'6'.padStart(64,'0');}}});
+ assert.ok(result.tokenStates.every(s=>s.status==='available'));assert.equal(fetches.filter(k=>k===implementation).length,1);
+ assert.equal(result.limits.filter(l=>l==='token_proxy_current_abi_not_historical').length,1);
+ assert.equal(calls.length,6);assert.ok(calls.every(([method,params])=>params[1]==='0x9'&&[address,second].includes(method==='eth_getCode'?params[0]:params[0].to)));
+ const balanceCalls=calls.filter(([method,params])=>method==='eth_call'&&params[0].data.startsWith('0x70a08231'));
+ assert.ok(balanceCalls.every(([,params])=>params[0].data.endsWith(owner.slice(2))));
+});
+
+test('token ABI and RPC failures are distinguished without exposing partial values',async()=>{
+ const api=load();
+ for(const [metadata,code,response,reason] of [
+  [{verificationStatus:'unknown'},'0x6000',null,'token_abi_unavailable'],
+  [{verificationStatus:'verified',abi:JSON.stringify([])},'0x6000',null,'token_erc20_interface_not_established'],
+  [{verificationStatus:'verified',abi:JSON.stringify(abi)},'0x',null,'token_code_not_established'],
+  [{verificationStatus:'verified',abi:JSON.stringify(abi)},'0x6000','0x','token_state_response_invalid'],
+  [{verificationStatus:'verified',abi:JSON.stringify(abi)},'0x6000',null,'token_state_rpc_unavailable'],
+ ]){
+  const result=await api.collectAnalysisEvidence({to:address,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
+   rpc:{attempts:0,async call(method){if(method==='eth_getCode')return code;if(response===null)throw Error('provider detail');return response;}},fetchContract:async()=>({address,isProxy:false,...metadata})});
+  assert.equal(result.tokenStates[0].status,'unavailable');assert.equal(result.tokenStates[0].reason,reason);
+  assert.equal(result.tokenStates[0].decimals,undefined);assert.equal(result.tokenStates[0].balanceRaw,undefined);
+ }
+});
+
+test('token reads validate boundary values atomically and stop after metadata cancellation',async()=>{
+ const api=load();
+ for(const [decimals,balance,available] of [[0,0n,true],[36,2n**256n-1n,true],[37,1n,false],[6,null,false]]){
+  const result=await api.collectAnalysisEvidence({to:address,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
+   fetchContract:async()=>({address,isProxy:false,verificationStatus:'verified',abi:JSON.stringify(abi)}),
+   rpc:{attempts:0,async call(method,params){if(method==='eth_getCode')return '0x6000';const value=params[0].data.startsWith('0x313ce567')?BigInt(decimals):balance;return value===null?'0x':'0x'+value.toString(16).padStart(64,'0');}}});
+  assert.equal(result.tokenStates[0].status,available?'available':'unavailable');
+  assert.equal(result.tokenStates[0].decimals,available?decimals:undefined);assert.equal(result.tokenStates[0].balanceRaw,available?balance.toString():undefined);
+ }
+ const controller=new AbortController();let reads=0;
+ const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
+  signal:controller.signal,fetchContract:async key=>{if(key===address)controller.abort();return {address:key,isProxy:false,verificationStatus:'verified',abi:JSON.stringify(abi)};},rpc:{attempts:0,call:async()=>{reads++;throw Error('must not call');}}});
+ assert.equal(reads,0);assert.equal(result.tokenStates[0].reason,'token_state_cancelled');
+});
+
+test('proxy adapter state survives findings/shared-parser/cache round-trip with limits intact',async()=>{
+ const api=load();const implementation='0x'+'4'.repeat(40);const hash='0x'+'a'.repeat(64);
+ const tx={hash,to:owner,from:owner,input:'0x',value:'0x0',blockNumber:'0x9',status:'0x1',inclusionStatus:'mined',destinationVerification:'verified',destinationHasCode:true,
+  receiptEvidence:{status:'available',complete:true,logsExamined:1,transfers:[{kind:'erc20-shaped',token:address,from:owner,to:address,amountRaw:'500000000'}]}};
+ const evidence=await api.collectAnalysisEvidence(tx,'mainnet',{
+  fetchContract:async key=>({address:key,verificationStatus:'verified',isProxy:key===address,abi:JSON.stringify(key===implementation?abi:[]),...(key===address?{implementation}:{})}),
+  rpc:{attempts:0,async call(method,params){return method==='eth_getCode'?'0x6000':'0x'+(params[0].data.startsWith('0x313ce567')?'6':'0').padStart(64,'0');}}});
+ const findings=vm.createContext({Buffer,URL,...viem,lookupEntity:()=>null});
+ for(const file of ['incident-catalog.ts','abi-evidence.ts','validated-findings.ts'])vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/${file}`,'utf8').replace(/^import .*\r?\n/gm,'').replace(/export /g,'')),findings);
+ const rendered=findings.renderFindings(findings.transactionFindings({...tx,analysisEvidence:evidence},'mainnet',null,null));
+ const validation=vm.createContext({URL,TextEncoder,lookupIncident:()=>undefined});
+ for(const file of ['../../../../../lib/api-zod/src/validated-report.ts','analysis-cache-validation.ts'])vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/${file}`,'utf8').replace(/^import .*\r?\n/gm,'').replace(/export /g,'')),validation);
+ const record={...rendered,input:hash,inputType:'transaction',network:'mainnet',details:{to:owner,rawData:tx,validatedReport:rendered.validatedReport}};
+ assert.equal(validation.validatedCacheEntry(record,hash,'mainnet'),true);
+ assert.equal(rendered.validatedReport.capabilities.reportedTokenState,true);assert.equal(rendered.validatedReport.coverage,'partial');
+ assert.match(rendered.validatedReport.findings.find(f=>f.code==='reported_token_state').text,/historical implementation semantics are not established/i);
+ assert.equal(rendered.validatedReport.capabilities.reportedPermissionState,false);
+});
+
+test('real RPC predicate rejections retain observed token failure classification across retries',async()=>{
+ const api=load();
+ for(const [stage,reason] of [['code','token_code_not_established'],['decimals','token_state_response_invalid'],['balance','token_state_response_invalid'],['transport','token_state_rpc_unavailable'],['fallback',undefined]]){
+  let invalidReplies=0;
+  const transport=vm.createContext({AbortSignal,TextEncoder,TextDecoder,getEvidenceEndpoints:()=>['https://one.invalid','https://two.invalid'],fetch:async(_url,options)=>{
+   if(stage==='transport')throw Error('upstream private detail');
+   const request=JSON.parse(options.body);const name=request.method==='eth_getCode'?'code':request.params[0].data.startsWith('0x313ce567')?'decimals':'balance';
+   const invalid=name===stage||stage==='fallback'&&name==='code'&&invalidReplies++===0;
+   return new Response(JSON.stringify({jsonrpc:'2.0',id:request.id,result:invalid?'0x':name==='code'?'0x6000':'0x'+'6'.padStart(64,'0')}));
+  }});
+  vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/evidence-rpc.ts`,'utf8').replace(/^import .*\r?\n/gm,'').replace(/export /g,'')),transport);
+  const result=await api.collectAnalysisEvidence({to:address,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
+   fetchContract:async()=>({address,isProxy:false,verificationStatus:'verified',abi:JSON.stringify(abi)}),rpc:transport.createEvidenceRpc('mainnet')});
+  assert.equal(result.tokenStates[0].reason,reason,stage);
+  assert.equal(result.tokenStates[0].status,stage==='fallback'?'available':'unavailable');
+  assert.doesNotMatch(JSON.stringify(result),/upstream private detail/);
+ }
+});

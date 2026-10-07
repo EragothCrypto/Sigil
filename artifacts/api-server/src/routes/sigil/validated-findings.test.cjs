@@ -113,6 +113,21 @@ function adapter(overrides = {}) {
     capabilities: { inputDecoding: true, reportedTokenState: false, reportedPermissionState: false, internalTraces: false, isolatedBalanceDeltas: false }, ...overrides };
 }
 
+test('token-state observation copy distinguishes all-unavailable, mixed and available records',()=>{
+ const api=load();const other='0x'+'22'.repeat(20);
+ const state={address,blockTag:'0x1',status:'unavailable',authority:'contract_reported_interface',reason:'token_proxy_abi_unavailable'};
+ for(const states of [[state],[{...state,status:'available',reason:'current_proxy_abi_only',decimals:6,balanceRaw:'1'}, {...state,address:other}],[{...state,status:'available',reason:undefined,decimals:6,balanceRaw:'1'}]]){
+  const some=states.some(s=>s.status==='available');
+  const evidence=adapter({tokenStates:states,capabilities:{...adapter().capabilities,reportedTokenState:some}});
+  const report=api.renderFindings(api.transactionFindings({...tx,input:'0xd0e30db0',blockNumber:'0x1',receiptEvidence:{...tx.receiptEvidence,transfers:[...tx.receiptEvidence.transfers,{kind:'erc20-shaped',token:other,from:address,to:address,amountRaw:'1'}]},analysisEvidence:evidence},'mainnet',null,null)).validatedReport;
+  const finding=report.findings.find(f=>f.code==='reported_token_state');assert.ok(finding);
+  if(!some){assert.match(finding.text,/No usable token-state responses/i);assert.doesNotMatch(finding.text,/queries report interface-candidate responses/i);}
+  else if(states.some(s=>s.status==='unavailable')) assert.match(finding.text,/Some token-state checks are unavailable/i);
+  assert.equal(report.capabilities.reportedTokenState,some);
+  assert.equal(report.evidence.find(e=>e.kind==='reported_token_state').tokenStates.length,states.length);
+ }
+});
+
 test('current ABI intent and reported state are bounded observations, not historical effects or rights', () => {
   const api = load();
   const state = { address, blockTag: '0x1', status: 'available', authority: 'contract_reported_interface', decimals: 6, balanceRaw: '1000000' };

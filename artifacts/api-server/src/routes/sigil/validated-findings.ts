@@ -236,7 +236,14 @@ function adapterFindings(data: FindingInventory, tx: TransactionData, network: s
     else if (evidence.input.status === "partial") add(data, "abi_partial", "limitation", "ABI decoding is partial; unresolved arguments or subcalls cannot establish complete call intent.", evidence.input.reason ?? "partial", 35);
   } else if (tx.input.length >= 10) add(data, "abi_unavailable", "limitation", "Bounded ABI decoding is unavailable; call intent was not established from ABI evidence.", evidence.input.reason ?? "unavailable", 35);
   if (evidence.tokenStates.length) {
-    add(data, "reported_token_state", "observation", "Token queries report interface-candidate responses at the recorded block. Contract-reported decimals and balances do not authenticate movement, economic value or token safety.", "contract_reported_interface");
+    const available = evidence.tokenStates.filter(state => state.status === "available").length;
+    const status = available === 0
+      ? "No usable token-state responses were established. Recorded checks are unavailable; see each token's reason."
+      : "Token queries report interface-candidate responses at the recorded block."
+        + (available < evidence.tokenStates.length ? " Some token-state checks are unavailable; see each token's reason." : "");
+    const proxyLimit = evidence.tokenStates.some(state => state.reason === "current_proxy_abi_only")
+      ? " Current proxy ABI describes response shape only; historical implementation semantics are not established." : "";
+    add(data, "reported_token_state", "observation", status + proxyLimit + " Contract-reported decimals and balances do not authenticate movement, economic value or token safety.", "contract_reported_interface");
     data.evidence[data.evidence.length - 1]!.tokenStates = evidence.tokenStates;
   }
   if (evidence.permissionStates.length) {
