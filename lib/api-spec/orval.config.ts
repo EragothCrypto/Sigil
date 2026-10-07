@@ -28,7 +28,7 @@ export default defineConfig({
       mode: "split",
       baseUrl: "/api",
       clean: true,
-      prettier: true,
+      formatter: "prettier",
       override: {
         query: {
           version: 5,
@@ -57,8 +57,13 @@ export default defineConfig({
       schemas: { path: "generated/types", type: "typescript" },
       mode: "split",
       clean: true,
-      prettier: true,
+      formatter: "prettier",
       override: {
+        operations: {
+          simulateTransactionV2: {
+            zod: { strict: { body: true, response: true } },
+          },
+        },
         zod: {
           version: 3,
           coerce: {

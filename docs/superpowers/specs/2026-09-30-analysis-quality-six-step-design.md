@@ -2,7 +2,7 @@
 
 Date: 2026-09-30
 Baseline: published validated-findings runtime a8dfc01; documentation checkpoint 2ec80c6.
-Status: written design for operator review, not implemented.
+Status: operator-approved design; local implementation verified and independently reviewed on 2026-10-07. See the implementation plan for publication and live-test gates. No production or overall compliance GO is implied.
 
 ## Goal And Constraints
 

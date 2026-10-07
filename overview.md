@@ -1,10 +1,10 @@
 # Sigil Project Overview
 
-Stand: 30. September 2026
+Stand: 7. Oktober 2026
 Produktions-URL: [sigil.s3ntrylabs.com](https://sigil.s3ntrylabs.com)  
 Chrome Web Store: [Sigil - Web3 Trust Layer](https://chromewebstore.google.com/detail/sigil-web3-trust-layer/klogkofhnlifhakklkjmoofhfopnhnkg)
 
-> Statushinweis: Dieses Dokument beschreibt den aktuellen Repository-Worktree. Die rein beratende Extension-Sanierung ist lokal implementiert; Version 1.0.3 ist als Update geplant, noch nicht veroeffentlicht und nicht durch Produktions-/manuelle Browser-QA bestaetigt. Der historische Chrome-Store-Build ist bereits veroeffentlicht, aber kein Nachweis fuer das Update. Die dokumentierte EU/DE-Audit-Entscheidung `NO_GO` ist damit nicht aufgehoben: Release-Gate-Neubewertung und offene organisatorische Compliance-Nachweise bleiben erforderlich. Roadmap-Haken allein gelten nicht als Produktionsnachweis.
+> Statushinweis: Dieses Dokument beschreibt den aktuellen Repository-Worktree. Findings-v2 und rein beratende Execution-Checks sind lokal implementiert; Extension 1.0.4 ist paketiert, aber noch nicht im Store veroeffentlicht oder produktiv/manuell geprueft. Lokale Typpruefungen, Builds und synthetische Desktop-/Mobil-Browsertests bestehen. Der historische Store-Build ist kein Nachweis fuer dieses Update. Die EU/DE-Audit-Entscheidung `NO_GO` bleibt bis zur Gate-Neubewertung und den offenen organisatorischen Nachweisen bestehen. Details: `.compliance/ANALYSIS_QUALITY_2026-10-07.md`.
 
 ## 1. README / Projektbeschreibung
 
@@ -31,7 +31,7 @@ Im lokal implementierten Update wird der originale Wallet-Provider pro umschloss
 | Bereich | Stand | Aktuelle Funktion |
 | --- | --- | --- |
 | Scanner | Implementiert | Analysiert EVM-Transaktions-Hashes und Contract-Adressen mit Streaming-Ausgabe, Risikoscore, Verdict, Warnungen und positiven Signalen. |
-| Transaction Simulation | Implementiert | Prueft rohe Calldata- oder JSON-Transaktionsdaten vor dem Signieren. |
+| Read-only Execution Check | Lokal implementiert; Produktionspruefung offen | Strukturiertes JSON kann einen blockgebundenen `eth_call` ausloesen. Reine Calldata/Prosa bleibt beratend; fehlende Daten werden als unavailable ausgewiesen. Keine vollstaendige Simulation, Balance-Deltas oder erfundenen Effekt-/Sicherheits-Scores. |
 | Contract Risk | Implementiert | Verifikations-, Bytecode-, Proxy-, bekannte Entitaeten- und Reputationssignale. |
 | Approval Inspector | Implementiert | Erkennt Approval-Operationen, Spender, unbegrenzte Freigaben und bekannte Gegenparteien. |
 | Approval Health Check | Implementiert | Scannt eine manuell eingegebene oeffentliche Wallet-Adresse und priorisiert aktive, riskante oder unbegrenzte Approvals. |
@@ -47,7 +47,7 @@ Im lokal implementierten Update wird der originale Wallet-Provider pro umschloss
 
 | Bereich | Stand | Aktuelle Funktion |
 | --- | --- | --- |
-| Chrome Web Store | Historischer Build live; 1.0.3 ausstehend | Der historische Manifest-V3-Build ist veroeffentlicht. Das lokal implementierte Advisory-Update 1.0.3 ist noch nicht veroeffentlicht. |
+| Chrome Web Store | Historischer Build live; 1.0.4 ausstehend | Der historische Manifest-V3-Build ist veroeffentlicht. Das lokal paketierte Advisory-/Execution-Check-Update 1.0.4 ist noch nicht veroeffentlicht. |
 | Wallet-Methodenerkennung | Lokal implementiert; manuelle QA offen | Beobachtet kompatible `eth_sendTransaction`, `eth_signTransaction`, `eth_sign`, `personal_sign` und `eth_signTypedData*`-Anfragen auf best-effort-Basis; keine Vollstaendigkeitsgarantie. |
 | Lokale beratende Checks | Lokal implementiert | Methodenspezifische Regeln, Approval-/Typed-Data-Signale und lokale Site-Reputation ohne Wallet-Gating oder Timing-Garantie. |
 | API-Analyse | Implementiert | Uebergibt geeignete Beobachtungen an die Sigil-Produktions-API. |

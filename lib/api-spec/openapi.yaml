@@ -30,7 +30,8 @@ paths:
     post:
       operationId: simulateTransaction
       tags: [sigil]
-      summary: Simulate a raw transaction before signing
+      summary: Legacy execution analysis (unavailable)
+      deprecated: true
       requestBody:
         required: true
         content:
@@ -38,14 +39,39 @@ paths:
             schema:
               $ref: "#/components/schemas/SimulateTransactionBody"
       responses:
-        "200":
-          description: Simulation result
+        "422":
+          description: Complete execution analysis is unavailable
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SimulationResult"
+                $ref: "#/components/schemas/ErrorResponse"
         "400":
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sigil/simulate-v2:
+    post:
+      operationId: simulateTransactionV2
+      tags: [sigil]
+      summary: Bounded read-only transaction feasibility check
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulateTransactionV2Body"
+      responses:
+        "200":
+          description: Explicit call-check, advisory-only or unavailable report; never signing clearance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationResultV2"
+        "400":
+          description: Invalid input or unsupported network
           content:
             application/json:
               schema:
@@ -148,6 +174,120 @@ components:
           description: Optional wallet address doing the signing
       required:
         - rawData
+
+    SimulateTransactionV2Body:
+      type: object
+      additionalProperties: false
+      required: [rawData]
+      properties:
+        rawData:
+          type: string
+          minLength: 1
+          maxLength: 69632
+          description: At most 68KiB UTF-8 input. JSON transaction keys are strictly to/from/data/value/gas; calldata at most 32KiB. Addresses are 20-byte hex; value/gas are canonical uint256 hex quantities. No endpoint or RPC method input. Prose/calldata without to is advisory only.
+        network:
+          type: string
+          enum: [mainnet, polygon, arbitrum, optimism, base, bsc, goerli, sepolia]
+          default: mainnet
+        fromAddress:
+          type: string
+          pattern: '^0x[0-9a-fA-F]{40}$'
+    ExecutionCapabilities:
+      type: object
+      additionalProperties: false
+      required: [readOnlyCall, internalTraces, walletBalanceDeltas, storageSimulation, permissionState, historicalArchive]
+      properties:
+        readOnlyCall:
+          type: boolean
+        internalTraces:
+          type: boolean
+          enum: [false]
+        walletBalanceDeltas:
+          type: boolean
+          enum: [false]
+        storageSimulation:
+          type: boolean
+          enum: [false]
+        permissionState:
+          type: boolean
+          enum: [false]
+        historicalArchive:
+          type: boolean
+          enum: [false]
+    SimulationReportBase:
+      type: object
+      required: [reportVersion, network, capabilities, limitations, summary]
+      properties: &executionProperties
+        reportVersion:
+          type: string
+          enum: [execution-check-v2]
+        network:
+          type: string
+        capabilities:
+          $ref: "#/components/schemas/ExecutionCapabilities"
+        limitations:
+          type: array
+          maxItems: 8
+          items:
+            type: string
+        summary:
+          type: string
+    SimulationCallCheck:
+      type: object
+      additionalProperties: false
+      required: [reportVersion, network, capabilities, limitations, summary, assessmentStatus, callCheck]
+      properties:
+            <<: *executionProperties
+            assessmentStatus:
+              type: string
+              enum: [call_check]
+            callCheck:
+              type: object
+              additionalProperties: false
+              required: [outcome, blockNumber, to]
+              properties:
+                outcome:
+                  type: string
+                  enum: [success]
+                  description: eth_call returned bytes; RPC errors including revert remain unavailable
+                blockNumber:
+                  type: string
+                  pattern: '^0x(?:0|[1-9a-fA-F][0-9a-fA-F]{0,63})$'
+                to:
+                  type: string
+                  pattern: '^0x[0-9a-fA-F]{40}$'
+                from:
+                  type: string
+                  pattern: '^0x[0-9a-fA-F]{40}$'
+    SimulationAdvisoryOnly:
+      type: object
+      additionalProperties: false
+      required: [reportVersion, network, capabilities, limitations, summary, assessmentStatus]
+      properties:
+            <<: *executionProperties
+            assessmentStatus:
+              type: string
+              enum: [advisory_only]
+    SimulationUnavailable:
+      type: object
+      additionalProperties: false
+      required: [reportVersion, network, capabilities, limitations, summary, assessmentStatus]
+      properties:
+            <<: *executionProperties
+            assessmentStatus:
+              type: string
+              enum: [unavailable]
+    SimulationResultV2:
+      oneOf:
+        - $ref: "#/components/schemas/SimulationCallCheck"
+        - $ref: "#/components/schemas/SimulationAdvisoryOnly"
+        - $ref: "#/components/schemas/SimulationUnavailable"
+      discriminator:
+        propertyName: assessmentStatus
+        mapping:
+          call_check: "#/components/schemas/SimulationCallCheck"
+          advisory_only: "#/components/schemas/SimulationAdvisoryOnly"
+          unavailable: "#/components/schemas/SimulationUnavailable"
 
     SimulationAssetChange:
       type: object

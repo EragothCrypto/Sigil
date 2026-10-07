@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useSimulateTransaction } from '@workspace/api-client-react';
-import { SimulationResultView } from '@/components/sigil/SimulationResultView';
+import { useSimulateTransactionV2, type SimulationResultV2, type SimulateTransactionV2BodyNetwork } from '@workspace/api-client-react';
+import { SimulationResultView, isExecutionReport } from '@/components/sigil/SimulationResultView';
 import { ScanAnimation } from '@/components/sigil/ScanAnimation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, ChevronDown, ArrowRight, RotateCcw, Zap } from 'lucide-react';
@@ -31,22 +31,28 @@ const NETWORKS = [
 
 export default function SimulatePage() {
   const [rawData, setRawData] = useState('');
-  const [network, setNetwork] = useState('mainnet');
-  const [result, setResult] = useState<ReturnType<typeof useSimulateTransaction>['data']>(undefined);
+  const [network, setNetwork] = useState<SimulateTransactionV2BodyNetwork>('mainnet');
+  const [result, setResult] = useState<SimulationResultV2 | undefined>(undefined);
+  const [invalidReport, setInvalidReport] = useState(false);
 
-  const simulateMutation = useSimulateTransaction({
-    mutation: { onSuccess: (data) => setResult(data) }
+  const simulateMutation = useSimulateTransactionV2({
+    mutation: { onSuccess: (data) => {
+      if (isExecutionReport(data)) setResult(data);
+      else setInvalidReport(true);
+    } }
   });
 
   const handleSimulate = () => {
     if (!rawData.trim()) return;
     setResult(undefined);
+    setInvalidReport(false);
     simulateMutation.mutate({ data: { rawData: rawData.trim(), network } });
   };
 
   const handleReset = () => {
     setResult(undefined);
     simulateMutation.reset();
+    setInvalidReport(false);
     setRawData('');
   };
 
@@ -81,10 +87,10 @@ export default function SimulatePage() {
                 className="inline-flex items-center gap-2 text-sm text-white/35 hover:text-white/70 transition-colors font-mono"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                Simulate another
+                Check another
               </button>
             </div>
-            <SimulationResultView data={result as any} />
+            <SimulationResultView data={result} />
           </motion.div>
         )}
 
@@ -101,10 +107,10 @@ export default function SimulatePage() {
             <div className="text-center space-y-4">
               <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-mono font-semibold uppercase tracking-widest">
                 <Zap className="w-3.5 h-3.5" />
-                Transaction Simulator
+                Read-only Execution Check
               </div>
               <h1 className="text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight">
-                Simulate{' '}
+                Check{' '}
                 <span
                   className="text-transparent bg-clip-text"
                   style={{ backgroundImage: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 50%, #c084fc 100%)' }}
@@ -113,7 +119,7 @@ export default function SimulatePage() {
                 </span>
               </h1>
               <p className="text-base text-white/35 max-w-xl mx-auto leading-relaxed">
-                Paste raw calldata, a JSON transaction, or a wallet prompt text. See exactly what will happen before you sign.
+                No complete execution simulation or signing clearance is available.
               </p>
             </div>
 
@@ -124,7 +130,7 @@ export default function SimulatePage() {
                 <div className="relative">
                   <select
                     value={network}
-                    onChange={e => setNetwork(e.target.value)}
+                    onChange={e => setNetwork(e.target.value as SimulateTransactionV2BodyNetwork)}
                     className="bg-white/4 border border-white/8 text-white/80 font-mono text-sm px-4 py-2.5 rounded-xl focus:outline-none focus:border-primary/40 appearance-none pr-8 cursor-pointer hover:bg-white/6 transition-colors tracking-wider"
                   >
                     {NETWORKS.map(n => (
@@ -163,18 +169,18 @@ export default function SimulatePage() {
               >
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)' }} />
                 <Zap className="relative z-10 w-4 h-4" strokeWidth={2} />
-                <span className="relative z-10">Simulate Transaction</span>
+                <span className="relative z-10">Check Read-only Call</span>
                 <ArrowRight className="relative z-10 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
 
-              {simulateMutation.isError && (
+              {(simulateMutation.isError || invalidReport) && (
                 <motion.div
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-center gap-3 p-4 bg-destructive/8 border border-destructive/20 rounded-xl text-destructive/90 font-mono text-sm"
                 >
                   <Shield className="w-4 h-4 shrink-0" />
-                  {(simulateMutation.error as any)?.message || "Simulation failed. Check your input."}
+                  Remote execution check unavailable. No outcome or signing clearance established.
                 </motion.div>
               )}
             </div>

@@ -5,14 +5,19 @@ const ts = require('../../../../../node_modules/typescript');
 const { test } = require('node:test');
 
 function routesFor(tx, inputType = 'transaction', options = {}) {
+  const parser = {exports:{}};
+  const compile = file => ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+  vm.runInNewContext(compile(`${__dirname}/../../../../../lib/api-zod/src/validated-report.ts`),{exports:parser.exports,URL,TextEncoder});
+  const cacheValidation={exports:{}};
+  vm.runInNewContext(compile(`${__dirname}/analysis-cache-validation.ts`),{exports:cacheValidation.exports,require:name=>name.includes('validated-report')?parser.exports:{lookupIncident:()=>undefined}});
   const handlers = new Map();
   const saved = [];
   let aiCalls = 0;
   let cacheWrites = 0;
   let reputationCalls = 0;
   class OutputError extends Error { constructor() { super('Analysis unreliable'); this.code = 'analysis_unreliable'; } }
-  function analyze() { aiCalls++; if (options.rejectAI) throw new OutputError(); return verdict; }
-  const report = { version: 'findings-v1', scorePolicy: 'max-floor-v1', findings: [{ id: 'f:traces_missing', code: 'traces_missing', category: 'limitation', text: 'Traces not collected.', evidenceRefs: ['e:traces_missing'] }] };
+  function analyze(data) { aiCalls++; if (options.rejectAI) throw new OutputError(); if (data && inputType === 'transaction') assert.equal(data.analysisEvidence?.version, 'adapters-v1'); return verdict; }
+  const report = { version: 'findings-v2', scorePolicy: 'dual-floor-v2', findings: [{ id: 'f:traces_missing', code: 'traces_missing', category: 'limitation', text: 'Traces not collected.', evidenceRefs: ['e:traces_missing'] }] };
   const verdict = { summary: 'Evidence summary', verdict: 'caution', verdictReason: 'Review evidence', riskScore: 40, riskLevel: 'medium', warnings: [], positives: [], validatedReport: report };
   const modules = {
     express: { Router: () => ({ get() {}, post: (path, handler) => handlers.set(path, handler) }) },
@@ -26,11 +31,12 @@ function routesFor(tx, inputType = 'transaction', options = {}) {
       fetchTransaction: async () => tx, decodeMethodId: () => null, decodeApprovalCalldata: () => null,
       transactionEvidenceDetails: data => ({ sourceVerification: data?.destinationVerification ?? 'unknown', transferCoverage: 'partial' }),
     },
+    './analysis-adapters.js': { collectAnalysisEvidence: async () => ({ version: 'adapters-v1', coverage: 'partial' }) },
     './ai-analyzer.js': {
       AIAnalysisOutputError: OutputError,
-      analyzeTransaction: async () => analyze(),
+      analyzeTransaction: async data => analyze(data),
       analyzeContract: async () => analyze(),
-      analyzeTransactionStreaming: async (_tx, _method, _network, _input, emit) => { const result = analyze(); emit({ type: 'result', result }); return result; },
+      analyzeTransactionStreaming: async (_tx, _method, _network, _input, emit) => { const result = analyze(_tx); emit({ type: 'result', result }); return result; },
       analyzeContractStreaming: async (_contract, _network, emit) => { const result = analyze(); emit({ type: 'result', result }); return result; },
     },
     './known-entities.js': { lookupEntity: () => null },
@@ -38,12 +44,13 @@ function routesFor(tx, inputType = 'transaction', options = {}) {
     './pattern-detector.js': { detectPatterns: () => [{ description: 'unsupported inflation', confidence: 'confirmed' }], mergePatterns: patterns => patterns },
     './score-factors.js': { computeScoreFactors: () => [{ label: 'unsupported source credit', delta: -15 }] },
     './analysis-cache.js': { cacheKey: () => 'test', analysisCache: { get() { return options.cached; }, set() { cacheWrites++; } } },
+    './analysis-cache-validation.js': cacheValidation.exports,
     './analysis-schema.js': { ensureAnalysesSchema: async () => {} },
   };
   const source = ts.transpileModule(readFileSync(`${__dirname}/index.ts`, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-  vm.runInNewContext(source, { exports: {}, require: name => modules[name] ?? {}, process: { env: {} } });
+  vm.runInNewContext(source, { exports: {}, AbortController, require: name => modules[name] ?? {}, process: { env: {} } });
   return { handlers, saved, get reputationCalls() { return reputationCalls; }, get aiCalls() { return aiCalls; }, get cacheWrites() { return cacheWrites; } };
 }
 
@@ -66,9 +73,18 @@ test('legacy cache cannot bypass new validation; contract routes skip legacy rep
     const events = []; const response = responseFor(events);
     await api.handlers.get(path)({body: {input: 'address', network: 'mainnet'}, log: {error() {}}}, response);
     assert.equal(api.aiCalls, 1); assert.equal(api.reputationCalls, 0); assert.equal(api.saved.length, 1);
-    assert.equal(api.saved[0].details.validatedReport.version, 'findings-v1');
+    assert.equal(api.saved[0].details.validatedReport.version, 'findings-v2');
     assert.equal(events.some(e => e.type === 'cached'), false);
   }
+});
+
+test('malformed v2 cache marker cannot publish safe zero in JSON or SSE',async()=>{
+ for(const path of ['/analyze','/analyze-stream']){
+  const api=routesFor(null,'contract',{cached:{input:'address',network:'mainnet',riskScore:0,verdict:'safe',details:{validatedReport:{version:'findings-v2'}}}});
+  const events=[];const response=responseFor(events);
+  await api.handlers.get(path)({body:{input:'address',network:'mainnet'},log:{error(){}}},response);
+  assert.equal(api.aiCalls,1);assert.equal(api.saved.length,1);assert.equal(events.some(e=>e.type==='cached'),false);
+ }
 });
 test('unknown input is rejected before AI or storage in both routes', async () => {
   const api = routesFor(null, 'unknown');
@@ -109,14 +125,14 @@ test('both analysis routes persist bounded evidence and SSE exposes the same det
     const response = { status() { return this; }, json(body) { this.body = body; }, setHeader() {}, flushHeaders() {}, end() {}, write(line) { events.push(JSON.parse(line.slice(6))); } };
     await handlers.get(path)({ body: { input: 'hash', network: 'mainnet', fresh: true }, log: { error() {} } }, response);
     const details = saved.at(-1).details;
-    assert.equal(details.validatedReport?.version, 'findings-v1');
+    assert.equal(details.validatedReport?.version, 'findings-v2');
     assert.equal(details.sourceVerification, 'unknown');
     assert.equal(details.rawData.receiptEvidence.status, 'unavailable');
     assert.equal(details.rawData.historicalExample.name, 'curated example');
     if (path === '/analyze-stream') {
       assert.equal(events.find(event => event.type === 'result').result.details.sourceVerification, 'unknown');
       assert.ok(events.some(event => event.type === 'done'));
-      assert.equal(events.find(event => event.type === 'result').result.details.validatedReport.version, 'findings-v1');
+      assert.equal(events.find(event => event.type === 'result').result.details.validatedReport.version, 'findings-v2');
     } else {
       assert.equal(response.body.details.sourceVerification, 'unknown');
       assert.equal(response.body.patterns, undefined);

@@ -1,6 +1,8 @@
 import { logger } from "../../lib/logger.js";
 import { getEtherscanApiKey } from "./etherscan-api.js";
 import { summarizeReceipt, readContractMetadata, historicalExample, type ReceiptEvidence } from "./transaction-evidence.js";
+import { boundedRpcJson } from './evidence-rpc.js';
+import type { AnalysisEvidence } from './analysis-adapters.js';
 
 export function isTransactionHash(input: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/.test(input);
@@ -36,6 +38,7 @@ export interface TransactionData {
   destinationVerification?: ContractData["verificationStatus"];
   destinationHasCode?: boolean;
   historicalExample?: ReturnType<typeof historicalExample>;
+  analysisEvidence?: AnalysisEvidence;
 }
 
 export interface ContractData {
@@ -49,6 +52,8 @@ export interface ContractData {
   tokenSymbol?: string;
   totalSupply?: string;
   isToken?: boolean;
+  isProxy?: boolean;
+  implementation?: string;
 }
 
 // Public RPC endpoints — no API key required, tested and working
@@ -87,6 +92,11 @@ const PUBLIC_RPC: Record<string, string[]> = {
 
 export function isSupportedNetwork(network: string): boolean {
   return Object.hasOwn(PUBLIC_RPC, network);
+}
+
+export function getEvidenceEndpoints(network: string): readonly string[] {
+  if (!isSupportedNetwork(network)) throw new Error('Unsupported network');
+  return PUBLIC_RPC[network]!;
 }
 
 export function verifiedEvidence(contract: ContractData): boolean | undefined {
@@ -252,7 +262,7 @@ const ETHERSCAN_CHAIN_IDS: Record<string, string> = {
   base:     "8453",
 };
 
-export async function etherscanFetch(network: string, params: Record<string, string>): Promise<unknown> {
+export async function etherscanFetch(network: string, params: Record<string, string>, signal?: AbortSignal): Promise<unknown> {
   const apiKey = getEtherscanApiKey();
   const chainId = Object.hasOwn(ETHERSCAN_CHAIN_IDS, network) ? ETHERSCAN_CHAIN_IDS[network] : undefined;
   if (!chainId) throw new Error("Unsupported network");
@@ -263,18 +273,18 @@ export async function etherscanFetch(network: string, params: Record<string, str
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("apikey", apiKey);
 
-  const res = await fetch(url.toString(), { signal: AbortSignal.timeout(8000) });
+  const res = await fetch(url.toString(), { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(6000)]) : AbortSignal.timeout(8000) });
   if (!res.ok) throw new Error(`Etherscan HTTP ${res.status}`);
-  return res.json();
+  return signal ? boundedRpcJson(res) : res.json();
 }
 
-export async function fetchContract(address: string, network: string, includeTokenInfo = true): Promise<ContractData> {
+export async function fetchContract(address: string, network: string, includeTokenInfo = true, signal?: AbortSignal): Promise<ContractData> {
   let result: ContractData = { address, isVerified: false, verificationStatus: "unknown" };
 
   try {
     const [sourceRes, tokenRes] = await Promise.allSettled([
-      etherscanFetch(network, { module: "contract", action: "getsourcecode", address }),
-      includeTokenInfo ? etherscanFetch(network, { module: "account", action: "tokeninfo", contractaddress: address }) : Promise.resolve(undefined),
+      etherscanFetch(network, { module: "contract", action: "getsourcecode", address }, signal),
+      includeTokenInfo ? etherscanFetch(network, { module: "account", action: "tokeninfo", contractaddress: address }, signal) : Promise.resolve(undefined),
     ]);
 
     result = readContractMetadata(address,

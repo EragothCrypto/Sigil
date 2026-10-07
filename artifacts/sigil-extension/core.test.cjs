@@ -268,8 +268,9 @@ test("upserts advisory lifecycle and summarizes unique observations", () => {
   assert.equal(sessions[0].summary.reviewed, 1);
   assert.equal(sessions[0].summary.dismissed, 1);
   assert.equal(sessions[0].summary.analysisFailed, 0);
-  assert.equal(sessions[0].summary.maxRiskScore, 88);
-  assert.equal(sessions[0].summary.highestVerdict, "dangerous");
+  assert.equal(sessions[0].summary.maxRiskScore, null);
+  assert.equal(sessions[0].summary.highestVerdict, "review");
+  assert.equal(sessions[0].events[0].evidenceSource, "local_advisory");
 });
 
 test("counts analysis failures and keeps legacy decision records readable", () => {

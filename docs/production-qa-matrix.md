@@ -1,8 +1,20 @@
 # Sigil Production QA Matrix
 
-Last updated: September 30, 2026
+Last updated: October 7, 2026
 
-Status: Advisory-only version 1.0.3 is implemented locally, pending release, and not yet published. The historical published Store build is not evidence that this update is deployed. Production and installed-build manual QA for 1.0.3 remain pending.
+Status: Advisory-only version 1.0.4 is packaged locally, pending release, and not yet published. The historical published Store build is not evidence that this update is deployed. Production and installed-build manual QA remain pending. Synthetic desktop/mobile checks passed locally; see `.compliance/ANALYSIS_QUALITY_2026-10-07.md`.
+
+## Next Operator Round After Vercel Ready
+
+Run fresh analyses in a private window and preserve the full hash, network, result URL and any provider error. Do not reuse older cached/history results as release evidence.
+
+1. Re-test the previously used WETH, Aave supply and Uniswap swap examples on their correct network. Expect bounded observations and current-ABI uncertainty, not an unconditional safety claim.
+2. Test exact Euler exploit hash `0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d` on Ethereum. Confirm the historical incident role and source links; exploit attribution has an evidence-risk floor of 80, not proof of current exploitability.
+3. Test wrong-network and unknown/malformed inputs. Missing evidence must never produce signing clearance or fabricated effects.
+4. Test structured JSON in the execution check, then plain calldata/prose. Check explicit call-check/advisory/unavailable states, no balance-delta or safety-score claims.
+5. Install the packaged 1.0.4 update in a separate test profile. Check popup and content-script handoff, local history, unavailable API behavior and original wallet behavior; do not sign a real risky transaction for QA.
+
+Record all outcomes before changing the rollout gate. These operator checks have not been performed by this implementation session.
 
 Current contract: Sigil reviews compatible wallet requests through best-effort observations. The original wallet provider runs independently exactly once per wrapped request, without waiting for Sigil UI or analysis. Sigil has no blocking, proceed, or cancel authority; the wallet remains the only place that approves or rejects a request. A hostile page may suppress or forge observations. Analysis may finish after the wallet prompt or confirmation, with no latency guarantee. Before-you-sign positioning is a review goal, not guaranteed pre-prompt coverage.
 

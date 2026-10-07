@@ -4,7 +4,7 @@ const { stripTypeScriptTypes } = require('node:module');
 const vm = require('node:vm');
 const { test } = require('node:test');
 function load(file, globals = {}) {
-  const context = vm.createContext(globals);
+  const context = vm.createContext({Buffer, ...globals});
   vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/${file}.ts`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, ''), { mode: 'transform' }), context);
   return context;
 }
@@ -67,7 +67,7 @@ test('fresh cache namespace cannot reuse legacy missing-evidence verdicts', () =
   const api = load('analysis-cache', { setInterval() {} });
   const oldKey = 'evidence-v2:mainnet:hash';
   vm.runInContext(`analysisCache.set('${oldKey}', { riskScore: 35 })`, api);
-  assert.equal(api.cacheKey('HASH', 'MAINNET'), 'findings-v1:mainnet:hash');
+  assert.equal(api.cacheKey('HASH', 'MAINNET'), 'findings-v2:mainnet:hash');
   assert.equal(vm.runInContext("analysisCache.get(cacheKey('hash', 'mainnet'))", api), null);
 });
 
@@ -241,6 +241,14 @@ test('invalid ABI entries do not establish verification', () => {
   }
   const ABI = JSON.stringify([{ type: 'function', name: 'balanceOf', inputs: [{ name: 'owner', type: 'address' }], outputs: [{ type: 'uint256' }] }]);
   assert.equal(api.readContractMetadata(address, { status: '1', result: [{ ABI }] }, null).verificationStatus, 'verified');
+});
+
+test('explorer metadata caps names and UTF8 ABI and records proxy identity explicitly',()=>{
+ const api=load('transaction-evidence');const envelope={status:'1',result:[{ABI:'[]',Proxy:'1',Implementation:address,ContractName:'x'.repeat(257),CompilerVersion:'y'.repeat(257)}]};
+ const result=api.readContractMetadata(address,envelope,{status:'1',result:[{tokenName:'x'.repeat(257),symbol:'TOK',totalSupply:'1'}]});
+ assert.equal(result.isProxy,true);assert.equal(result.implementation,address.toLowerCase());assert.equal(result.contractName,undefined);assert.equal(result.compilerVersion,undefined);assert.equal(result.isToken,undefined);
+ const oversized={status:'1',result:[{ABI:JSON.stringify([{type:'event',name:'界'.repeat(90000),inputs:[]}])}]};
+ assert.equal(api.readContractMetadata(address,oversized,null).verificationStatus,'unknown');
 });
 
 test('EOA destination does not receive an unverified-contract finding', async () => {

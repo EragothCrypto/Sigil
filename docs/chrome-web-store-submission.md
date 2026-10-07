@@ -1,8 +1,8 @@
 # Sigil Chrome Web Store Submission Pack
 
-Last updated: September 30, 2026
+Last updated: October 7, 2026
 
-Status: Historical build published in the Chrome Web Store. Advisory-only version 1.0.3 is implemented locally, pending release, and not yet published. The listing and historical submission checks below do not verify the pending update.
+Status: Historical build published in the Chrome Web Store. Advisory-only version 1.0.4 is packaged locally, pending release, and not yet published. It includes discriminated read-only execution checks, not full transaction simulation. The listing and historical submission checks below do not verify the pending update.
 
 Live listing:
 
@@ -28,7 +28,7 @@ Understand wallet requests, approvals, and contract risk before you sign. Best-e
 
 Sigil helps Web3 users understand wallet risk before you sign through manual analysis and best-effort advisory observation of compatible wallet requests.
 
-The pending 1.0.3 extension observes compatible wallet signing methods such as transactions, typed-data signatures, raw signatures, and token approvals on a best-effort basis. The original wallet provider runs independently exactly once per wrapped request, without waiting for Sigil observations, UI, or network analysis. Sigil may show an advisory risk panel with a plain-English verdict, risk score, warnings, and a link to full analysis when available. Analysis may finish after the wallet prompt or confirmation; there is no timing guarantee.
+The pending 1.0.4 extension observes compatible wallet signing methods such as transactions, typed-data signatures, raw signatures, and token approvals on a best-effort basis. The original wallet provider runs independently exactly once per wrapped request, without waiting for Sigil observations, UI, or network analysis. Sigil may show a local advisory panel or a bounded read-only call check, with a link to full analysis when available. A call check is not full simulation or signing clearance and does not establish balance changes or granted permissions. Analysis may finish after the wallet prompt or confirmation; there is no timing guarantee.
 
 Sigil has no blocking, proceed, or cancel authority: the wallet remains the only place that approves or rejects a request. Dismissing an alert or trusting a site only affects Sigil alerts. A hostile page may suppress or forge observations; an observation or missing warning is not proof of wallet activity or safety.
 
@@ -37,7 +37,7 @@ Core features:
 - Reviews compatible wallet requests through best-effort advisory observations.
 - Flags unlimited token approvals and high-risk permission grants.
 - Reviews typed-data signatures, transaction calldata, contract addresses, and transaction hashes.
-- Provides Safe, Caution, or Dangerous verdicts with 0-100 risk scoring.
+- Presents qualified heuristic analysis decisions and coverage limits; read-only call checks have no invented safety score or asset effects.
 - Offers Quiet, Standard, and Strict alert sensitivity settings; these affect alerts, not wallet execution.
 - Lets users manage trusted sites, trusted contracts, optional settings sync, and local recent-check history.
 - Connects to the Sigil backend at https://sigil.s3ntrylabs.com for deeper analysis.
@@ -62,7 +62,7 @@ https://sigil.s3ntrylabs.com/terms
 
 ## Release Package
 
-Historical release ZIP (not the pending 1.0.3 update):
+Historical release ZIP (not the pending 1.0.4 update):
 
 `artifacts/release/sigil-chrome-extension-v1.0.2.zip`
 
@@ -70,9 +70,9 @@ SHA-256:
 
 `4827DEE1AAF5A2A328A1E87290069846B54CC2BEE34DDCBF72335B2AECCC3DFF`
 
-Local update package: `artifacts/release/sigil-chrome-extension-v1.0.3.zip`.
+Current local update package: `artifacts/release/sigil-chrome-extension-v1.0.4.zip`.
 
-SHA-256: `9DB2340A093D84CB7155FBAB66C9FF3BEDBDB3223CDF3FABE3067B922CEF030B`.
+SHA-256: `7D0765CBFFEAD475CC78AB95094029E2A3B99ECA66D40EA85D8BD318F9363170`.
 
 Generated twice with `scripts/package-extension.ps1`; identical hashes. The web download ZIP matches this package. Submission, publication, and installed-build production/manual QA remain pending. The historical checksum above applies only to 1.0.2.
 

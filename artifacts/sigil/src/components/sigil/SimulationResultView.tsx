@@ -1,224 +1,66 @@
-import { CheckCircle, AlertTriangle, XCircle, ArrowDownLeft, ArrowUpRight, Key, ShieldAlert } from 'lucide-react';
-import { motion } from 'framer-motion';
-import type { SimulationResult, SimulationAssetChange } from '@workspace/api-client-react';
+import type { SimulationResultV2 } from '@workspace/api-client-react';
+import { AlertTriangle, FlaskConical } from 'lucide-react';
 
-const VERDICT_CONFIG = {
-  safe: {
-    icon: CheckCircle,
-    label: 'Safe to Sign',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/30',
-    text: 'text-emerald-400',
-    glow: 'bg-emerald-400',
-    emoji: '✅',
-  },
-  caution: {
-    icon: AlertTriangle,
-    label: 'Proceed with Caution',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/30',
-    text: 'text-amber-400',
-    glow: 'bg-amber-400',
-    emoji: '⚠️',
-  },
-  dangerous: {
-    icon: XCircle,
-    label: 'Do Not Sign',
-    bg: 'bg-red-500/10',
-    border: 'border-red-500/30',
-    text: 'text-red-400',
-    glow: 'bg-red-500',
-    emoji: '🚨',
-  },
-} as const;
-
-const DIRECTION_CONFIG = {
-  lose: {
-    icon: ArrowUpRight,
-    label: 'You will lose',
-    color: 'text-red-400',
-    bg: 'bg-red-500/10',
-    border: 'border-red-500/20',
-    iconColor: 'text-red-400',
-  },
-  receive: {
-    icon: ArrowDownLeft,
-    label: 'You will receive',
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/20',
-    iconColor: 'text-emerald-400',
-  },
-  approve: {
-    icon: Key,
-    label: 'Permission granted',
-    color: 'text-amber-400',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/20',
-    iconColor: 'text-amber-400',
-  },
-} as const;
-
-function AssetChangeRow({ change, index }: { change: SimulationAssetChange; index: number }) {
-  const dir = (change.direction as keyof typeof DIRECTION_CONFIG) in DIRECTION_CONFIG
-    ? (change.direction as keyof typeof DIRECTION_CONFIG)
-    : 'lose';
-  const cfg = DIRECTION_CONFIG[dir];
-  const Icon = cfg.icon;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: 0.1 + index * 0.08 }}
-      className={`flex items-center gap-5 p-5 rounded-2xl border ${cfg.bg} ${cfg.border}`}
-    >
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${cfg.bg} border ${cfg.border} shrink-0`}>
-        <Icon className={`w-5 h-5 ${cfg.iconColor}`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <span className={`text-xs font-mono font-semibold uppercase tracking-wider ${cfg.color} block mb-1`}>
-          {cfg.label}
-        </span>
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-white font-display font-bold text-xl">{change.amount}</span>
-          <span className={`font-mono font-semibold text-base ${cfg.color}`}>{change.asset}</span>
-          {change.usdValue && (
-            <span className="text-white/40 font-mono text-sm">≈ {change.usdValue}</span>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
+const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
+const QUANTITY = /^0x(?:0|[1-9a-fA-F][0-9a-fA-F]{0,63})$/;
+function object(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+export function isExecutionReport(value: unknown): value is SimulationResultV2 {
+  if (!object(value) || value.reportVersion !== 'execution-check-v2') return false;
+  if (!['call_check', 'advisory_only', 'unavailable'].includes(String(value.assessmentStatus))) return false;
+  const keys = ['reportVersion', 'network', 'assessmentStatus', 'summary', 'capabilities', 'limitations'];
+  if (value.assessmentStatus === 'call_check') keys.push('callCheck');
+  if (Object.keys(value).length !== keys.length || Object.keys(value).some(key => !keys.includes(key))) return false;
+  if (typeof value.network !== 'string' || typeof value.summary !== 'string' || value.summary.length > 2048
+    || !Array.isArray(value.limitations) || value.limitations.length > 8
+    || !value.limitations.every(item => typeof item === 'string' && item.length <= 2048)) return false;
+  const caps = value.capabilities;
+  const missing = ['internalTraces', 'walletBalanceDeltas', 'storageSimulation', 'permissionState', 'historicalArchive'];
+  if (!object(caps) || Object.keys(caps).length !== 6 || typeof caps.readOnlyCall !== 'boolean'
+    || !missing.every(key => caps[key] === false)) return false;
+  if (value.assessmentStatus === 'call_check') {
+    const call = value.callCheck;
+    if (!object(call) || call.outcome !== 'success' || typeof call.blockNumber !== 'string' || !QUANTITY.test(call.blockNumber)
+      || typeof call.to !== 'string' || !ADDRESS.test(call.to)
+      || (call.from !== undefined && (typeof call.from !== 'string' || !ADDRESS.test(call.from)))
+      || Object.keys(call).length !== (call.from === undefined ? 3 : 4)) return false;
+  }
+  return true;
 }
 
-export function SimulationResultView({ data }: { data: SimulationResult }) {
-  const verdict = (data.verdict ?? 'caution') as keyof typeof VERDICT_CONFIG;
-  const config = VERDICT_CONFIG[verdict] || VERDICT_CONFIG.caution;
-  const VerdictIcon = config.icon;
-
-  const loses = data.assetChanges.filter(c => c.direction === 'lose');
-  const receives = data.assetChanges.filter(c => c.direction === 'receive');
-  const approves = data.assetChanges.filter(c => c.direction === 'approve');
-
+export function SimulationResultView({ data }: { data: unknown }) {
+  if (!isExecutionReport(data)) return (
+    <div role="alert" className="py-6 text-amber-400">
+      Execution evidence unavailable. No remote outcome or signing clearance established.
+    </div>
+  );
+  const title = data.assessmentStatus === 'call_check' ? 'Read-only call completed'
+    : data.assessmentStatus === 'advisory_only' ? 'Advisory only' : 'Check unavailable';
   return (
-    <div className="w-full space-y-6 animate-in fade-in zoom-in duration-700 fill-mode-both">
-
-      {/* ── VERDICT BANNER ── */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className={`relative overflow-hidden rounded-3xl border ${config.bg} ${config.border} shadow-2xl p-8 flex flex-col sm:flex-row items-center gap-6`}
-      >
-        <div className={`absolute -top-8 -left-8 w-40 h-40 rounded-full blur-3xl opacity-20 ${config.glow}`} />
-        <div className={`relative flex-shrink-0 w-20 h-20 rounded-2xl flex items-center justify-center border ${config.border} ${config.bg}`}>
-          <VerdictIcon className={`w-10 h-10 ${config.text}`} strokeWidth={1.5} />
-        </div>
-        <div className="relative flex-1 space-y-2 text-center sm:text-left">
-          <span className={`text-xs font-mono font-bold tracking-widest uppercase px-3 py-1 rounded-full border inline-block ${config.border} ${config.bg} ${config.text}`}>
-            Should I sign this?
-          </span>
-          <p className={`text-2xl md:text-3xl font-display font-bold ${config.text}`}>
-            {config.emoji} {config.label}
-          </p>
-          <p className="text-white/70 text-base leading-relaxed">{data.verdictReason}</p>
-        </div>
-      </motion.div>
-
-      {/* ── SUMMARY & INPUT TYPE ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-card/80 border border-card-border rounded-3xl p-8 space-y-4 backdrop-blur-xl"
-      >
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="px-3 py-1.5 bg-primary/10 border border-primary/20 text-primary rounded-full font-mono text-xs font-semibold tracking-wider">
-            {data.inputType}
-          </span>
-          <span className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-full font-mono text-xs text-muted-foreground tracking-wider">
-            SIMULATION
-          </span>
-        </div>
-        <p className="text-white text-xl md:text-2xl font-display font-semibold leading-snug">
-          {data.summary}
-        </p>
-      </motion.div>
-
-      {/* ── AFTER THIS TRANSACTION ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-card/60 border border-card-border rounded-3xl p-8 space-y-5 backdrop-blur-sm"
-      >
-        <h3 className="font-display text-xl font-bold text-white flex items-center gap-3">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          After this transaction
-        </h3>
-
-        {data.assetChanges.length === 0 ? (
-          <p className="text-muted-foreground font-mono text-sm bg-black/40 p-4 rounded-xl border border-white/5">
-            No direct asset changes detected.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {loses.length > 0 && loses.map((c, i) => (
-              <AssetChangeRow key={`lose-${i}`} change={c} index={i} />
-            ))}
-            {receives.length > 0 && receives.map((c, i) => (
-              <AssetChangeRow key={`receive-${i}`} change={c} index={loses.length + i} />
-            ))}
-            {approves.length > 0 && approves.map((c, i) => (
-              <AssetChangeRow key={`approve-${i}`} change={c} index={loses.length + receives.length + i} />
-            ))}
-          </div>
+    <div className="space-y-6 text-white/80">
+      <section className="border-b border-white/10 py-6 space-y-3">
+        <h2 className="flex items-center gap-3 text-xl font-semibold text-white"><FlaskConical className="w-5 h-5" />{title}</h2>
+        <p>{data.summary}</p>
+        <p className="text-sm text-white/50">{data.network} | {data.reportVersion}</p>
+        {data.assessmentStatus === 'call_check' && (
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm font-mono">
+            <dt>Outcome</dt><dd>{data.callCheck.outcome}</dd>
+            <dt>Pinned block</dt><dd className="break-all">{data.callCheck.blockNumber}</dd>
+            <dt>Destination</dt><dd className="break-all">{data.callCheck.to}</dd>
+            <dt>Caller</dt><dd className="break-all">{data.callCheck.from || 'Provider default (not wallet-bound)'}</dd>
+          </dl>
         )}
-      </motion.div>
-
-      {/* ── PERMISSIONS GRANTED ── */}
-      {data.permissionsGranted.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-amber-500/5 border border-amber-500/20 rounded-3xl p-8 space-y-5"
-        >
-          <h3 className="font-display text-xl font-bold text-amber-400 flex items-center gap-3">
-            <Key className="w-5 h-5" /> Permissions Granted
-          </h3>
-          <ul className="space-y-3">
-            {data.permissionsGranted.map((p, i) => (
-              <li key={i} className="flex items-start gap-4 bg-black/40 p-4 rounded-xl border border-amber-500/10">
-                <Key className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <span className="text-sm text-white/90 font-mono leading-relaxed">{p}</span>
-              </li>
-            ))}
-          </ul>
-        </motion.div>
-      )}
-
-      {/* ── WARNINGS ── */}
-      {data.warnings.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="bg-destructive/5 border border-destructive/20 rounded-3xl p-8 space-y-5"
-        >
-          <h3 className="font-display text-xl font-bold text-destructive flex items-center gap-3">
-            <ShieldAlert className="w-5 h-5" /> Threat Vectors
-          </h3>
-          <ul className="space-y-3">
-            {data.warnings.map((w, i) => (
-              <li key={i} className="flex items-start gap-4 bg-black/40 p-4 rounded-xl border border-destructive/10">
-                <ShieldAlert className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                <span className="text-sm text-white/90 leading-relaxed">{w}</span>
-              </li>
-            ))}
-          </ul>
-        </motion.div>
-      )}
+      </section>
+      <section className="space-y-3">
+        <h3 className="flex items-center gap-2 font-semibold text-amber-400"><AlertTriangle className="w-4 h-4" />Coverage limits</h3>
+        <ul className="list-disc pl-5 space-y-2 text-sm">{data.limitations.map((item, i) => <li key={i}>{item}</li>)}</ul>
+        <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 text-sm">
+          {Object.entries(data.capabilities).map(([key, available]) => (
+            <div key={key} className="contents"><dt className="break-words">{key}</dt><dd>{available ? 'Supported check' : 'Unavailable'}</dd></div>
+          ))}
+        </dl>
+      </section>
     </div>
   );
 }

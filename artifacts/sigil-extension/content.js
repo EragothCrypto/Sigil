@@ -102,7 +102,7 @@
     if (normalized === "dangerous" || normalized === "critical" || normalized === "high") return "dangerous";
     if (normalized === "caution" || normalized === "warning" || normalized === "medium") return "caution";
     if (normalized === "loading") return "loading";
-    return "safe";
+    return normalized === "safe" || normalized === "low" ? "safe" : "caution";
   }
 
   function safeAnalysisUrl(value) {
@@ -203,14 +203,24 @@
   function render({ method, url, result, input, loading = false, error = false, fullUrl = "" }, settings, eventDetail, token) {
     if (!isActive(eventDetail, token)) return;
     buildOverlay();
-    const verdict = loading ? "loading" : error ? "caution" : result.verdict || "caution";
+    const execution = input?.kind === "simulation" || Boolean(result.assessmentStatus);
+    const executionReport = execution ? core.readExecutionReport(result) : null;
+    const verdict = loading ? "loading" : execution || error ? "caution" : result.verdict || "caution";
     const verdictClass = safeVerdictClass(verdict);
     const fullAnalysisUrl = safeAnalysisUrl(fullUrl);
     const emoji = loading ? '<span class="spinner"></span>' : verdictClass === "safe" ? "OK" : verdictClass === "dangerous" ? "!!" : "!";
-    const title = loading ? "Sigil is checking this request" : result.verdictReason || result.summary || "Review this wallet request";
+    const executionTitle = executionReport?.assessmentStatus === "call_check" ? "Read-only call completed"
+      : executionReport?.assessmentStatus === "unavailable" ? "Execution check unavailable"
+      : executionReport ? "Advisory only" : "Local advisory only";
+    const title = loading ? "Sigil is checking this request" : execution ? executionTitle
+      : result.verdictReason || result.summary || "Review this wallet request";
     const numericRisk = Number(result.riskScore);
     const risk = Number.isFinite(numericRisk) ? numericRisk : 0;
-    const warnings = Array.isArray(result.warnings) ? result.warnings : [];
+    const warnings = executionReport ? executionReport.limitations : Array.isArray(result.warnings) ? result.warnings : [];
+    const executionContext = executionReport?.assessmentStatus === "call_check"
+      ? `Pinned block ${executionReport.callCheck.blockNumber} - ${executionReport.callCheck.outcome}; not mined execution or signing clearance`
+      : executionReport ? "No execution outcome or signing clearance established"
+      : "Local checks only; no remote execution evidence or signing clearance";
     const site = (() => { try { return new URL(url).hostname; } catch { return "current site"; } })();
 
     shadowRoot.getElementById("content").innerHTML = `
@@ -227,11 +237,11 @@
           <div class="icon">${emoji}</div>
           <div>
             <h2>${escHtml(title)}</h2>
-            <div class="sub">${loading ? "Analyzing" : `Risk ${risk}/100 - ${escHtml(result.riskLevel || "medium")}`}</div>
+            <div class="sub">${loading ? "Analyzing" : execution ? escHtml(executionContext) : `Risk ${risk}/100 - ${escHtml(result.riskLevel || "medium")}`}</div>
           </div>
         </div>
         <div class="summary">${escHtml(result.summary || "Sigil is reviewing this request while you evaluate it in your wallet.")}</div>
-        ${loading ? "" : `<div class="score"><div class="track"><div class="fill" style="width:${Math.max(0, Math.min(100, risk))}%"></div></div><strong>${risk}</strong></div>`}
+        ${loading || execution ? "" : `<div class="score"><div class="track"><div class="fill" style="width:${Math.max(0, Math.min(100, risk))}%"></div></div><strong>${risk}</strong></div>`}
         ${warnings.length ? `<div class="warnings"><p>Warnings</p><ul>${warnings.slice(0, 4).map((item) => `<li>${escHtml(item)}</li>`).join("")}</ul></div>` : ""}
         <div class="summary">This is an advisory alert. Your wallet remains the only place that approves or rejects the request.</div>
         <div class="actions">
@@ -270,7 +280,7 @@
 
   async function callSigilApi(settings, input) {
     if (!input) throw new Error("No analyzable input");
-    const endpoint = input.kind === "hash" || input.kind === "address" ? "/api/sigil/analyze" : "/api/sigil/simulate";
+    const endpoint = input.kind === "hash" || input.kind === "address" ? "/api/sigil/analyze" : "/api/sigil/simulate-v2";
     const body = input.kind === "hash" || input.kind === "address"
       ? { input: input.value, network: "mainnet" }
       : { rawData: input.value, network: "mainnet" };
@@ -282,7 +292,11 @@
     });
 
     if (!response.ok) throw new Error(`Sigil API returned ${response.status}`);
-    return response.json();
+    const payload = await response.json();
+    if (input.kind !== "hash" && input.kind !== "address" && !core.readExecutionReport(payload)) {
+      throw new Error("Execution evidence unavailable");
+    }
+    return payload;
   }
 
   async function handleObservation(eventDetail, token) {
@@ -324,8 +338,8 @@
       const apiResult = await callSigilApi(settings, input);
       if (!isActive(eventDetail, token)) return;
       const analysisPath = apiResult.id ? `/analysis/${encodeURIComponent(apiResult.id)}` : `/?q=${encodeURIComponent(input?.value || "")}`;
-      const fullUrl = `${settings.apiUrl}${analysisPath}`;
-      const result = { ...localResult, ...apiResult };
+      const fullUrl = input?.kind === "simulation" ? "" : `${settings.apiUrl}${analysisPath}`;
+      const result = input?.kind === "simulation" ? apiResult : { ...localResult, ...apiResult };
       const reviewedPayload = { method, url, target, input, result };
       eventDetail.sessionPayload = reviewedPayload;
       eventDetail.sessionStatus = "reviewed";
@@ -334,7 +348,10 @@
       await saveSessionEvent(reviewedPayload, "reviewed", eventDetail, token);
     } catch (error) {
       if (!isActive(eventDetail, token)) return;
-      const fallback = {
+      const fallback = input?.kind === "simulation" ? {
+        summary: "Remote execution check unavailable. Local advisory only; no execution outcome or signing clearance established.",
+        warnings: ["Local input checks are not remote simulation evidence and establish no confirmed effects."],
+      } : {
         ...localResult,
         verdict: localResult.verdict === "safe" ? "caution" : localResult.verdict,
         verdictReason: "Caution - Sigil API was unreachable",

@@ -98,7 +98,7 @@ function safeVerdictClass(value) {
   const normalized = String(value || "").toLowerCase();
   if (normalized === "dangerous" || normalized === "critical" || normalized === "high") return "dangerous";
   if (normalized === "caution" || normalized === "warning" || normalized === "medium") return "caution";
-  return "safe";
+  return normalized === "safe" || normalized === "low" ? "safe" : "caution";
 }
 
 function safeVerdictLabel(value) {
@@ -131,6 +131,12 @@ function createEmpty(message) {
 
 function extractApiSummary(payload) {
   const result = payload?.result || payload || {};
+  if (result.assessmentStatus) {
+    const report = core.readExecutionReport(result);
+    return { verdict: "review", score: null,
+      summary: report ? `${report.assessmentStatus}: ${report.summary} ${report.limitations.join(" ")}`
+        : "Execution evidence unavailable. No remote outcome was established." };
+  }
   const verdict = result.verdict || result.riskLevel || result.status || "review";
   const score = Number.isFinite(Number(result.riskScore)) ? Number(result.riskScore) : null;
   const summary = result.summary || result.verdictReason || result.explanation || result.reason || "Sigil returned an analysis.";
@@ -178,11 +184,14 @@ function renderHistory() {
     const site = document.createElement("div");
     site.className = "history-site";
     site.textContent = item.site || "Unknown site";
-    top.append(site, createPill(item.verdict || "caution"));
+    const execution = item.inputKind === "simulation" || item.assessmentStatus;
+    top.append(site, createPill(execution ? "review" : item.verdict || "caution"));
 
     const meta = document.createElement("div");
     meta.className = "history-meta";
-    meta.textContent = `${item.method || "wallet request"} - Risk ${safeNumber(item.riskScore)}/100 - ${formatDate(item.timestamp)}`;
+    meta.textContent = `${item.method || "wallet request"} - ${execution
+      ? (item.evidenceSource === "remote_bounded_check" ? "Bounded read-only check" : "Local advisory only")
+      : `Risk ${safeNumber(item.riskScore)}/100`} - ${formatDate(item.timestamp)}`;
     card.append(top, meta);
     elements.historyList.appendChild(card);
   });
@@ -197,7 +206,7 @@ function renderSessions() {
   }
 
   items.forEach((session) => {
-    const summary = session.summary || {};
+    const summary = core.summarizeSessionEvents(session.events);
     const card = document.createElement("div");
     card.className = "session-item";
 
@@ -206,7 +215,7 @@ function renderSessions() {
     const site = document.createElement("div");
     site.className = "session-site";
     site.textContent = session.site || "Unknown site";
-    top.append(site, createPill(summary.highestVerdict || "safe"));
+    top.append(site, createPill(summary.highestVerdict || "review"));
 
     const meta = document.createElement("div");
     meta.className = "history-meta";
@@ -227,7 +236,7 @@ function renderSessions() {
       const stat = document.createElement("div");
       stat.className = "session-stat";
       const strong = document.createElement("strong");
-      strong.textContent = String(safeNumber(value));
+      strong.textContent = label === "Risk" && value == null ? "Unavailable" : String(safeNumber(value));
       const span = document.createElement("span");
       span.textContent = label;
       stat.append(strong, span);
@@ -290,7 +299,8 @@ function renderPasteResult(value, output) {
   } else if (output?.type === "api") {
     const apiSummary = extractApiSummary(output.payload);
     const scoreText = apiSummary.score === null ? "" : ` - Risk ${apiSummary.score}/100`;
-    outputNode.textContent = `Sigil verdict: ${safeVerdictLabel(apiSummary.verdict)}${scoreText}. ${apiSummary.summary}`;
+    outputNode.textContent = classification.scanMode === "simulate"
+      ? apiSummary.summary : `Sigil verdict: ${safeVerdictLabel(apiSummary.verdict)}${scoreText}. ${apiSummary.summary}`;
   } else if (output?.type === "error") {
     outputNode.textContent = output.message || "Sigil API scan failed. Please try again.";
   } else {
@@ -439,7 +449,7 @@ elements.pasteAnalyzeBtn.addEventListener("click", async () => {
     return;
   }
 
-  const endpoint = classification.scanMode === "analyze" ? "/api/sigil/analyze" : "/api/sigil/simulate";
+  const endpoint = classification.scanMode === "analyze" ? "/api/sigil/analyze" : "/api/sigil/simulate-v2";
   const body = classification.scanMode === "analyze"
     ? { input: classification.value, network: "mainnet" }
     : { rawData: classification.value, network: "mainnet" };
@@ -454,6 +464,7 @@ elements.pasteAnalyzeBtn.addEventListener("click", async () => {
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload) throw new Error(`Sigil API returned ${response.status}`);
+    if (classification.scanMode === "simulate" && !core.readExecutionReport(payload)) throw new Error("Execution evidence unavailable");
     const summary = extractApiSummary(payload);
     renderPasteResult(elements.pasteInput.value, {
       type: "api",
@@ -464,7 +475,9 @@ elements.pasteAnalyzeBtn.addEventListener("click", async () => {
     renderPasteResult(elements.pasteInput.value, {
       type: "error",
       verdict: "caution",
-      message: error?.message || "Sigil API scan failed. Please try again.",
+      message: classification.scanMode === "simulate"
+        ? "Remote execution evidence unavailable. Local input classification is advisory only; no effects or signing clearance established."
+        : "Sigil API scan failed. Please try again.",
     });
   } finally {
     elements.pasteAnalyzeBtn.disabled = false;

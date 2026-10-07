@@ -4,7 +4,7 @@ const { stripTypeScriptTypes } = require('node:module');
 const vm = require('node:vm');
 const { test } = require('node:test');
 function load(create) {
-  const context = vm.createContext({ hexWeiToEth: () => '0 ETH', lookupEntity: () => null, getSigilAiModel: () => 'deepseek/deepseek-v4-flash', openai: { chat: { completions: { create } } } });
+  const context = vm.createContext({ Buffer, lookupIncident: () => undefined, toFunctionSelector: require('../../../node_modules/viem').toFunctionSelector, hexWeiToEth: () => '0 ETH', lookupEntity: () => null, getSigilAiModel: () => 'deepseek/deepseek-v4-flash', openai: { chat: { completions: { create } } } });
   for (const file of ['validated-findings', 'ai-analyzer']) vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/${file}.ts`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '')), context);
   return context;
 }
@@ -18,7 +18,7 @@ test('stream emits only steps and one server-rendered validated result, never ra
   });
   const events = [];
   const result = await api.analyzeTransactionStreaming(tx, null, 'mainnet', 'hash', event => events.push(event));
-  assert.equal(result.validatedReport.version, 'findings-v1');
+  assert.equal(result.validatedReport.version, 'findings-v2');
   assert.equal(events.filter(e => e.type === 'result').length, 1);
   assert.equal(events.some(e => ['token', 'metadata'].includes(e.type)), false);
   assert.equal(requests[0].max_completion_tokens, 4096);
@@ -52,6 +52,6 @@ test('length plus trailing transport error is not retried and retains numeric us
 test('non-streaming contract follows the same validation contract', async () => {
   const api = load(async () => ({ choices: [{ message: { content: '{"findingIds":[]}' }, finish_reason: 'stop' }] }));
   const result = await api.analyzeContract({ address: tx.to, verificationStatus: 'unknown' }, 'mainnet');
-  assert.equal(result.validatedReport.version, 'findings-v1');
+  assert.equal(result.validatedReport.version, 'findings-v2');
   assert.equal(result.riskScore, 35);
 });

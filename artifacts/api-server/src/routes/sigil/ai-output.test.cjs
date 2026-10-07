@@ -4,7 +4,7 @@ const { stripTypeScriptTypes } = require('node:module');
 const vm = require('node:vm');
 const { test } = require('node:test');
 function load(create, model = 'deepseek/deepseek-v4-flash') {
-  const context = vm.createContext({ lookupEntity: () => null, getSigilAiModel: () => model, openai: { chat: { completions: { create } } } });
+  const context = vm.createContext({ Buffer, lookupIncident: () => undefined, toFunctionSelector: require('../../../node_modules/viem').toFunctionSelector, lookupEntity: () => null, getSigilAiModel: () => model, openai: { chat: { completions: { create } } } });
   for (const file of ['validated-findings', 'ai-analyzer']) vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/${file}.ts`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '')), context);
   return context;
 }

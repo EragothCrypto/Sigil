@@ -10,7 +10,49 @@ import { ContractDiffView } from './ContractDiffView';
 import { RiskScoreBreakdown } from './RiskScoreBreakdown';
 import { JargonText } from './JargonTooltip';
 import { useToast } from '@/hooks/use-toast';
-import { parseValidatedReport } from '@/lib/validated-report';
+import { parseValidatedReport, type ReportEvidence, type ReportInput } from '@/lib/validated-report';
+
+function DecodedIntent({ input }: { input: ReportInput }) {
+  return <div className="mt-3 space-y-1 break-all">
+    <h4 className="font-semibold text-white/70">Decoded intent (not executed effects)</h4>
+    <p>{input.signature ?? 'No decoded signature'} - {input.status}</p>
+    <p>ABI provenance: {input.provenance.scope}; network {input.provenance.network}; address {input.provenance.address}; block {input.provenance.blockTag}.</p>
+    {input.provenance.abiAddress && <p>ABI address: {input.provenance.abiAddress}</p>}
+    <p>{input.historicalCertainty ? 'Historically bound ABI.' : 'Historical execution semantics are not established.'} {input.reason}</p>
+    {input.arguments?.map((argument, index) => <p key={index} className="font-mono">{argument.name || `Argument ${index + 1}`} ({argument.type}): {JSON.stringify(argument.value)}</p>)}
+    {input.subcalls?.map((subcall, index) => <details key={index} className="border-l border-white/10 pl-3"><summary>Subcall {index + 1}</summary><DecodedIntent input={subcall} /></details>)}
+  </div>;
+}
+
+function AdditionalEvidence({ evidence }: { evidence: ReportEvidence }) {
+  return <>
+    {evidence.incident && <div className="mt-3 space-y-2">
+      <p>{evidence.incident.name} - {evidence.incident.role}; {evidence.incident.date}. Reviewed {evidence.incident.reviewedAt}.</p>
+      <p className="font-mono break-all">{evidence.incident.network}: {evidence.incident.hash}</p>
+      <ul className="space-y-2">{evidence.incident.sources.map((source, index) => <li key={index}>
+        <a href={source.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline break-all">{source.title}<ExternalLink className="w-3 h-3 shrink-0" /></a>
+        <p>{source.claim}</p>
+      </li>)}</ul>
+    </div>}
+    {evidence.input && <DecodedIntent input={evidence.input} />}
+    {(!!evidence.tokenStates?.length || !!evidence.permissionStates?.length) && <div className="mt-3 space-y-2">
+      <h4 className="font-semibold text-white/70">Contract-reported state (not effective rights)</h4>
+      <p>Interface responses are observations, not authenticated economics or permission effectiveness.</p>
+      {evidence.tokenStates?.map((state, index) => <div key={`token:${index}`} className="font-mono break-all border-l border-white/10 pl-3">
+        <p>Token {state.address}; block {state.blockTag}; {state.status}</p>
+        {state.decimals !== undefined && <p>Contract-declared decimals: {state.decimals}</p>}
+        {state.balanceRaw !== undefined && <p>Raw balance: {state.balanceRaw}</p>}
+        {state.reason && <p>{state.reason}</p>}
+      </div>)}
+      {evidence.permissionStates?.map((state, index) => <div key={`permission:${index}`} className="font-mono break-all border-l border-white/10 pl-3">
+        <p>{state.kind}; token {state.token}; block {state.blockTag}</p><p>Owner: {state.owner ?? 'unknown'}</p>
+        {state.caller && <p>Caller: {state.caller}</p>}
+        {state.spender && <p>Spender: {state.spender}</p>}<p>Raw permission value: {state.rawValue}</p>
+        {state.tokenIdRaw !== undefined && <p>Raw token ID: {state.tokenIdRaw}</p>}
+      </div>)}
+    </div>}
+  </>;
+}
 
 const CATEGORY_ICONS: Record<string, string> = {
   "DEX": "⚡",
@@ -94,7 +136,8 @@ const VERDICT_CONFIG = {
 export function AnalysisResultView({ data }: { data: AnalysisResult }) {
   const { toast } = useToast();
   const validatedReport = parseValidatedReport(data.details);
-  const verdict = (data.verdict ?? 'caution') as keyof typeof VERDICT_CONFIG;
+  const reportV2 = validatedReport?.version === 'findings-v2' ? validatedReport : null;
+  const verdict = (reportV2 ? reportV2.decisionScore <= 25 ? 'safe' : reportV2.decisionScore <= 60 ? 'caution' : 'dangerous' : data.verdict ?? 'caution') as keyof typeof VERDICT_CONFIG;
   const config = VERDICT_CONFIG[verdict] || VERDICT_CONFIG.caution;
   const VerdictIcon = config.icon;
 
@@ -115,6 +158,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
           Legacy report: these statements were not checked by the current finding validator. Run a fresh analysis before relying on them.
         </p>
       )}
+      {validatedReport?.version === 'findings-v1' && <p role="status" className="border-l-2 border-amber-400 pl-4 py-2 text-sm text-amber-200/80">Legacy validated report (findings-v1): narrower coverage. Separate evidence risk, uncertainty and adapter capabilities were not recorded. Run a fresh analysis for current supported checks.</p>}
 
       {/* ── VERDICT BANNER ── */}
       <div className={`relative overflow-hidden rounded-2xl border ${config.bg} ${config.border} p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-5`}>
@@ -152,7 +196,11 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
         className="rounded-2xl border border-white/6 p-6 md:p-8 flex flex-col md:flex-row gap-8 items-center"
         style={{ background: 'rgba(139,92,246,0.04)' }}
       >
-        <RiskRing score={data.riskScore} level={data.riskLevel} />
+        {reportV2 ? <dl className="grid grid-cols-1 gap-3 w-full md:w-56 shrink-0 text-sm">
+          <div><dt className="text-white/50">Evidence-backed risk</dt><dd className="text-white/90 font-semibold">{reportV2.evidenceRiskScore === null ? 'No concrete risk established' : `${reportV2.evidenceRiskScore}/100`}</dd></div>
+          <div><dt className="text-white/50">Uncertainty</dt><dd className="text-amber-300 font-mono">{reportV2.uncertaintyScore}/100</dd></div>
+          <div><dt className="text-white/50">Decision score</dt><dd className="text-white/90 font-mono">{reportV2.decisionScore}/100</dd></div>
+        </dl> : <RiskRing score={data.riskScore} level={data.riskLevel} />}
 
         <div className="flex-1 space-y-4 text-center md:text-left">
           <div className="flex flex-wrap items-center gap-2 justify-center md:justify-start">
@@ -206,7 +254,16 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
       {/* ── STRUCTURED BREAKDOWN ── */}
       {validatedReport ? (
         <section className="space-y-5 border-y border-white/10 py-6">
-          <p className="text-xs text-white/50">Assessed evidence only, not signing clearance. Score policy: maximum evidence floor v1; a product heuristic, not a loss probability.</p>
+          <p className="text-xs text-white/50">Assessed evidence only, not signing clearance. {reportV2 ? 'Decision score uses dual evidence-risk and uncertainty floors v2; a product heuristic, not a loss probability. No concrete risk established does not mean safe.' : 'Score policy: maximum evidence floor v1; a product heuristic, not a loss probability.'}</p>
+          {reportV2 && <div className="space-y-3">
+            <p className="text-sm text-white/75">Coverage: <strong>{reportV2.coverage === 'complete_for_supported_checks' ? 'Complete for supported checks only' : reportV2.coverage === 'partial' ? 'Partial' : 'Unavailable'}</strong>. Not a complete audit or full execution assessment.</p>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-xs">
+              {([
+                ['sourceVerification', 'Source verification'], ['receiptEvents', 'Receipt events'], ['incidentLookup', 'Incident lookup'], ['inputDecoding', 'Input decoding'],
+                ['reportedTokenState', 'Reported token state'], ['reportedPermissionState', 'Reported permission state'], ['internalTraces', 'Internal traces'], ['isolatedBalanceDeltas', 'Isolated balance deltas'],
+              ] as const).map(([key, label]) => <div key={key} className="flex justify-between gap-3 border-b border-white/5 pb-2"><dt className="text-white/60">{label}</dt><dd className={reportV2.capabilities[key] ? 'text-white/80' : 'text-amber-300'}>{reportV2.capabilities[key] ? 'Available' : 'Not established'}</dd></div>)}
+            </dl>
+          </div>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
             {([
               { category: 'risk', label: 'Risk Findings', icon: ShieldAlert, color: 'text-rose-400', empty: 'No concrete risk findings in the acquired data.' },
@@ -229,6 +286,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
                           <div><dt className="inline text-white/35">Subject: </dt><dd className="inline font-mono">{evidence.subject}</dd></div>
                           <div><dt className="inline text-white/35">Observation: </dt><dd className="inline">{evidence.value}</dd></div>
                         </dl>
+                        <AdditionalEvidence evidence={evidence} />
                         {evidence.transfers && evidence.transfers.length > 0 && <ul className="mt-2 divide-y divide-white/10">{evidence.transfers.map((transfer, index) => <li key={index} className="py-2 space-y-1 font-mono break-all">
                           <p>{transfer.kind} · emitter {transfer.token}</p>
                           <p>From {transfer.from}</p><p>To {transfer.to}</p>
@@ -287,7 +345,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
       )}
 
       {/* ── RAW DETAILS ── */}
-      {data.details && Object.keys(data.details).length > 0 && (
+      {!validatedReport && data.details && Object.keys(data.details).length > 0 && (
         <div className="rounded-2xl border border-white/5 bg-white/2 p-6">
           <h3 className="font-display text-sm font-bold text-white/50 uppercase tracking-widest mb-5">Execution Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

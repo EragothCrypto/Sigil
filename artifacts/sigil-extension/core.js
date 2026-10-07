@@ -771,7 +771,40 @@
     };
   }
 
+  function readExecutionReport(value) {
+    if (!isPlainObject(value) || value.reportVersion !== "execution-check-v2") return null;
+    const status = value.assessmentStatus;
+    if (!["call_check", "advisory_only", "unavailable"].includes(status)) return null;
+    const keys = ["reportVersion", "assessmentStatus", "network", "capabilities", "limitations", "summary"];
+    if (status === "call_check") keys.push("callCheck");
+    if (!hasExactKeys(value, keys) || typeof value.network !== "string" || typeof value.summary !== "string"
+      || value.summary.length > 2048 || !Array.isArray(value.limitations) || value.limitations.length > 8
+      || !value.limitations.every(item => typeof item === "string" && item.length <= 2048)) return null;
+    const caps = value.capabilities;
+    const unavailable = ["internalTraces", "walletBalanceDeltas", "storageSimulation", "permissionState", "historicalArchive"];
+    if (!hasExactKeys(caps, ["readOnlyCall", ...unavailable]) || typeof caps.readOnlyCall !== "boolean"
+      || !unavailable.every(key => caps[key] === false)) return null;
+    if (status === "call_check") {
+      const call = value.callCheck;
+      if (!isPlainObject(call) || !hasExactKeys(call, ["outcome", "blockNumber", "to", ...(call.from === undefined ? [] : ["from"])])
+        || call.outcome !== "success" || !isAddress(call.to) || (call.from !== undefined && !isAddress(call.from))
+        || typeof call.blockNumber !== "string" || !/^0x(?:0|[1-9a-fA-F][0-9a-fA-F]{0,63})$/.test(call.blockNumber)) return null;
+    }
+    return value;
+  }
+
+  function executionHistory(input, result) {
+    if (input?.kind !== "simulation" && !result?.assessmentStatus) return {};
+    const accepted = readExecutionReport(result);
+    return { verdict: "review", riskScore: null, riskLevel: null,
+      assessmentStatus: accepted?.assessmentStatus || "advisory_only",
+      evidenceSource: accepted ? "remote_bounded_check" : "local_advisory",
+      summary: accepted?.summary || "Local advisory only. Remote execution analysis is unavailable.",
+      warnings: accepted?.limitations || ["Local checks do not establish execution effects or signing clearance."] };
+  }
+
   function shouldNotify(result, settings) {
+    if (result?.assessmentStatus) return false;
     const normalized = normalizeSettings(settings);
     if (!result || normalized.notificationPolicy === "off") return false;
     const riskScore = Number(result.riskScore || 0);
@@ -803,6 +836,7 @@
       verdict: result?.verdict || "caution",
       riskScore: Number(result?.riskScore || 0),
       summary: result?.summary || result?.verdictReason || "Analyzed wallet request",
+      ...executionHistory(input, result),
     };
   }
 
@@ -839,19 +873,23 @@
       warnings,
       timestamp,
       createdAt: new Date(timestamp).toISOString(),
+      ...executionHistory(input, result),
     };
   }
 
   function summarizeSessionEvents(events) {
     const safeEvents = Array.isArray(events) ? events : [];
     const warnings = [];
-    let highestVerdict = "safe";
-    let maxRiskScore = 0;
+    let highestVerdict = "review";
+    let maxRiskScore = null;
 
     for (const event of safeEvents) {
-      if (verdictRank(event.verdict) > verdictRank(highestVerdict)) highestVerdict = event.verdict;
-      maxRiskScore = Math.max(maxRiskScore, Number(event.riskScore || 0));
-      for (const warning of event.warnings || []) {
+      const execution = event.inputKind === "simulation" || event.assessmentStatus;
+      if (!execution && verdictRank(event.verdict) > verdictRank(highestVerdict)) highestVerdict = event.verdict;
+      if (!execution && typeof event.riskScore === "number" && Number.isFinite(event.riskScore)) {
+        maxRiskScore = Math.max(maxRiskScore ?? 0, event.riskScore);
+      }
+      for (const warning of execution ? ["Execution checks do not establish effects or signing clearance."] : event.warnings || []) {
         if (warnings.length < 5 && !warnings.includes(warning)) warnings.push(warning);
       }
     }
@@ -921,5 +959,6 @@
     summarizeSessionEvents,
     recordSessionEvent,
     classifyPastedInput,
+    readExecutionReport,
   };
 });

@@ -17,8 +17,18 @@ try {
   })).status, 401);
   assert.equal((await fetch(`${url}/api/sigil/simulate`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+  })).status, 422);
+  assert.equal((await fetch(`${url}/api/sigil/simulate-v2`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
   })).status, 400);
-  console.log("Built Express smoke passed: health 200, unauthorized cron 401, invalid simulation 400");
+  const advisory = await fetch(`${url}/api/sigil/simulate-v2`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({rawData: "public prompt", network: "mainnet"}),
+  });
+  assert.equal(advisory.status, 200);
+  const result = await advisory.json();
+  assert.equal(result.assessmentStatus, "advisory_only");
+  for (const field of ["riskScore", "verdict", "assetChanges", "permissionsGranted"]) assert.equal(Object.hasOwn(result, field), false);
+  console.log("Built Express smoke passed: health200, cron401, legacy422, invalid-v2 400, advisory-v2 without invented effects/score");
 } finally {
   await new Promise((resolve) => server.close(resolve));
 }

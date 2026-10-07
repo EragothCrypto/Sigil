@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import { analysesTable } from "@workspace/db/schema";
@@ -32,15 +32,29 @@ import { computeScoreFactors } from "./score-factors.js";
 import { fetchTokenPrice, computeApprovalUsdValue } from "./token-price.js";
 import { analysisCache, cacheKey } from "./analysis-cache.js";
 import { ensureAnalysesSchema, runAnalysisRetentionCleanup } from "./analysis-schema.js";
+import { collectAnalysisEvidence } from "./analysis-adapters.js";
+import { validatedCacheEntry } from "./analysis-cache-validation.js";
+
+async function acquireAdapters(tx: Awaited<ReturnType<typeof fetchTransaction>> & {}, network: string, req: Request, res: Response) {
+  const controller = new AbortController();
+  const aborted = () => controller.abort();
+  const closed = () => { if (!res.writableEnded) controller.abort(); };
+  req.on?.("aborted", aborted);
+  res.on?.("close", closed);
+  try {
+    if (req.aborted || res.destroyed) controller.abort();
+    const evidence = await collectAnalysisEvidence(tx, network, {signal: controller.signal});
+    controller.signal.throwIfAborted();
+    tx.analysisEvidence = evidence;
+  } finally {
+    req.off?.("aborted", aborted);
+    res.off?.("close", closed);
+  }
+}
 
 const router: IRouter = Router();
 const TRANSACTION_DATA_UNAVAILABLE = "Analysis unavailable: transaction data could not be retrieved. Check the network and hash, then retry. No risk verdict was produced.";
 const networkEntity = (address: string, network: string) => network === "mainnet" ? lookupEntity(address) : null;
-function validatedCacheEntry(value: unknown): boolean {
-  if (!value || typeof value !== "object") return false;
-  const details = (value as { details?: { validatedReport?: { version?: string } } }).details;
-  return details?.validatedReport?.version === "findings-v1";
-}
 
 router.get("/maintenance/retention", async (req, res) => {
   const cronSecret = process.env.CRON_SECRET;
@@ -86,7 +100,7 @@ router.post("/analyze", async (req, res) => {
   // ── Cache hit — return instantly without any API / AI calls ───────────────
   if (!fresh) {
     const hit = analysisCache.get(key);
-    if (hit && validatedCacheEntry(hit)) {
+    if (hit && validatedCacheEntry(hit, trimmed, network)) {
       res.json({ ...(hit as object), cached: true });
       return;
     }
@@ -170,6 +184,7 @@ router.post("/analyze", async (req, res) => {
       }
 
       Object.assign(details, transactionEvidenceDetails(tx));
+      await acquireAdapters(tx, network, req, res);
       Object.assign(details.rawData as Record<string, unknown>, { receiptEvidence: tx?.receiptEvidence, historicalExample: tx?.historicalExample });
       isVerified = tx?.destinationVerification === "verified" ? true : tx?.destinationVerification === "unverified" ? false : undefined;
 
@@ -358,6 +373,7 @@ router.post("/analyze-stream", async (req, res) => {
   res.flushHeaders();
 
   const send = (event: Record<string, unknown>) => {
+    if (res.destroyed || res.writableEnded) return;
     res.write(`data: ${JSON.stringify(event)}\n\n`);
     // Flush the buffer to ensure the client receives the event immediately
     if (typeof (res as unknown as { flush?: () => void }).flush === "function") {
@@ -368,7 +384,7 @@ router.post("/analyze-stream", async (req, res) => {
   // ── Cache hit — emit a cached event with the existing result ────────────
   if (!fresh) {
     const hit = analysisCache.get(key) as ({ id?: string } & Record<string, unknown>) | undefined;
-    if (hit && validatedCacheEntry(hit)) {
+    if (hit && validatedCacheEntry(hit, trimmed, network)) {
       send({ type: "cached", id: hit.id, ...hit });
       res.end();
       return;
@@ -453,6 +469,8 @@ router.post("/analyze-stream", async (req, res) => {
       }
 
       Object.assign(details, transactionEvidenceDetails(tx));
+      stage = "evidence_adapters";
+      await acquireAdapters(tx, network, req, res);
       Object.assign(details.rawData as Record<string, unknown>, { receiptEvidence: tx?.receiptEvidence, historicalExample: tx?.historicalExample });
       isVerified = tx?.destinationVerification === "verified" ? true : tx?.destinationVerification === "unverified" ? false : undefined;
 

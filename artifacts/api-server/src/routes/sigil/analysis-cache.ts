@@ -68,7 +68,7 @@ export const analysisCache = new AnalysisCache();
 
 /** Build the canonical cache key for an (input, network) pair */
 export function cacheKey(input: string, network: string): string {
-  return `findings-v1:${network.toLowerCase()}:${input.toLowerCase()}`;
+  return `findings-v2:${network.toLowerCase()}:${input.toLowerCase()}`;
 }
 
 // Purge expired entries every 10 minutes to prevent memory accumulation

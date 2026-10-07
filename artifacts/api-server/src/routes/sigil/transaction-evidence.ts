@@ -98,13 +98,17 @@ export function readContractMetadata(address: string, sourceEnvelope: unknown, t
     address: string; isVerified: boolean; verificationStatus: "verified" | "unverified" | "unknown";
     contractName?: string; compilerVersion?: string; abi?: string;
     tokenName?: string; tokenSymbol?: string; totalSupply?: string; isToken?: boolean;
+    isProxy?: boolean; implementation?: string;
   } = { address, isVerified: false, verificationStatus: "unknown" };
   const source = explorerRow(sourceEnvelope);
-  if (typeof source?.ABI === "string") {
+  if (source?.Proxy === '0' || source?.Proxy === '1') result.isProxy = source.Proxy === '1';
+  if (typeof source?.Implementation === 'string' && ADDRESS.test(source.Implementation)) result.implementation = source.Implementation.toLowerCase();
+  if (typeof source?.ABI === "string" && Buffer.byteLength(source.ABI, 'utf8') <= 262144) {
     if (source.ABI === "Contract source code not verified") result.verificationStatus = "unverified";
     else {
       try {
-        if (usableAbi(JSON.parse(source.ABI))) {
+        const abi: unknown = JSON.parse(source.ABI);
+        if (Array.isArray(abi) && abi.length <= 256 && usableAbi(abi)) {
           result.verificationStatus = "verified";
           result.isVerified = true;
           result.abi = source.ABI;
@@ -112,12 +116,12 @@ export function readContractMetadata(address: string, sourceEnvelope: unknown, t
       } catch { /* Invalid ABI is missing evidence, not unverified source. */ }
     }
   }
-  if (typeof source?.ContractName === "string" && source.ContractName.trim()) result.contractName = source.ContractName;
-  if (typeof source?.CompilerVersion === "string" && source.CompilerVersion.trim()) result.compilerVersion = source.CompilerVersion;
+  if (typeof source?.ContractName === "string" && source.ContractName.trim() && source.ContractName.length <= 256) result.contractName = source.ContractName;
+  if (typeof source?.CompilerVersion === "string" && source.CompilerVersion.trim() && source.CompilerVersion.length <= 256) result.compilerVersion = source.CompilerVersion;
   const token = explorerRow(tokenEnvelope);
-  if (typeof token?.tokenName === "string" && token.tokenName.trim()
-    && typeof token.symbol === "string" && token.symbol.trim()
-    && typeof token.totalSupply === "string" && /^\d+$/.test(token.totalSupply)) {
+  if (typeof token?.tokenName === "string" && token.tokenName.trim() && token.tokenName.length <= 256
+    && typeof token.symbol === "string" && token.symbol.trim() && token.symbol.length <= 64
+    && typeof token.totalSupply === "string" && /^\d{1,78}$/.test(token.totalSupply)) {
     result.tokenName = token.tokenName;
     result.tokenSymbol = token.symbol;
     result.totalSupply = token.totalSupply;
