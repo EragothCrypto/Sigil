@@ -21,3 +21,12 @@
 
 Scanner / Ethereum Mainnet: `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac`.
 Expand token evidence. Each token must show actual block-bound reported decimals/balance or a precise unavailable reason, never fabricated units. Current implementation ABI remains non-historical; no authenticated movement, effective permission or signing clearance. If archive/RPC/ABI evidence is missing, unavailable remains an acceptable fail-closed outcome, not a successful token-coverage test.
+
+## Metadata Diagnostics Checkpoint
+
+The operator retest showed both tokens unavailable with `token_abi_unavailable`. The unavailable-only observation copy is corrected, but live token coverage is still open. Production credentials/logs are not available locally; the actual cause is not established.
+
+- [x] Add fixed, sanitized Etherscan source/transport/ABI failure codes and propagate them through token and one-hop implementation metadata failures. No provider messages, URLs or keys are included in diagnostics.
+- [x] Preserve strict verification, proxy gates, ABI size/entry budgets, RPC targets and existing request budgets; no retries, providers or guessed units added.
+- [x] Reproduce review findings with failing tests, then fix masked implementation failures and distinguish the 256-entry ABI boundary from limit rejection. All 260 affected tests, workspace typecheck, API build and built API/wrapper smoke tests pass.
+- [ ] After deployment Ready, perform a new mainnet scan of the Aave hash above and expand both token records. Record the exact unavailable code or qualified available state. Do not infer rate limiting or successful token reads before this result.

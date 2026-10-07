@@ -84,6 +84,12 @@ Nach dem Proxy-Token-Follow-up unter **Token state / Recorded evidence** beide T
 
 Current contract: Sigil reviews compatible wallet requests through best-effort observations. The original wallet provider runs independently exactly once per wrapped request, without waiting for Sigil UI or analysis. Sigil has no blocking, proceed, or cancel authority; the wallet remains the only place that approves or rejects a request. A hostile page may suppress or forge observations. Analysis may finish after the wallet prompt or confirmation, with no latency guarantee. Before-you-sign positioning is a review goal, not guaranteed pre-prompt coverage.
 
+### Aave Metadata Diagnostic Retest
+
+Latest operator evidence: both USDC and aToken remain unavailable with `token_abi_unavailable`; unavailable-only copy is correct. The production cause is unconfirmed. After the diagnostic deployment is Ready, start a new **Scanner / Ethereum Mainnet** analysis (not an existing history result): `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac`. Expand **Token state / Recorded evidence** for both addresses above at `0x1706d45` and record each reason.
+
+Expected: either qualified block-bound contract-reported state or a fixed code distinguishing source/transport failure, missing/invalid/over-budget ABI, unverified source or token interface validation. Examples: `etherscan_rate_limited`, `etherscan_auth_failed`, `etherscan_abi_missing`, `etherscan_abi_limit`, `etherscan_timeout`, `token_abi_validation_failed`. These are possible diagnostics, not confirmed production findings. No raw provider messages or credentials; no signing or safety clearance. If metadata is unavailable, token capability must remain unavailable and no decimals/balance may be invented.
+
 Chrome Web Store listing:
 
 https://chromewebstore.google.com/detail/sigil-web3-trust-layer/klogkofhnlifhakklkjmoofhfopnhnkg

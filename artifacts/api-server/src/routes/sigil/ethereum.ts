@@ -1,6 +1,6 @@
 import { logger } from "../../lib/logger.js";
 import { getEtherscanApiKey } from "./etherscan-api.js";
-import { summarizeReceipt, readContractMetadata, historicalExample, type ReceiptEvidence } from "./transaction-evidence.js";
+import { summarizeReceipt, readContractMetadata, historicalExample, contractSourceFailure, type ReceiptEvidence, type ContractMetadataIssue } from "./transaction-evidence.js";
 import { boundedRpcJson } from './evidence-rpc.js';
 import type { AnalysisEvidence } from './analysis-adapters.js';
 
@@ -54,6 +54,7 @@ export interface ContractData {
   isToken?: boolean;
   isProxy?: boolean;
   implementation?: string;
+  metadataIssue?: ContractMetadataIssue;
 }
 
 // Public RPC endpoints — no API key required, tested and working
@@ -290,8 +291,10 @@ export async function fetchContract(address: string, network: string, includeTok
     result = readContractMetadata(address,
       sourceRes.status === "fulfilled" ? sourceRes.value : undefined,
       tokenRes.status === "fulfilled" ? tokenRes.value : undefined);
+    if (sourceRes.status === 'rejected') result.metadataIssue = contractSourceFailure(sourceRes.reason, signal);
   } catch (err) {
-    logger.warn({ err, network }, "Failed to fetch contract metadata");
+    result.metadataIssue = contractSourceFailure(err, signal);
+    logger.warn({ issue: result.metadataIssue, network }, "Failed to fetch contract metadata");
   }
 
   return result;

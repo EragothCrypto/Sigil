@@ -16,6 +16,27 @@ export interface ReceiptEvidence {
   transfers: ObservedTransfer[];
 }
 
+export type ContractMetadataIssue = 'etherscan_metadata_unavailable' | 'etherscan_rate_limited'
+  | 'etherscan_auth_failed' | 'etherscan_plan_restricted' | 'etherscan_quota_exceeded'
+  | 'etherscan_response_invalid' | 'etherscan_abi_missing' | 'etherscan_abi_invalid'
+  | 'etherscan_abi_limit' | 'etherscan_source_unverified' | 'etherscan_key_missing'
+  | 'etherscan_response_limit' | 'etherscan_transport_unavailable' | 'etherscan_cancelled'
+  | 'etherscan_timeout' | 'etherscan_http_unavailable';
+
+export function contractSourceFailure(error: unknown, signal?: AbortSignal): ContractMetadataIssue {
+  if (signal?.aborted) return 'etherscan_cancelled';
+  const value = object(error);
+  const message = typeof value?.message === 'string' ? value.message : '';
+  if (message === 'ETHERSCAN_API_KEY is required for Etherscan API calls') return 'etherscan_key_missing';
+  if (message === 'Etherscan HTTP 429') return 'etherscan_rate_limited';
+  if (/^Etherscan HTTP (401|403)$/.test(message)) return 'etherscan_auth_failed';
+  if (/^Etherscan HTTP \d{3}$/.test(message)) return 'etherscan_http_unavailable';
+  if (message === 'Evidence response exceeds budget') return 'etherscan_response_limit';
+  if (value?.name === 'SyntaxError') return 'etherscan_response_invalid';
+  if (value?.name === 'TimeoutError' || value?.name === 'AbortError') return 'etherscan_timeout';
+  return 'etherscan_transport_unavailable';
+}
+
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const MAX_LOGS = 200;
 const MAX_TRANSFERS = 50;
@@ -99,23 +120,40 @@ export function readContractMetadata(address: string, sourceEnvelope: unknown, t
     contractName?: string; compilerVersion?: string; abi?: string;
     tokenName?: string; tokenSymbol?: string; totalSupply?: string; isToken?: boolean;
     isProxy?: boolean; implementation?: string;
+    metadataIssue?: ContractMetadataIssue;
   } = { address, isVerified: false, verificationStatus: "unknown" };
   const source = explorerRow(sourceEnvelope);
+  result.metadataIssue = source ? 'etherscan_abi_missing' : 'etherscan_metadata_unavailable';
+  const envelope = object(sourceEnvelope);
+  if (!source && envelope?.status === '1') result.metadataIssue = 'etherscan_response_invalid';
+  if (!source && envelope?.status === '0' && typeof envelope.result === 'string' && envelope.result.length <= 2048) {
+    const message = envelope.result.toLowerCase();
+    if (/daily limit|daily.*quota|calls per day/.test(message)) result.metadataIssue = 'etherscan_quota_exceeded';
+    else if (/rate limit|too many requests/.test(message)) result.metadataIssue = 'etherscan_rate_limited';
+    else if (/invalid api key|missing.*api key|api key.*invalid/.test(message)) result.metadataIssue = 'etherscan_auth_failed';
+    else if (/free api access.*not supported|not supported.*free|upgrade.*plan/.test(message)) result.metadataIssue = 'etherscan_plan_restricted';
+  }
   if (source?.Proxy === '0' || source?.Proxy === '1') result.isProxy = source.Proxy === '1';
   if (typeof source?.Implementation === 'string' && ADDRESS.test(source.Implementation)) result.implementation = source.Implementation.toLowerCase();
   if (typeof source?.ABI === "string" && Buffer.byteLength(source.ABI, 'utf8') <= 262144) {
-    if (source.ABI === "Contract source code not verified") result.verificationStatus = "unverified";
+    if (source.ABI === "Contract source code not verified") {
+      result.verificationStatus = "unverified";
+      result.metadataIssue = 'etherscan_source_unverified';
+    }
     else {
+      result.metadataIssue = 'etherscan_abi_invalid';
       try {
         const abi: unknown = JSON.parse(source.ABI);
+        if (Array.isArray(abi) && abi.length > 256) result.metadataIssue = 'etherscan_abi_limit';
         if (Array.isArray(abi) && abi.length <= 256 && usableAbi(abi)) {
           result.verificationStatus = "verified";
           result.isVerified = true;
           result.abi = source.ABI;
+          delete result.metadataIssue;
         }
       } catch { /* Invalid ABI is missing evidence, not unverified source. */ }
     }
-  }
+  } else if (typeof source?.ABI === 'string') result.metadataIssue = 'etherscan_abi_limit';
   if (typeof source?.ContractName === "string" && source.ContractName.trim() && source.ContractName.length <= 256) result.contractName = source.ContractName;
   if (typeof source?.CompilerVersion === "string" && source.CompilerVersion.trim() && source.CompilerVersion.length <= 256) result.compilerVersion = source.CompilerVersion;
   const token = explorerRow(tokenEnvelope);

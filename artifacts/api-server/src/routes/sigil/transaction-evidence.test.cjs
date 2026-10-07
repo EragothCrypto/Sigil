@@ -194,6 +194,47 @@ test('explorer errors are not token metadata or unverified evidence', () => {
   assert.equal(api.readContractMetadata(address, { status: '1', result: [{ ABI: '[]' }] }, null).verificationStatus, 'verified');
   assert.equal(api.readContractMetadata(address, { status: '1', result: [{ ABI: 'Contract source code not verified' }] }, null).verificationStatus, 'unverified');
 });
+
+test('source diagnostics distinguish provider failures from missing/invalid/oversized ABI without echoing payloads',()=>{
+ const api=load('transaction-evidence');
+ for(const [envelope,issue] of [
+  [undefined,'etherscan_metadata_unavailable'],
+  [{status:'0',result:'Max rate limit reached, please use API Key for higher rate limit secret=do-not-echo'},'etherscan_rate_limited'],
+  [{status:'0',result:'Invalid API Key secret=do-not-echo'},'etherscan_auth_failed'],
+  [{status:'0',result:'Free API access is not supported for this chain'},'etherscan_plan_restricted'],
+  [{status:'0',result:'Daily limit reached'},'etherscan_quota_exceeded'],
+  [{status:'0',result:'unknown provider secret=do-not-echo'},'etherscan_metadata_unavailable'],
+  [{status:'1',result:[null]},'etherscan_response_invalid'],
+  [{status:'1',result:[{Proxy:'1',Implementation:address}]},'etherscan_abi_missing'],
+  [{status:'1',result:[{ABI:'{bad'}]},'etherscan_abi_invalid'],
+  [{status:'1',result:[{ABI:' '.repeat(262145)}]},'etherscan_abi_limit'],
+  [{status:'1',result:[{ABI:'Contract source code not verified'}]},'etherscan_source_unverified'],
+ ]){
+  const result=api.readContractMetadata(address,envelope,null);assert.equal(result.metadataIssue,issue);
+  assert.equal(result.verificationStatus,issue==='etherscan_source_unverified'?'unverified':'unknown');
+  assert.equal(result.abi,undefined);assert.doesNotMatch(JSON.stringify(result),/secret=|do-not-echo/);
+ }
+ assert.equal(api.readContractMetadata(address,{status:'1',result:[{ABI:'[]'}]},null).metadataIssue,undefined);
+});
+
+test('ABI entry budget distinguishes accepted boundary from limit rejection',()=>{
+ const api=load('transaction-evidence');
+ for(const count of [256,257]){
+  const ABI=JSON.stringify(Array.from({length:count},()=>({type:'function',name:'balanceOf',inputs:[{type:'address'}],outputs:[{type:'uint256'}]})));
+  const result=api.readContractMetadata(address,{status:'1',result:[{ABI}]},null);
+  assert.equal(result.metadataIssue,count===256?undefined:'etherscan_abi_limit');
+  assert.equal(result.verificationStatus,count===256?'verified':'unknown');
+ }
+});
+
+test('contract acquisition preserves sanitized rejected-source diagnostics',async()=>{
+ for(const [error,issue] of [[Error('Etherscan HTTP 429'),'etherscan_rate_limited'],[Error('ETHERSCAN_API_KEY is required for Etherscan API calls'),'etherscan_key_missing'],[Error('Evidence response exceeds budget'),'etherscan_response_limit'],[Error('private provider URL?apikey=do-not-echo'),'etherscan_transport_unavailable']]){
+  const api=loadEthereum(null,null);api.fetch=async()=>{throw error;};
+  if(issue==='etherscan_key_missing')api.getEtherscanApiKey=()=>{throw error;};
+  const result=await api.fetchContract(address,'mainnet',false);
+  assert.equal(result.metadataIssue,issue);assert.equal(result.verificationStatus,'unknown');assert.doesNotMatch(JSON.stringify(result),/do-not-echo/);
+ }
+});
 test('historical example labels match the full hash and network only', () => {
   const api = load('transaction-evidence');
   const hash = '0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d';

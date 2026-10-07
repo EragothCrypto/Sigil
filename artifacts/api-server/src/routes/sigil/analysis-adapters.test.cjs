@@ -190,3 +190,16 @@ test('real RPC predicate rejections retain observed token failure classification
   assert.doesNotMatch(JSON.stringify(result),/upstream private detail/);
  }
 });
+
+test('token evidence preserves sanitized metadata diagnostics instead of generic ABI failure',async()=>{
+ const api=load();const implementation='0x'+'4'.repeat(40);
+ for(const stage of ['token','proxy','implementation']){
+  let reads=0;
+  const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
+   rpc:{attempts:0,call:async()=>{reads++;throw Error('no state');}},fetchContract:async key=>{
+    const failure=stage==='implementation'?key===implementation:key===address;
+    return {address:key,verificationStatus:failure?'unknown':'verified',...(failure?{}:{isProxy:key===address&&stage!=='token'}),implementation,abi:failure?undefined:JSON.stringify(abi),...(failure?{metadataIssue:'etherscan_rate_limited'}:{})};
+   }});
+  assert.equal(reads,0);assert.equal(result.tokenStates[0].reason,'etherscan_rate_limited',stage);assert.equal(result.tokenStates[0].status,'unavailable');
+ }
+});
