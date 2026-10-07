@@ -5,6 +5,10 @@
   "crons": [{ "path": "/api/sigil/maintenance/retention", "schedule": "17 3 * * *" }],
   "rewrites": [
     {
+      "source": "/api/sigil/simulate-v2",
+      "destination": "/api/sigil/simulate?executionCheckVersion=2"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/:path*"
     },

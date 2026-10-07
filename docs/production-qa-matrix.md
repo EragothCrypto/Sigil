@@ -66,6 +66,8 @@ Fuer Schritt4 kann im Execution Check auf Ethereum / Mainnet dieses JSON verwend
 
 Das ist eine read-only `deposit()`-Call-Kontrolle mit Wert0, keine ETH-Einzahlung. Ohne `from` gilt der Provider-Default-Caller; das Ergebnis ist nicht an eine Wallet gebunden. Ein erfolgreicher Call darf weder Balance-Deltas noch Signing-Freigabe behaupten. Bei nicht verfuegbarer RPC-Evidenz muss der Status unavailable bleiben.
 
+Read-only-Routing-Checkpoint 2026-10-07: Der Operator meldete `Remote execution check unavailable`. Ein direkter POST desselben WETH-JSONs an die Live-Route `/api/sigil/simulate-v2` reproduzierte HTTP405, nicht einen strukturierten RPC-unavailable-Report. Beide Vercel-Layouts erhalten eine explizite v2-Rewrite auf die bestehende Simulation-Funktion; der Wrapper unterscheidet v2 vom weiterhin deaktivierten Legacy-Endpunkt. Keine zusaetzliche Serverless-Funktion, keine KI-Anfrage, keine Wallet-Transaktion. Lokale Routing-/Wrapper-Pruefung ersetzt keine Deployment-Verifikation. Nach Vercel Ready dieselbe JSON-Eingabe erneut testen: HTTP200 mit `execution-check-v2` und explizitem Call-/Unavailable-Status erwartet; Legacy `/simulate` bleibt HTTP422.
+
 Current contract: Sigil reviews compatible wallet requests through best-effort observations. The original wallet provider runs independently exactly once per wrapped request, without waiting for Sigil UI or analysis. Sigil has no blocking, proceed, or cancel authority; the wallet remains the only place that approves or rejects a request. A hostile page may suppress or forge observations. Analysis may finish after the wallet prompt or confirmation, with no latency guarantee. Before-you-sign positioning is a review goal, not guaranteed pre-prompt coverage.
 
 Chrome Web Store listing:
