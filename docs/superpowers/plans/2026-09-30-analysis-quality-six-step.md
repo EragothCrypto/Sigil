@@ -57,7 +57,7 @@ Files: `validated-findings.ts`, `ai-analyzer.ts`, `index.ts`, `analysis-cache.ts
 - [x] Generate deterministic fixture evaluation and capability matrix: zero missing mandatory findings and zero unsupported risk/effect/trust claims in covered fixtures; disclose selection bias and no statistical calibration.
 - [x] Independent specification-compliance review, then code-quality/security review; resolve blockers and rerun affected tests. Whole-spec approval followed by quality fixes and independent follow-up approval (29 tests).
 - [x] Run selected API/privacy/retention/extension/web regressions, workspace typechecks and both production builds. Run desktop/mobile browser QA with synthetic responses, including malformed/legacy/unavailable simulation and interrupted stream. No paid model or production DB calls.
-- [ ] Update implementation checkboxes, roadmap phase Dashboard and audit checkpoint accurately; commit/push reviewed implementation under current authorisation. Keep unfinished full traces/statistical calibration/installed-old-extension gates open.
+- [x] Update implementation checkboxes and audit checkpoint; reviewed implementation committed and pushed as `c34652b6f264e0ad0c20721236146027197f9cb1`. Dashboard follow-through recorded separately; full traces/statistical calibration/installed-old-extension gates remain open.
 - [ ] Deliver one consolidated operator live-test list after Vercel Ready. No overall compliance GO or guaranteed novel-exploit detection claim.
 
 ## Verification Commands
@@ -69,6 +69,8 @@ Builds: `pnpm --filter @workspace/api-server build`, `pnpm --filter @workspace/s
 Publication: exact scoped files, clean `git diff --check`, fetched origin/no divergence, verify pushed SHA and worktree. No destructive reset or production migrations.
 
 ## Status
+
+Publication checkpoint: runtime commit `c34652b6f264e0ad0c20721236146027197f9cb1` fast-forwarded to main and pushed to GitHub; direct remote SHA verification matched, and all239tests passed on main. Deployment Ready has not been verified. The consolidated operator list is in `docs/production-qa-matrix.md`; run it only after the correct Vercel deployment is Ready. Documentation/Dashboard follow-through does not imply live or compliance clearance.
 
 Final verified implementation checkpoint: **239 combined tests passed**. Independent specification review approved the package; quality review's ABI-node and RPC-envelope blockers were corrected and independently rechecked (29 focused tests passed). Full workspace typecheck, both builds, generated contract checks and built API smoke passed. The locally packaged extension remains1.0.4 with unchanged verified hash. Publication/Dashboard follow-through is next; deployment, installed Store testing and the wider NO_GO gates remain open.
 

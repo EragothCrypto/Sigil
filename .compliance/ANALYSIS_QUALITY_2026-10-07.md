@@ -39,7 +39,9 @@ Registry checks use Node system CA support; TLS verification was not disabled.
 
 ## Open Gates
 
-Final reviews approved the implemented scope. Git publication is tracked in the implementation plan. Production deployment and fresh operator live tests remain unverified here. Extension 1.0.4 still requires Store submission and real installed-build/wallet QA. No paid model, production database mutation, new provider or account privacy change was performed.
+Final reviews approved the implemented scope. Runtime commit `c34652b6f264e0ad0c20721236146027197f9cb1` was pushed to GitHub main and its remote SHA verified. Production deployment and fresh operator live tests remain unverified here. Extension 1.0.4 still requires Store submission and real installed-build/wallet QA. No paid model, production database mutation, new provider or account privacy change was performed.
+
+The SBOM lockfile hash uses canonical LF text so Windows CRLF checkouts do not invalidate its identity; the normalization is declared in the component inventory. This is a component inventory, not signed provenance.
 
 Review-driven boundary fixes: cache floors/categories and block identities are checked; named ABI tuples retain values; ABI node overflow becomes unavailable without hiding other findings; the bounded 68KiB RPC parameter envelope accommodates unchanged maximum 32KiB calldata. These corrections have executable red/green regressions.
 

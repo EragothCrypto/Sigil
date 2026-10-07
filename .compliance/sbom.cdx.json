@@ -12,6 +12,10 @@
       {
         "name": "sigil:pnpm-lock-sha256",
         "value": "2e2ca54bc90ab0b7bc87bd48e56fe5058ab7bde16e2c4c6a89f5b7141d31e0c1"
+      },
+      {
+        "name": "sigil:lock-newline-normalization",
+        "value": "LF"
       }
     ]
   },

@@ -4,7 +4,9 @@ import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
 const inventory = JSON.parse((await readFile(path.join(root, ".compliance/dependency-licenses.json"), "utf8")).replace(/^\uFEFF/, ""));
-const lockHash = createHash("sha256").update(await readFile(path.join(root, "pnpm-lock.yaml"))).digest("hex");
+// Git checkouts may use CRLF on Windows; hash the canonical LF lockfile content.
+const lockText = (await readFile(path.join(root, "pnpm-lock.yaml"), "utf8")).replace(/\r\n/g, "\n");
+const lockHash = createHash("sha256").update(lockText).digest("hex");
 const unique = new Map();
 for (const [license, packages] of Object.entries(inventory)) {
   for (const pkg of packages) {
@@ -21,7 +23,7 @@ const sbom = {
   bomFormat: "CycloneDX", specVersion: "1.6", version: 1,
   metadata: {
     component: { type: "application", name: "Sigil workspace", version: "0.0.0" },
-    properties: [{ name: "sigil:pnpm-lock-sha256", value: lockHash }],
+    properties: [{ name: "sigil:pnpm-lock-sha256", value: lockHash }, { name: "sigil:lock-newline-normalization", value: "LF" }],
   },
   components: [...unique.values()].sort((a, b) => a.purl.localeCompare(b.purl)),
 };
