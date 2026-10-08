@@ -34,6 +34,7 @@ import { analysisCache, cacheKey } from "./analysis-cache.js";
 import { ensureAnalysesSchema, runAnalysisRetentionCleanup } from "./analysis-schema.js";
 import { collectAnalysisEvidence } from "./analysis-adapters.js";
 import { validatedCacheEntry } from "./analysis-cache-validation.js";
+import { AnalysisTimeoutError, createAnalysisDeadline } from './analysis-deadline.js';
 
 async function acquireAdapters(tx: Awaited<ReturnType<typeof fetchTransaction>> & {}, network: string, req: Request, res: Response) {
   const controller = new AbortController();
@@ -330,6 +331,28 @@ router.post("/analyze", async (req, res) => {
 
 // ── Streaming analysis endpoint ─────────────────────────────────────────────
 router.post("/analyze-stream", async (req, res) => {
+  const started = Date.now();
+  let stage = 'validate_input';
+  const cancelled = new AbortController();
+  const deadline = createAnalysisDeadline(() => {
+    req.log.warn?.({stage, elapsedMs: Date.now() - started}, 'Analysis deadline exceeded');
+    if (res.destroyed || res.writableEnded) return;
+    const error = {type: 'error', code: 'analysis_timeout', message: new AnalysisTimeoutError().message};
+    if (res.headersSent) res.end(`data: ${JSON.stringify(error)}\n\n`);
+    else res.status(503).json(error);
+  }, 120000, cancelled.signal);
+  const aborted = () => cancelled.abort();
+  const cleanup = () => {
+    if (!res.writableEnded) cancelled.abort();
+    deadline.dispose();
+    req.off?.('aborted', aborted); res.off?.('finish', cleanup); res.off?.('close', cleanup);
+  };
+  req.on?.('aborted', aborted); res.on?.('finish', cleanup); res.on?.('close', cleanup);
+  if (req.aborted || res.destroyed) aborted();
+  const setStage = (next: string) => {
+    deadline.check(); stage = next;
+    req.log.info?.({stage, elapsedMs: Date.now() - started}, 'Analysis stage started');
+  };
   const parseResult = AnalyzeInputBody.safeParse(req.body);
   if (!parseResult.success) {
     res.status(400).json({ error: "validation_error", message: "Invalid request body" });
@@ -355,9 +378,11 @@ router.post("/analyze-stream", async (req, res) => {
       res.status(400).json({ error: "unsupported_network", message: "Select a supported network" });
       return;
     }
-    await ensureAnalysesSchema();
+    setStage('schema');
+    await deadline.wait(ensureAnalysesSchema());
   } catch (err) {
-    req.log.error({ err }, "Analysis schema check failed");
+    if (res.destroyed || res.writableEnded) return;
+    req.log.error({ err, stage }, "Analysis schema check failed");
     res.status(500).json({
       error: "database_not_ready",
       message: "Analysis storage is not ready. Check the Vercel DATABASE_URL value and redeploy.",
@@ -365,6 +390,7 @@ router.post("/analyze-stream", async (req, res) => {
     return;
   }
 
+  deadline.check();
   // SSE setup
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -373,7 +399,7 @@ router.post("/analyze-stream", async (req, res) => {
   res.flushHeaders();
 
   const send = (event: Record<string, unknown>) => {
-    if (res.destroyed || res.writableEnded) return;
+    if (res.destroyed || res.writableEnded || deadline.signal.aborted) return;
     res.write(`data: ${JSON.stringify(event)}\n\n`);
     // Flush the buffer to ensure the client receives the event immediately
     if (typeof (res as unknown as { flush?: () => void }).flush === "function") {
@@ -391,7 +417,7 @@ router.post("/analyze-stream", async (req, res) => {
     }
   }
 
-  let stage = "start";
+  setStage('start');
   try {
     let details: Record<string, unknown> = {};
     let knownEntity = null;
@@ -406,8 +432,8 @@ router.post("/analyze-stream", async (req, res) => {
       : event as unknown as Record<string, unknown>);
 
     if (inputType === "transaction") {
-      stage = "fetch_transaction";
-      const tx = await fetchTransaction(trimmed, network);
+      setStage('fetch_transaction');
+      const tx = await deadline.wait(fetchTransaction(trimmed, network));
       if (!tx) {
         send({ type: "error", code: "transaction_data_unavailable", message: TRANSACTION_DATA_UNAVAILABLE });
         res.end();
@@ -469,19 +495,19 @@ router.post("/analyze-stream", async (req, res) => {
       }
 
       Object.assign(details, transactionEvidenceDetails(tx));
-      stage = "evidence_adapters";
-      await acquireAdapters(tx, network, req, res);
+      setStage('evidence_adapters');
+      await deadline.wait(acquireAdapters(tx, network, req, res));
       Object.assign(details.rawData as Record<string, unknown>, { receiptEvidence: tx?.receiptEvidence, historicalExample: tx?.historicalExample });
       isVerified = tx?.destinationVerification === "verified" ? true : tx?.destinationVerification === "unverified" ? false : undefined;
 
       // Fetch price in parallel while AI streams
       const pricePromise = approval && tx?.to ? fetchTokenPrice(tx.to, network) : Promise.resolve(null);
 
-      stage = "ai_transaction";
-      const [aiResult, priceResult] = await Promise.all([
-        analyzeTransactionStreaming(tx, methodName, network, trimmed, onEvent, knownEntity, approvalInfo),
+      setStage('ai_transaction');
+      const [aiResult, priceResult] = await deadline.wait(Promise.all([
+        analyzeTransactionStreaming(tx, methodName, network, trimmed, onEvent, knownEntity, approvalInfo, deadline.signal),
         pricePromise,
-      ]);
+      ]));
 
       if (priceResult && approvalInfo) {
         const usd = approvalInfo.isUnlimited ? computeApprovalUsdValue(
@@ -527,8 +553,8 @@ router.post("/analyze-stream", async (req, res) => {
         riskScore: aiResult.riskScore,
       });
 
-      stage = "save_transaction";
-      const [saved] = await db
+      setStage('save_transaction');
+      const [saved] = await deadline.wait(db
         .insert(analysesTable)
         .values({
           publicId: randomUUID(),
@@ -544,7 +570,7 @@ router.post("/analyze-stream", async (req, res) => {
           positives: aiResult.positives,
           details,
         })
-        .returning();
+        .returning());
 
       const result = {
         id: saved.publicId!,
@@ -574,11 +600,11 @@ router.post("/analyze-stream", async (req, res) => {
     }
 
     if (inputType === "contract") {
-      stage = "fetch_contract";
+      setStage('fetch_contract');
       knownEntity = networkEntity(trimmed, network);
-      const contract = await fetchContract(trimmed, network);
+      const contract = await deadline.wait(fetchContract(trimmed, network, true, deadline.signal));
 
-      stage = "ai_contract";
+      setStage('ai_contract');
       details = {
         contractName: contract.contractName,
         tokenSymbol: contract.tokenSymbol,
@@ -587,7 +613,7 @@ router.post("/analyze-stream", async (req, res) => {
         ...(knownEntity ? { protocol: knownEntity.name } : {}),
         rawData: { isToken: contract.isToken, tokenName: contract.tokenName, totalSupply: contract.totalSupply },
       };
-      const aiResult = await analyzeContractStreaming(contract, network, onEvent, knownEntity);
+      const aiResult = await deadline.wait(analyzeContractStreaming(contract, network, onEvent, knownEntity, deadline.signal));
       if (aiResult.validatedReport) details.validatedReport = aiResult.validatedReport;
 
       const staticContractPatterns = aiResult.validatedReport ? [] : detectPatterns({ contract, knownEntity });
@@ -604,8 +630,8 @@ router.post("/analyze-stream", async (req, res) => {
         riskScore: aiResult.riskScore,
       });
 
-      stage = "save_contract";
-      const [saved] = await db
+      setStage('save_contract');
+      const [saved] = await deadline.wait(db
         .insert(analysesTable)
         .values({
           publicId: randomUUID(),
@@ -621,7 +647,7 @@ router.post("/analyze-stream", async (req, res) => {
           positives: aiResult.positives,
           details,
         })
-        .returning();
+        .returning());
 
       const result = {
         id: saved.publicId!,
@@ -651,10 +677,10 @@ router.post("/analyze-stream", async (req, res) => {
     }
 
     // Unknown input type
-    stage = "ai_unknown";
-    const aiResult = await analyzeUnknown(trimmed, network);
-    stage = "save_unknown";
-    const [saved] = await db
+    setStage('ai_unknown');
+    const aiResult = await deadline.wait(analyzeUnknown(trimmed, network));
+    setStage('save_unknown');
+    const [saved] = await deadline.wait(db
       .insert(analysesTable)
       .values({
         publicId: randomUUID(),
@@ -670,12 +696,13 @@ router.post("/analyze-stream", async (req, res) => {
         positives: aiResult.positives,
         details: {},
       })
-      .returning();
+      .returning());
     send({ type: "done", id: saved.publicId! });
     res.end();
   } catch (err) {
-    req.log.error({ err }, "Streaming analysis failed");
-    send({ type: "error", code: err instanceof AIAnalysisOutputError ? err.code : "analysis_failed", message: err instanceof AIAnalysisOutputError
+    if (res.destroyed || res.writableEnded) return;
+    req.log.error({ err, stage, elapsedMs: Date.now() - started }, "Streaming analysis failed");
+    send({ type: "error", code: err instanceof AnalysisTimeoutError ? err.code : err instanceof AIAnalysisOutputError ? err.code : "analysis_failed", message: err instanceof AIAnalysisOutputError || err instanceof AnalysisTimeoutError
       ? err.message
       : `Failed to analyze input — please try again. (${stage})` });
     res.end();

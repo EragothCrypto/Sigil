@@ -3,13 +3,39 @@ const { readFileSync } = require('node:fs');
 const { stripTypeScriptTypes } = require('node:module');
 const vm = require('node:vm');
 const { test } = require('node:test');
-function load(create, model = 'deepseek/deepseek-v4-flash') {
-  const context = vm.createContext({ Buffer, lookupIncident: () => undefined, toFunctionSelector: require('../../../node_modules/viem').toFunctionSelector, lookupEntity: () => null, getSigilAiModel: () => model, openai: { chat: { completions: { create } } } });
-  for (const file of ['validated-findings', 'ai-analyzer']) vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/${file}.ts`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '')), context);
+const {APIConnectionTimeoutError}=require('../../../../../lib/integrations-openai-ai-server/node_modules/openai');
+function load(create, model = 'deepseek/deepseek-v4-flash', deadlineMs) {
+  const context = vm.createContext({ Buffer, AbortController, AbortSignal, setTimeout: deadlineMs ? (fn,ms)=>setTimeout(fn,Math.min(ms,deadlineMs)) : setTimeout, clearTimeout, lookupIncident: () => undefined, toFunctionSelector: require('../../../node_modules/viem').toFunctionSelector, lookupEntity: () => null, getSigilAiModel: () => model, openai: { chat: { completions: { create } } } });
+  context.APIConnectionTimeoutError=APIConnectionTimeoutError;
+  for (const file of ['analysis-deadline', 'validated-findings', 'ai-analyzer']) vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/${file}.ts`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '')), context);
   return context;
 }
 const contract = { address: `0x${'1'.repeat(40)}`, verificationStatus: 'verified' };
 const reply = content => ({ choices: [{ message: { content }, finish_reason: 'stop' }] });
+
+test('SDK timeout in either phase produces explicit timeout without fallback',async()=>{
+ for(const phase of ['signals','verdict']){
+  let calls=0;const events=[];
+   const api=load(async request=>{calls++;if(phase==='signals'||request.stream)throw new APIConnectionTimeoutError();return reply('{"findingIds":[]}');});
+  await assert.rejects(api.analyzeContractStreaming(contract,'mainnet',e=>events.push(e)),e=>e.code==='analysis_timeout');
+  assert.equal(calls,phase==='signals'?1:2);assert.equal(events.some(e=>e.type==='result'),false);
+ }
+});
+
+test('AI deadline stops uncooperative request or stream without fallback or result',{timeout:2000},async()=>{
+ for(const phase of ['signals','verdict']){
+  let calls=0;const events=[];const options=[];
+  const api=load(async(request,opts)=>{
+   calls++;options.push(opts);
+   if(phase==='signals')return new Promise(()=>{});
+   if(!request.stream)return reply('{"findingIds":[]}');
+   return (async function*(){await new Promise(()=>{});})();
+  },'deepseek/deepseek-v4-flash',20);
+  await assert.rejects(api.analyzeContractStreaming(contract,'mainnet',e=>events.push(e)),e=>e.code==='analysis_timeout');
+  assert.equal(calls,phase==='signals'?1:2);assert.equal(events.some(e=>e.type==='result'),false);
+  for(const opts of options){assert.equal(opts.signal.aborted,true);assert.equal(opts.maxRetries,0);}
+ }
+});
 test('non-streaming and streaming keep configured completion ceilings', async () => {
   for (const streaming of [false, true]) {
     const requests = [];

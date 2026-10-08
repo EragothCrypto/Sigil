@@ -4,8 +4,9 @@ const { stripTypeScriptTypes } = require('node:module');
 const vm = require('node:vm');
 const { test } = require('node:test');
 function load(create) {
-  const context = vm.createContext({ Buffer, lookupIncident: () => undefined, toFunctionSelector: require('../../../node_modules/viem').toFunctionSelector, hexWeiToEth: () => '0 ETH', lookupEntity: () => null, getSigilAiModel: () => 'deepseek/deepseek-v4-flash', openai: { chat: { completions: { create } } } });
-  for (const file of ['validated-findings', 'ai-analyzer']) vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/${file}.ts`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '')), context);
+  const context = vm.createContext({ Buffer, AbortController, setTimeout, clearTimeout, lookupIncident: () => undefined, toFunctionSelector: require('../../../node_modules/viem').toFunctionSelector, hexWeiToEth: () => '0 ETH', lookupEntity: () => null, getSigilAiModel: () => 'deepseek/deepseek-v4-flash', openai: { chat: { completions: { create } } } });
+  context.APIConnectionTimeoutError=require('../../../../../lib/integrations-openai-ai-server/node_modules/openai').APIConnectionTimeoutError;
+  for (const file of ['analysis-deadline', 'validated-findings', 'ai-analyzer']) vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/${file}.ts`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '')), context);
   return context;
 }
 const tx = { to: `0x${'1'.repeat(40)}`, input: '0x', status: '0x1', inclusionStatus: 'mined', destinationHasCode: true, destinationVerification: 'verified', receiptEvidence: { status: 'available', complete: true, transfers: [] } };

@@ -96,6 +96,14 @@ Operator diagnostic retest after `a27014d`: both USDC and aToken at `0x1706d45` 
 
 After deployment Ready, repeat the same Aave mainnet hash in a new Scanner analysis and expand both token records at `0x1706d45`. Expected: block-bound qualified contract-reported state if the upstream checks succeed; otherwise the real unavailable reason, including provider rejection, timeout, queue saturation, ABI/interface or archive limitations. This change reduces repeated calls/bursts but does not guarantee token success or coordinate the API key across multiple Vercel instances. Do not sign anything for this test.
 
+### Stream Deadline Retest (2026-10-08)
+
+Operator log confirms `Vercel Runtime Timeout Error: Task timed out after 300 seconds` after a stream ended without a terminal event. Startup Node `url.parse` and PostgreSQL SSL warnings do not identify the stalled stage. No claim that Etherscan, AI or database is the confirmed blocking dependency.
+
+Deadline follow-up: streaming requests now have a 120-second application deadline including schema/acquisition/AI/save, with explicit `analysis_timeout` SSE error (or HTTP503 before headers). Validated AI calls share a 60-second deadline, cancellable SDK signal, disabled SDK retries and no fallback after timeout. Each stage is logged with elapsed time. Caller disconnect cancels AI. Late dependency completions cannot emit `done` or populate the analysis cache; already-issued SQL is not claimed cancelled. Evidence acceptance is unchanged.
+
+After Vercel Ready, start a fresh Scanner / Ethereum Mainnet analysis of `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac`. Expect a complete validated report or explicit failure before the five-minute platform termination. On `analysis_timeout`, provide the matching `Analysis stage started`, `Analysis deadline exceeded` or `Streaming analysis failed` stage/elapsed log entries, without secrets. A timeout is a failed live test, not a safe verdict. Token-state success remains separately open.
+
 Chrome Web Store listing:
 
 https://chromewebstore.google.com/detail/sigil-web3-trust-layer/klogkofhnlifhakklkjmoofhfopnhnkg
