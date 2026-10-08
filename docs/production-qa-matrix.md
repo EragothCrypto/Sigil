@@ -132,6 +132,14 @@ Token ABI acquisition now supports at most two current explorer implementation l
 
 After deployment Ready, fresh Scanner / Ethereum Mainnet test: `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac`. Expand both token records. USDC may become qualified `current_proxy_abi_only` state only if the complete bounded chain and real RPC checks pass; otherwise record `token_proxy_cycle`, `token_proxy_depth_limit`, `token_proxy_status_unknown`, `token_proxy_implementation_unavailable` or the actual upstream/ABI/RPC error. Euler control: `0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d`, expected historical exploit finding remains. No signing required. Local verification: 282 affected tests, workspace typechecks, API build/import smoke pass. Independent review and publication tracked in the implementation plan/project phase; live USDC coverage and compliance GO remain unestablished.
 
+## Token Interface Provenance Retest (October 8, 2026)
+
+Operator USDC reason advances to `token_erc20_interface_not_established` while aToken remains available. Public Blockscout FiatTokenV2_2 ABI at `0x43506849d7c04f9138d1a2050bbf3a0c054402dd` passes the existing local detector (ERC20 candidate/allowance true, no ownerOf). This public reference does not establish the actual production-selected Etherscan ABI or chain, so no acceptance rule is loosened.
+
+Both analysis routes now log bounded failures as `Token ABI interface rejected`: tokenAddress, abiAddress, proxyPath (at most three validated addresses), blockTag, transferMatches/balanceMatches/decimalsMatches and nftAmbiguous. No raw ABI, provider text/keys, calldata, balances or signatures. Callback failure cannot change rejection; diagnostic fields are server-only, not model/report/persisted data.
+
+After deployment Ready, fresh Scanner / Ethereum Mainnet input: `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac`. If USDC still rejects, inspect its matching Vercel `Token ABI interface rejected` log. The UI error may remain unchanged; this change provides missing provenance rather than promising token coverage. No signing or I/O logging. Workspace typechecks, API build/import smoke and independent review pass; final affected tests tracked in project phase. Actual production leaf diagnosis and overall compliance GO remain open.
+
 ## Historical Verification (May 26, 2026)
 
 These recorded checks have not been rerun for the pending release. They do not establish current production health, download version, or advisory behavior.

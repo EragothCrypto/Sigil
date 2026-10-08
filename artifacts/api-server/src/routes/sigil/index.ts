@@ -44,7 +44,9 @@ async function acquireAdapters(tx: Awaited<ReturnType<typeof fetchTransaction>> 
   res.on?.("close", closed);
   try {
     if (req.aborted || res.destroyed) controller.abort();
-    const evidence = await collectAnalysisEvidence(tx, network, {signal: controller.signal});
+    const evidence = await collectAnalysisEvidence(tx, network, {signal: controller.signal,
+      onDiagnostic: diagnostic => req.log.warn?.({network, ...diagnostic}, 'Token ABI interface rejected'),
+    });
     controller.signal.throwIfAborted();
     tx.analysisEvidence = evidence;
   } finally {

@@ -34,10 +34,17 @@ function has(abi: Abi, name: string, inputs: string[], outputs?: string[]): bool
 function erc20Candidate(abi: Abi): boolean {
   return inspectTokenInterface(abi).erc20Candidate && !has(abi, 'ownerOf', ['uint256']);
 }
+export interface TokenAbiDiagnostic {
+  code: 'token_erc20_interface_not_established'; tokenAddress: string; abiAddress: string;
+  blockTag: string; proxyPath: string[]; transferMatches: number; balanceMatches: number;
+  decimalsMatches: number; nftAmbiguous: boolean;
+}
 function tokenAbiFailure(contract: ContractData, fallback: string): string {
   return contract.metadataIssue ?? (contract.verificationStatus === 'verified' && contract.abi ? 'token_abi_validation_failed' : fallback);
 }
-async function proxyTokenAbi(contract: ContractData, metadata: (address: string) => Promise<ContractData>): Promise<{abi?: Abi; reason?: string}> {
+async function proxyTokenAbi(contract: ContractData, metadata: (address: string) => Promise<ContractData>): Promise<
+  {abi: Abi; abiAddress: string; proxyPath: string[]; reason?: never} | {abi?: never; reason: string}
+> {
   const visited = new Set([contract.address.toLowerCase()]);
   let current = contract;
   // At most two implementation links; explorer metadata is current, never historical proof.
@@ -46,7 +53,7 @@ async function proxyTokenAbi(contract: ContractData, metadata: (address: string)
     if (current.verificationStatus !== 'verified') return {reason: tokenAbiFailure(current, 'token_proxy_abi_unavailable')};
     if (current.isProxy === false) {
       const abi = parsedAbi(current);
-      return abi ? {abi} : {reason: tokenAbiFailure(current, 'token_proxy_abi_unavailable')};
+      return abi ? {abi, abiAddress: current.address.toLowerCase(), proxyPath: [...visited]} : {reason: tokenAbiFailure(current, 'token_proxy_abi_unavailable')};
     }
     if (current.isProxy !== true) return {reason: 'token_proxy_status_unknown'};
     if (depth === 2) return {reason: 'token_proxy_depth_limit'};
@@ -65,6 +72,7 @@ export function formatReportedAmount(raw: string, decimals: number): string {
 }
 export async function collectAnalysisEvidence(tx: TransactionData, network: string, options: {
   rpc?: EvidenceRpc; fetchContract?: (address: string) => Promise<ContractData>; signal?: AbortSignal;
+  onDiagnostic?: (diagnostic: TokenAbiDiagnostic) => void;
 } = {}): Promise<AnalysisEvidence> {
   const signal = AbortSignal.any([AbortSignal.timeout(20000), ...(options.signal ? [options.signal] : [])]);
   const rpc = options.rpc ?? createEvidenceRpc(network, signal);
@@ -108,6 +116,8 @@ export async function collectAnalysisEvidence(tx: TransactionData, network: stri
       state.reason = 'token_metadata_unavailable';
       const contract = await metadata(address);
       let tokenAbi = parsedAbi(contract);
+      let tokenAbiAddress = address;
+      let proxyPath = [address];
       if (contract.isProxy) {
         // A current ABI only defines the response shape; reads stay on the token at the requested block.
         if (!limits.includes('token_proxy_current_abi_not_historical')) limits.push('token_proxy_current_abi_not_historical');
@@ -115,9 +125,22 @@ export async function collectAnalysisEvidence(tx: TransactionData, network: stri
         const resolved = await proxyTokenAbi(contract, metadata);
         if (!resolved.abi) { state.reason = resolved.reason; continue; }
         tokenAbi = resolved.abi;
+        tokenAbiAddress = resolved.abiAddress;
+        proxyPath = resolved.proxyPath;
       }
       if (!tokenAbi) { state.reason = tokenAbiFailure(contract, 'token_abi_unavailable'); continue; }
-      if (!erc20Candidate(tokenAbi)) { state.reason = 'token_erc20_interface_not_established'; continue; }
+      if (!erc20Candidate(tokenAbi)) {
+        state.reason = 'token_erc20_interface_not_established';
+        const count = (name: string, inputs: string[], outputs?: string[]) => tokenAbi.filter(f => f.type === 'function' && f.name === name
+          && f.inputs.map(p => p.type).join(',') === inputs.join(',')
+          && (!outputs || (f.outputs.length === 1 && outputs.includes(f.outputs[0]!.type)))).length;
+        try {
+          options.onDiagnostic?.({code: 'token_erc20_interface_not_established', tokenAddress: address, abiAddress: tokenAbiAddress, blockTag, proxyPath,
+            transferMatches: count('transfer', ['address', 'uint256']), balanceMatches: count('balanceOf', ['address'], ['uint256']),
+            decimalsMatches: count('decimals', [], ['uint8', 'uint256']), nftAmbiguous: has(tokenAbi, 'ownerOf', ['uint256'])});
+        } catch { /* Diagnostics cannot change evidence acceptance. */ }
+        continue;
+      }
       if (signal.aborted) { state.reason = 'token_state_cancelled'; continue; }
       state.reason = 'token_state_rpc_unavailable';
       const code = await rpc.call('eth_getCode', [address, blockTag], v => {

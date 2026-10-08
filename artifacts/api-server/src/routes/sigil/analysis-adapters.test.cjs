@@ -124,6 +124,43 @@ test('two-hop proxy uses only the verified leaf ABI and original block-bound tok
  assert.equal(calls.length,3);assert.ok(calls.every(([method,params])=>params[1]==='0x9'&&(method==='eth_getCode'?params[0]:params[0].to)===address));
 });
 
+test('interface rejection reports bounded leaf provenance and function counts without raw ABI or state reads',async()=>{
+ const api=load();const middle='0x'+'4'.repeat(40);const leaf='0x'+'5'.repeat(40);const diagnostics=[];let reads=0;
+ const leafAbi=viem.parseAbi(['function admin() view returns (address)']);
+ const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
+  onDiagnostic:d=>diagnostics.push(d),
+  fetchContract:async key=>({address:key,verificationStatus:'verified',isProxy:key===address||key===middle,abi:JSON.stringify(key===leaf?leafAbi:abi),implementation:key===address?middle:leaf}),
+  rpc:{attempts:0,call:async()=>{reads++;throw Error('unexpected state read');}}});
+ assert.equal(result.tokenStates[0].reason,'token_erc20_interface_not_established');assert.equal(reads,0);
+ assert.equal(diagnostics.length,1);const d=diagnostics[0];
+ assert.equal(d.tokenAddress,address);assert.equal(d.abiAddress,leaf);assert.equal(d.blockTag,'0x9');
+ assert.deepEqual(Array.from(d.proxyPath),[address,middle,leaf]);
+ assert.equal(d.transferMatches,0);assert.equal(d.balanceMatches,0);assert.equal(d.decimalsMatches,0);assert.equal(d.nftAmbiguous,false);
+ assert.doesNotMatch(JSON.stringify(d),/admin|ABI|secret|balanceRaw|implementation\(\)/);
+});
+
+test('diagnostic callback failure does not alter fail-closed token result',async()=>{
+ const api=load();let diagnostics=0;const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
+  onDiagnostic:()=>{diagnostics++;throw Error('logger failed');},fetchContract:async key=>({address:key,verificationStatus:'verified',isProxy:false,abi:'[]'}),
+  rpc:{attempts:0,call:async()=>{throw Error('unexpected RPC');}}});
+ assert.equal(result.tokenStates[0].reason,'token_erc20_interface_not_established');assert.equal(result.tokenStates[0].status,'unavailable');
+ assert.equal(diagnostics,1);
+});
+
+test('interface diagnostics distinguish duplicate functions and NFT ambiguity with bounded counts',async()=>{
+ const api=load();const transfer=abi.find(f=>f.name==='transfer');
+ for(const [extra,count,nft] of [[[transfer],2,false],[viem.parseAbi(['function ownerOf(uint256) view returns (address)']),1,true]]){
+  const diagnostics=[];
+  const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
+   onDiagnostic:d=>diagnostics.push(d),fetchContract:async key=>({address:key,verificationStatus:'verified',isProxy:false,abi:JSON.stringify([...abi,...extra])}),
+   rpc:{attempts:0,call:async()=>{throw Error('unexpected RPC');}}});
+  assert.equal(result.tokenStates[0].status,'unavailable');assert.equal(diagnostics.length,1);
+  assert.equal(diagnostics[0].transferMatches,count);assert.equal(diagnostics[0].balanceMatches,1);
+  assert.equal(diagnostics[0].decimalsMatches,1);assert.equal(diagnostics[0].nftAmbiguous,nft);
+  assert.deepEqual(Array.from(diagnostics[0].proxyPath),[address]);
+ }
+});
+
 test('bounded proxy chain rejects cycles, excess depth and unusable terminal metadata without RPC',async()=>{
  const api=load();const middle='0x'+'4'.repeat(40);const leaf='0x'+'5'.repeat(40);const fourth='0x'+'6'.repeat(40);
  for(const [middleChange,leafChange,reason] of [

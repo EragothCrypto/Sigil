@@ -36,7 +36,10 @@ function routesFor(tx, inputType = 'transaction', options = {}) {
       fetchTransaction: async () => options.hangTx?new Promise(()=>{}):tx, decodeMethodId: () => null, decodeApprovalCalldata: () => null,
       transactionEvidenceDetails: data => ({ sourceVerification: data?.destinationVerification ?? 'unknown', transferCoverage: 'partial' }),
     },
-    './analysis-adapters.js': { collectAnalysisEvidence: async () => ({ version: 'adapters-v1', coverage: 'partial' }) },
+    './analysis-adapters.js': { collectAnalysisEvidence: async (_tx, _network, adapterOptions) => {
+      if (options.diagnostic) adapterOptions.onDiagnostic(options.diagnostic);
+      return { version: 'adapters-v1', coverage: 'partial' };
+    } },
     './ai-analyzer.js': {
       AIAnalysisOutputError: OutputError,
       analyzeTransaction: async data => analyze(data),
@@ -62,6 +65,18 @@ function routesFor(tx, inputType = 'transaction', options = {}) {
 function responseFor(events = []) {
   return Object.assign(new (require('node:events').EventEmitter)(),{ code:200, ended:false, writableEnded:false, headersSent:false, status(code){this.code=code;return this;},json(body){this.body=body;this.end();},setHeader(){},flushHeaders(){this.headersSent=true;},end(line){if(line)this.write(line);this.ended=true;this.writableEnded=true;this.emit('finish');},write(line){events.push(JSON.parse(line.slice(6)));} });
 }
+
+test('both routes forward sanitized token ABI diagnostics to request logs only',async()=>{
+ const token='0x'+'1'.repeat(40);const leaf='0x'+'2'.repeat(40);
+ const diagnostic={code:'token_erc20_interface_not_established',tokenAddress:token,abiAddress:leaf,blockTag:'0x9',proxyPath:[token,leaf],transferMatches:0,balanceMatches:0,decimalsMatches:0,nftAmbiguous:false};
+ for(const path of ['/analyze','/analyze-stream']){
+  const api=routesFor({to:'target',from:'sender',input:'0x',value:'0x0'},'transaction',{diagnostic});const logs=[];const events=[];const res=responseFor(events);
+  await api.handlers.get(path)({body:{input:'hash',network:'mainnet',fresh:true},log:{error(){},warn(entry,message){logs.push({entry,message});}}},res);
+  assert.equal(logs.length,1);assert.equal(logs[0].entry.network,'mainnet');assert.equal(logs[0].entry.abiAddress,leaf);
+  assert.equal(logs[0].message,'Token ABI interface rejected');assert.equal(api.saved.length,1);
+  assert.doesNotMatch(JSON.stringify({body:res.body,events,saved:api.saved}),/transferMatches|proxyPath|abiAddress/);
+ }
+});
 
 test('stream deadline reports its stage and cannot publish/cache late or missing results',{timeout:3000},async()=>{
  for(const option of ['hangSchema','hangTx','hangAI','slowSave']){
