@@ -152,6 +152,12 @@ After deployment Ready, fresh Scanner / Ethereum Mainnet Aave input: `0x431294ff
 
 Operator retest after implementation ABI correction reports both original token records available at block `0x1706d45`: USDC `0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48`, declared decimals 6/raw balance 4490987896; aToken `0x98c23e9d8f34fefb1b7bd6a91b7ff122f4e16f5c`, declared decimals 6/raw balance 499999998. Both retain `current_proxy_abi_only`. Input remains qualified current-only supplyWithPermit intent, and two Transfer-shaped events remain recorded. This closes this Aave token-state control only; no transaction-isolated balance delta, authenticated economics, historical implementation proof or signing clearance. No timing or deployment SHA appears in this supplied result. Fresh Euler control after the correction remains pending; overall compliance NO_GO unchanged.
 
+## Euler Post-Correction Live Control (October 8, 2026)
+
+Operator screenshot and expanded detail report for Euler transaction `0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d` show Do Not Sign, evidence risk 80, uncertainty 40, decision 80 and retained source-backed historical exploit finding. At block `0x1009f4c`, DAI `0x6b175474e89094c44da98b954eedeac495271d0f` and `0x028171bca77440897b824ca71d1c56cac55b68a3` report 18 decimals/raw balance 0; the latter retains current_proxy_abi_only. Emitters `0xe025e3ca2be02316033184551d4d3aa22024d9dc` and `0x6085bc95f506c326dcbcd7a6dd6c79fbc18d4686` remain unavailable with token_erc20_interface_not_established. 20 Transfer-shaped events remain observations, not confirmed net loss or wallet balance deltas. Source/input/traces/rights limitations persist. Supplied data contains no deployment SHA or duration.
+
+This closes the Aave/Euler live control pair for the implementation ABI selection correction, not repository-wide QA, remaining token interface coverage or compliance release gates. Rejected Euler token interfaces are residual coverage gaps, not automatically bugs or malicious-token findings. Overall NO_GO unchanged.
+
 ## Historical Verification (May 26, 2026)
 
 These recorded checks have not been rerun for the pending release. They do not establish current production health, download version, or advisory behavior.
