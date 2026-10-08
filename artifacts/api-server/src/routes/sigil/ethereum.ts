@@ -1,5 +1,6 @@
 import { logger } from "../../lib/logger.js";
 import { getEtherscanApiKey } from "./etherscan-api.js";
+import { etherscanCoordinator } from './etherscan-coordinator.js';
 import { summarizeReceipt, readContractMetadata, historicalExample, contractSourceFailure, type ReceiptEvidence, type ContractMetadataIssue } from "./transaction-evidence.js";
 import { boundedRpcJson } from './evidence-rpc.js';
 import type { AnalysisEvidence } from './analysis-adapters.js';
@@ -274,9 +275,14 @@ export async function etherscanFetch(network: string, params: Record<string, str
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("apikey", apiKey);
 
-  const res = await fetch(url.toString(), { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(6000)]) : AbortSignal.timeout(8000) });
-  if (!res.ok) throw new Error(`Etherscan HTTP ${res.status}`);
-  return signal ? boundedRpcJson(res) : res.json();
+  const deadline = AbortSignal.any([AbortSignal.timeout(signal ? 6000 : 8000), ...(signal ? [signal] : [])]);
+  const source = params.module === 'contract' && params.action === 'getsourcecode' && isContractAddress(params.address ?? '');
+  const key = source ? JSON.stringify([apiKey, chainId, Object.entries(params).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => [k, k === 'address' ? v.toLowerCase() : v])]) : undefined;
+  return etherscanCoordinator.run(key, async sharedSignal => {
+    const res = await fetch(url.toString(), {signal: sharedSignal});
+    if (!res.ok) throw new Error(`Etherscan HTTP ${res.status}`);
+    return boundedRpcJson(res);
+  }, deadline, source ? value => readContractMetadata(params.address!, value, undefined).verificationStatus === 'verified' : undefined);
 }
 
 export async function fetchContract(address: string, network: string, includeTokenInfo = true, signal?: AbortSignal): Promise<ContractData> {

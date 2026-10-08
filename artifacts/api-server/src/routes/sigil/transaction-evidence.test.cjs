@@ -11,11 +11,13 @@ function load(file, globals = {}) {
 function loadEthereum(tx, receipt, explorer = { status: '0', result: 'NOTOK' }, code = '0x6000') {
   const api = load('transaction-evidence');
   Object.assign(api, {
-    URL, AbortSignal, logger: { warn() {} }, getEtherscanApiKey: () => 'test-only',
+    URL, AbortSignal, logger: { warn() {} }, getEtherscanApiKey: () => 'test-only', boundedRpcJson: response=>response.json(),
     fetch: async (url, options) => ({ ok: true, json: async () => options?.body
       ? { result: JSON.parse(options.body).method === 'eth_getTransactionByHash' ? tx : JSON.parse(options.body).method === 'eth_getCode' ? code : receipt }
       : explorer }),
   });
+  Object.assign(api,{setTimeout,clearTimeout,AbortController,structuredClone});
+  vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/etherscan-coordinator.ts`,'utf8').replace(/export /g,'').replace('createEtherscanCoordinator();','createEtherscanCoordinator({spacingMs:0,ttlMs:60000,maxJobs:16,maxEntries:64,maxBytes:16777216});')),api);
   vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/ethereum.ts`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '')), api);
   return api;
 }
@@ -234,6 +236,36 @@ test('contract acquisition preserves sanitized rejected-source diagnostics',asyn
   const result=await api.fetchContract(address,'mainnet',false);
   assert.equal(result.metadataIssue,issue);assert.equal(result.verificationStatus,'unknown');assert.doesNotMatch(JSON.stringify(result),/do-not-echo/);
  }
+});
+
+test('Etherscan source acquisition coalesces and caches only strictly verified identity-bound metadata',async()=>{
+ const api=loadEthereum(null,null,{status:'1',result:[{ABI:'[]',Proxy:'0'}]});let calls=0;const fetch=api.fetch;
+ api.fetch=async(...args)=>{calls++;return fetch(...args);};
+ await Promise.all([api.fetchContract(address,'mainnet',false),api.fetchContract(address.toUpperCase().replace('0X','0x'),'mainnet',false)]);
+ assert.equal(calls,1);await api.fetchContract(address,'mainnet',false);assert.equal(calls,1);
+ await api.fetchContract(address,'polygon',false);assert.equal(calls,2);
+ await api.fetchContract('0x'+'2'.repeat(40),'mainnet',false);assert.equal(calls,3);
+ api.getEtherscanApiKey=()=> 'different-test-key';await api.fetchContract(address,'mainnet',false);assert.equal(calls,4);
+});
+
+test('rate-limited or invalid Etherscan source envelopes are not cached',async()=>{
+ for(const envelope of [{status:'0',result:'Max rate limit reached'},{status:'1',result:[{ABI:'bad'}]}]){
+  const api=loadEthereum(null,null,envelope);let calls=0;const fetch=api.fetch;
+  api.fetch=async(...args)=>{calls++;return fetch(...args);};
+  await api.fetchContract(address,'mainnet',false);await api.fetchContract(address,'mainnet',false);assert.equal(calls,2);
+ }
+});
+
+test('coordinated acquisition enforces the real response reader budget without caching rejection',async()=>{
+ const api=loadEthereum(null,null);Object.assign(api,{TextDecoder,TextEncoder});
+ vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/evidence-rpc.ts`,'utf8').replace(/^import .*;\r?\n/gm,'').replace(/export /g,'')),api);
+ let calls=0;
+ api.fetch=async()=>new Response(++calls===1?' '.repeat(512*1024+1):JSON.stringify({status:'1',result:[{ABI:'[]',Proxy:'0'}]}));
+ const rejected=await api.fetchContract(address,'mainnet',false);
+ assert.equal(rejected.metadataIssue,'etherscan_response_limit');assert.equal(rejected.verificationStatus,'unknown');
+ const recovered=await api.fetchContract(address,'mainnet',false);
+ assert.equal(recovered.verificationStatus,'verified');assert.equal(calls,2);
+ await api.fetchContract(address,'mainnet',false);assert.equal(calls,2);
 });
 test('historical example labels match the full hash and network only', () => {
   const api = load('transaction-evidence');

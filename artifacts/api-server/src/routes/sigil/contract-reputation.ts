@@ -5,6 +5,8 @@
  */
 import { logger } from "../../lib/logger.js";
 import { getEtherscanApiKey } from "./etherscan-api.js";
+import { etherscanCoordinator } from './etherscan-coordinator.js';
+import { boundedRpcJson } from './evidence-rpc.js';
 import type { KnownEntity } from "./known-entities.js";
 
 // ── Known Exploit Registry ────────────────────────────────────────────────────
@@ -54,9 +56,11 @@ async function etherscanFetch(network: string, params: Record<string, string>): 
   url.searchParams.set("chainid", chainId);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("apikey", apiKey);
-  const res = await fetch(url.toString(), { signal: AbortSignal.timeout(9000) });
-  if (!res.ok) throw new Error(`Etherscan HTTP ${res.status}`);
-  return res.json();
+  return etherscanCoordinator.run(undefined, async signal => {
+    const res = await fetch(url.toString(), {signal});
+    if (!res.ok) throw new Error(`Etherscan HTTP ${res.status}`);
+    return boundedRpcJson(res);
+  }, AbortSignal.timeout(9000));
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────

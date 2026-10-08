@@ -21,7 +21,7 @@ export type ContractMetadataIssue = 'etherscan_metadata_unavailable' | 'ethersca
   | 'etherscan_response_invalid' | 'etherscan_abi_missing' | 'etherscan_abi_invalid'
   | 'etherscan_abi_limit' | 'etherscan_source_unverified' | 'etherscan_key_missing'
   | 'etherscan_response_limit' | 'etherscan_transport_unavailable' | 'etherscan_cancelled'
-  | 'etherscan_timeout' | 'etherscan_http_unavailable';
+  | 'etherscan_timeout' | 'etherscan_http_unavailable' | 'etherscan_queue_full';
 
 export function contractSourceFailure(error: unknown, signal?: AbortSignal): ContractMetadataIssue {
   if (signal?.aborted) return 'etherscan_cancelled';
@@ -32,6 +32,7 @@ export function contractSourceFailure(error: unknown, signal?: AbortSignal): Con
   if (/^Etherscan HTTP (401|403)$/.test(message)) return 'etherscan_auth_failed';
   if (/^Etherscan HTTP \d{3}$/.test(message)) return 'etherscan_http_unavailable';
   if (message === 'Evidence response exceeds budget') return 'etherscan_response_limit';
+  if (message === 'Etherscan queue limit') return 'etherscan_queue_full';
   if (value?.name === 'SyntaxError') return 'etherscan_response_invalid';
   if (value?.name === 'TimeoutError' || value?.name === 'AbortError') return 'etherscan_timeout';
   return 'etherscan_transport_unavailable';
