@@ -99,7 +99,10 @@ test('proxy metadata failures have precise reasons and never attempt token state
   [{verificationStatus:'unverified'},'token_proxy_abi_unavailable'],
   [{impl:{verificationStatus:'unverified'}},'token_proxy_abi_unavailable'],
   [{impl:{isProxy:true}},'token_proxy_nested_unsupported'],
-  [{impl:{isProxy:undefined}},'token_proxy_nested_unsupported'],
+  [{impl:{isProxy:undefined}},'token_proxy_status_unknown'],
+  [{impl:{isProxy:null}},'token_proxy_status_unknown'],
+  [{impl:{isProxy:'0'}},'token_proxy_status_unknown'],
+  [{impl:{isProxy:0}},'token_proxy_status_unknown'],
   [{impl:{address:other}},'token_proxy_metadata_unavailable'],
   [{impl:{abi:JSON.stringify([])}},'token_erc20_interface_not_established'],
  ]){

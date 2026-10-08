@@ -97,7 +97,10 @@ export async function collectAnalysisEvidence(tx: TransactionData, network: stri
         state.reason = 'token_proxy_metadata_unavailable';
         const implementationContract = await metadata(implementation);
         if (implementationContract.metadataIssue) { state.reason = implementationContract.metadataIssue; continue; }
-        if (implementationContract.isProxy !== false) { state.reason = 'token_proxy_nested_unsupported'; continue; }
+        if (implementationContract.isProxy !== false) {
+          state.reason = implementationContract.isProxy === true ? 'token_proxy_nested_unsupported' : 'token_proxy_status_unknown';
+          continue;
+        }
         tokenAbi = parsedAbi(implementationContract);
         if (!tokenAbi) { state.reason = tokenAbiFailure(implementationContract, 'token_proxy_abi_unavailable'); continue; }
       }

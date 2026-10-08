@@ -116,6 +116,14 @@ For exact model `deepseek/deepseek-v4-flash`, both selection phases and the boun
 
 After deployment Ready, freshly scan Ethereum Mainnet transaction `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac`. Expect a complete validated report or a precise error without a score. Expand both token-state evidence records separately. No signing, raw prompt capture or I/O logging required. Local verification: 279 affected tests, workspace typechecks, API build, mocked real-SDK short JSON exchange and built API/Vercel-handler import smoke pass; independent review has no blockers. Live paid generation and token success remain unverified. Overall compliance remains NO_GO.
 
+## USDC Proxy Diagnostic Retest (October 8, 2026)
+
+Operator Aave evidence after the non-reasoning change shows completed intent decoding and qualified aToken state (contract-declared decimals 6, raw balance 499999998); USDC remains unavailable. Euler screenshot shows the expected historical exploit finding, risk 80 and uncertainty 40. Complete displayed reports do not establish latency or whether a cached result was used.
+
+Code investigation: `token_proxy_nested_unsupported` previously covered both explicit nested-proxy metadata and missing implementation proxy status. It did not prove an actual nested USDC chain. Strict acceptance is unchanged: implementation must explicitly report non-proxy status. Unknown status now reports `token_proxy_status_unknown`; explicit proxy status keeps `token_proxy_nested_unsupported`. No recursive resolution, special token exception or guessed decimals added.
+
+After deployment Ready, freshly scan mainnet `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac` and expand USDC Recorded evidence. Record the new reason; neither case promises availability. Existing upstream diagnostics may take precedence. Verification: 196 API tests, workspace typechecks, API build, import smoke and independent review pass. Authenticated implementation metadata and full USDC coverage remain unverified. Overall compliance NO_GO unchanged.
+
 ## Historical Verification (May 26, 2026)
 
 These recorded checks have not been rerun for the pending release. They do not establish current production health, download version, or advisory behavior.
