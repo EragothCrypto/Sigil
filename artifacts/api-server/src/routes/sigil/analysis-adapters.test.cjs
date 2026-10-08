@@ -98,7 +98,7 @@ test('proxy metadata failures have precise reasons and never attempt token state
   [{implementation:'0x'+'0'.repeat(40)},'token_proxy_implementation_unavailable'],
   [{verificationStatus:'unverified'},'token_proxy_abi_unavailable'],
   [{impl:{verificationStatus:'unverified'}},'token_proxy_abi_unavailable'],
-  [{impl:{isProxy:true}},'token_proxy_nested_unsupported'],
+  [{impl:{isProxy:true}},'token_proxy_implementation_unavailable'],
   [{impl:{isProxy:undefined}},'token_proxy_status_unknown'],
   [{impl:{isProxy:null}},'token_proxy_status_unknown'],
   [{impl:{isProxy:'0'}},'token_proxy_status_unknown'],
@@ -113,6 +113,41 @@ test('proxy metadata failures have precise reasons and never attempt token state
  }
 });
 
+test('two-hop proxy uses only the verified leaf ABI and original block-bound token reads',async()=>{
+ const api=load();const middle='0x'+'4'.repeat(40);const leaf='0x'+'5'.repeat(40);const calls=[];const fetches=[];
+ const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
+  fetchContract:async key=>{fetches.push(key);return {address:key,verificationStatus:'verified',isProxy:key!==leaf,abi:JSON.stringify(key===leaf?abi:[]),...(key===address?{implementation:middle}:key===middle?{implementation:leaf}:{})};},
+  rpc:{attempts:0,async call(method,params){calls.push([method,params]);return method==='eth_getCode'?'0x6000':'0x'+(params[0].data.startsWith('0x313ce567')?'6':'499999998').padStart(64,'0');}}});
+ assert.equal(result.tokenStates[0].status,'available');assert.equal(result.tokenStates[0].reason,'current_proxy_abi_only');
+ assert.equal(result.tokenStates[0].decimals,6);assert.equal(result.permissionStates.length,0);
+ assert.equal(fetches.filter(k=>k===middle).length,1);assert.equal(fetches.filter(k=>k===leaf).length,1);
+ assert.equal(calls.length,3);assert.ok(calls.every(([method,params])=>params[1]==='0x9'&&(method==='eth_getCode'?params[0]:params[0].to)===address));
+});
+
+test('bounded proxy chain rejects cycles, excess depth and unusable terminal metadata without RPC',async()=>{
+ const api=load();const middle='0x'+'4'.repeat(40);const leaf='0x'+'5'.repeat(40);const fourth='0x'+'6'.repeat(40);
+ for(const [middleChange,leafChange,reason] of [
+  [{implementation:address},{},'token_proxy_cycle'],
+  [{implementation:middle},{},'token_proxy_cycle'],
+  [{implementation:'0x'+'0'.repeat(40)},{},'token_proxy_implementation_unavailable'],
+  [{verificationStatus:'unverified'},{},'token_proxy_abi_unavailable'],
+  [{},{isProxy:true,implementation:fourth},'token_proxy_depth_limit'],
+  [{},{isProxy:undefined},'token_proxy_status_unknown'],
+  [{},{verificationStatus:'unverified'},'token_proxy_abi_unavailable'],
+  [{},{metadataIssue:'etherscan_rate_limited'},'etherscan_rate_limited'],
+  [{},{address:fourth},'token_proxy_metadata_unavailable'],
+  [{},{abi:'not json'},'token_abi_validation_failed'],
+ ]){
+  const fetches=[];let reads=0;
+  const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
+   fetchContract:async key=>{fetches.push(key);return {address:key,verificationStatus:'verified',abi:JSON.stringify(abi),isProxy:key!==leaf,...(key===address?{implementation:middle}:key===middle?{implementation:leaf,...middleChange}:key===leaf?leafChange:{})};},
+   rpc:{attempts:0,call:async()=>{reads++;throw Error('unexpected RPC');}}});
+  assert.equal(result.tokenStates[0].reason,reason);assert.equal(result.tokenStates[0].status,'unavailable');
+  assert.equal(result.tokenStates[0].decimals,undefined);assert.equal(result.tokenStates[0].balanceRaw,undefined);
+  assert.equal(reads,0);assert.equal(fetches.includes(fourth),false);assert.ok(fetches.length<=4);
+ }
+});
+
 test('proxy emitter metadata deduplicates while reads remain bound to each emitter and caller',async()=>{
  const api=load();const implementation='0x'+'4'.repeat(40);const second='0x'+'5'.repeat(40);const calls=[];const fetches=[];
  const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[address,second].map(token=>({token,kind:'erc20-shaped'}))}},'mainnet',{
@@ -123,6 +158,20 @@ test('proxy emitter metadata deduplicates while reads remain bound to each emitt
  assert.equal(calls.length,6);assert.ok(calls.every(([method,params])=>params[1]==='0x9'&&[address,second].includes(method==='eth_getCode'?params[0]:params[0].to)));
  const balanceCalls=calls.filter(([method,params])=>method==='eth_call'&&params[0].data.startsWith('0x70a08231'));
  assert.ok(balanceCalls.every(([,params])=>params[0].data.endsWith(owner.slice(2))));
+});
+
+test('two-hop metadata remains shared and cancellation prevents leaf acquisition and state reads',async()=>{
+ const api=load();const middle='0x'+'4'.repeat(40);const leaf='0x'+'5'.repeat(40);const second='0x'+'6'.repeat(40);
+ for(const cancelled of [false,true]){
+  const controller=new AbortController();const fetches=[];let reads=0;
+  const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[address,second].map(token=>({token,kind:'erc20-shaped'}))}},'mainnet',{
+   signal:controller.signal,fetchContract:async key=>{fetches.push(key);if(cancelled&&key===middle)controller.abort();return {address:key,verificationStatus:'verified',isProxy:key!==leaf,abi:JSON.stringify(key===leaf?abi:[]),implementation:key===middle?leaf:middle};},
+   rpc:{attempts:0,async call(method){reads++;return method==='eth_getCode'?'0x6000':'0x'+'6'.padStart(64,'0');}}});
+  assert.equal(fetches.filter(k=>k===middle).length,1);assert.equal(fetches.filter(k=>k===leaf).length,cancelled?0:1);
+  assert.equal(reads,cancelled?0:6);
+  assert.ok(result.tokenStates.every(s=>s.status===(cancelled?'unavailable':'available')));
+  if(cancelled)assert.ok(result.tokenStates.every(s=>s.reason==='token_state_cancelled'));
+ }
 });
 
 test('token ABI and RPC failures are distinguished without exposing partial values',async()=>{
@@ -156,12 +205,12 @@ test('token reads validate boundary values atomically and stop after metadata ca
  assert.equal(reads,0);assert.equal(result.tokenStates[0].reason,'token_state_cancelled');
 });
 
-test('proxy adapter state survives findings/shared-parser/cache round-trip with limits intact',async()=>{
- const api=load();const implementation='0x'+'4'.repeat(40);const hash='0x'+'a'.repeat(64);
+test('two-hop proxy adapter state survives findings/shared-parser/cache round-trip with limits intact',async()=>{
+ const api=load();const implementation='0x'+'4'.repeat(40);const leaf='0x'+'5'.repeat(40);const hash='0x'+'a'.repeat(64);
  const tx={hash,to:owner,from:owner,input:'0x',value:'0x0',blockNumber:'0x9',status:'0x1',inclusionStatus:'mined',destinationVerification:'verified',destinationHasCode:true,
   receiptEvidence:{status:'available',complete:true,logsExamined:1,transfers:[{kind:'erc20-shaped',token:address,from:owner,to:address,amountRaw:'500000000'}]}};
  const evidence=await api.collectAnalysisEvidence(tx,'mainnet',{
-  fetchContract:async key=>({address:key,verificationStatus:'verified',isProxy:key===address,abi:JSON.stringify(key===implementation?abi:[]),...(key===address?{implementation}:{})}),
+  fetchContract:async key=>({address:key,verificationStatus:'verified',isProxy:key===address||key===implementation,abi:JSON.stringify(key===leaf?abi:[]),...(key===address?{implementation}:key===implementation?{implementation:leaf}:{})}),
   rpc:{attempts:0,async call(method,params){return method==='eth_getCode'?'0x6000':'0x'+(params[0].data.startsWith('0x313ce567')?'6':'0').padStart(64,'0');}}});
  const findings=vm.createContext({Buffer,URL,...viem,lookupEntity:()=>null});
  for(const file of ['incident-catalog.ts','abi-evidence.ts','validated-findings.ts'])vm.runInContext(stripTypeScriptTypes(readFileSync(`${__dirname}/${file}`,'utf8').replace(/^import .*\r?\n/gm,'').replace(/export /g,'')),findings);

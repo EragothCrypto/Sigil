@@ -124,6 +124,14 @@ Code investigation: `token_proxy_nested_unsupported` previously covered both exp
 
 After deployment Ready, freshly scan mainnet `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac` and expand USDC Recorded evidence. Record the new reason; neither case promises availability. Existing upstream diagnostics may take precedence. Verification: 196 API tests, workspace typechecks, API build, import smoke and independent review pass. Authenticated implementation metadata and full USDC coverage remain unverified. Overall compliance NO_GO unchanged.
 
+## Bounded Token Proxy Chain Retest (October 8, 2026)
+
+Operator repeats `token_proxy_nested_unsupported` for USDC and available qualified aToken state. With the diagnostic-split build active, this indicates an explicit additional proxy flag, not an unknown status. The authenticated implementation chain was not obtained locally; no concrete USDC implementation address or live success is established.
+
+Token ABI acquisition now supports at most two current explorer implementation links. Every visited metadata record must be verified without a provider issue. The terminal record must explicitly report non-proxy status and pass existing bounded ABI/ERC20 checks. Original emitter/block state reads, no proxy permissions, 20-second adapter lifetime, 8-emitter cap and existing metadata pacing/caching are preserved. Cycles, excess depth and unknown statuses fail closed with precise codes; no intermediate ABI shortcut.
+
+After deployment Ready, fresh Scanner / Ethereum Mainnet test: `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac`. Expand both token records. USDC may become qualified `current_proxy_abi_only` state only if the complete bounded chain and real RPC checks pass; otherwise record `token_proxy_cycle`, `token_proxy_depth_limit`, `token_proxy_status_unknown`, `token_proxy_implementation_unavailable` or the actual upstream/ABI/RPC error. Euler control: `0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d`, expected historical exploit finding remains. No signing required. Local verification: 282 affected tests, workspace typechecks, API build/import smoke pass. Independent review and publication tracked in the implementation plan/project phase; live USDC coverage and compliance GO remain unestablished.
+
 ## Historical Verification (May 26, 2026)
 
 These recorded checks have not been rerun for the pending release. They do not establish current production health, download version, or advisory behavior.

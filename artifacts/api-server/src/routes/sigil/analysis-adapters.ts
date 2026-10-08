@@ -37,6 +37,28 @@ function erc20Candidate(abi: Abi): boolean {
 function tokenAbiFailure(contract: ContractData, fallback: string): string {
   return contract.metadataIssue ?? (contract.verificationStatus === 'verified' && contract.abi ? 'token_abi_validation_failed' : fallback);
 }
+async function proxyTokenAbi(contract: ContractData, metadata: (address: string) => Promise<ContractData>): Promise<{abi?: Abi; reason?: string}> {
+  const visited = new Set([contract.address.toLowerCase()]);
+  let current = contract;
+  // At most two implementation links; explorer metadata is current, never historical proof.
+  for (let depth = 0; depth <= 2; depth++) {
+    if (current.metadataIssue) return {reason: current.metadataIssue};
+    if (current.verificationStatus !== 'verified') return {reason: tokenAbiFailure(current, 'token_proxy_abi_unavailable')};
+    if (current.isProxy === false) {
+      const abi = parsedAbi(current);
+      return abi ? {abi} : {reason: tokenAbiFailure(current, 'token_proxy_abi_unavailable')};
+    }
+    if (current.isProxy !== true) return {reason: 'token_proxy_status_unknown'};
+    if (depth === 2) return {reason: 'token_proxy_depth_limit'};
+    const implementation = current.implementation;
+    if (!implementation || !ADDRESS.test(implementation) || /^0x0{40}$/i.test(implementation)) return {reason: 'token_proxy_implementation_unavailable'};
+    const key = implementation.toLowerCase();
+    if (visited.has(key)) return {reason: depth === 0 ? 'token_proxy_implementation_unavailable' : 'token_proxy_cycle'};
+    visited.add(key);
+    current = await metadata(key);
+  }
+  return {reason: 'token_proxy_depth_limit'};
+}
 export function formatReportedAmount(raw: string, decimals: number): string {
   if (!/^\d{1,78}$/.test(raw) || BigInt(raw) >= 2n ** 256n || !Number.isInteger(decimals) || decimals < 0 || decimals > 36) throw new Error('Invalid declared token units');
   return formatUnits(BigInt(raw), decimals);
@@ -89,20 +111,10 @@ export async function collectAnalysisEvidence(tx: TransactionData, network: stri
       if (contract.isProxy) {
         // A current ABI only defines the response shape; reads stay on the token at the requested block.
         if (!limits.includes('token_proxy_current_abi_not_historical')) limits.push('token_proxy_current_abi_not_historical');
-        if (contract.verificationStatus !== 'verified') { state.reason = tokenAbiFailure(contract, 'token_proxy_abi_unavailable'); continue; }
-        const implementation = contract.implementation;
-        if (!implementation || !ADDRESS.test(implementation) || /^0x0{40}$/i.test(implementation) || implementation.toLowerCase() === address) {
-          state.reason = 'token_proxy_implementation_unavailable'; continue;
-        }
         state.reason = 'token_proxy_metadata_unavailable';
-        const implementationContract = await metadata(implementation);
-        if (implementationContract.metadataIssue) { state.reason = implementationContract.metadataIssue; continue; }
-        if (implementationContract.isProxy !== false) {
-          state.reason = implementationContract.isProxy === true ? 'token_proxy_nested_unsupported' : 'token_proxy_status_unknown';
-          continue;
-        }
-        tokenAbi = parsedAbi(implementationContract);
-        if (!tokenAbi) { state.reason = tokenAbiFailure(implementationContract, 'token_proxy_abi_unavailable'); continue; }
+        const resolved = await proxyTokenAbi(contract, metadata);
+        if (!resolved.abi) { state.reason = resolved.reason; continue; }
+        tokenAbi = resolved.abi;
       }
       if (!tokenAbi) { state.reason = tokenAbiFailure(contract, 'token_abi_unavailable'); continue; }
       if (!erc20Candidate(tokenAbi)) { state.reason = 'token_erc20_interface_not_established'; continue; }
