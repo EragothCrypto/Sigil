@@ -46,13 +46,62 @@ test('non-streaming and streaming keep configured completion ceilings', async ()
     });
     if (streaming) await api.analyzeContractStreaming(contract, 'mainnet', () => {});
     else await api.analyzeContract(contract, 'mainnet');
-    assert.equal(requests[0].max_completion_tokens, 4096);
-    assert.equal(requests[1].max_completion_tokens, 12288);
+    assert.equal(requests[0].max_tokens, 4096);
+    assert.equal(requests[1].max_tokens, 12288);
+    for (const request of requests) {
+      assert.equal(request.reasoning.enabled, false);
+      assert.equal(request.response_format.type, 'json_object');
+      assert.equal(request.provider.require_parameters, true);
+      assert.equal(request.max_completion_tokens, undefined);
+    }
     assert.equal(requests.length, 2);
   }
   const other = load(async () => reply('{"findingIds":[]}'), 'other/model');
   assert.equal(other.completionTokenBudget('signals'), 700);
   assert.equal(other.completionTokenBudget('verdict'), 2048);
+});
+test('other models retain existing request parameters', async () => {
+  const requests = [];
+  const api = load(async request => { requests.push(request); return reply('{"findingIds":[]}'); }, 'other/model');
+  await api.analyzeContract(contract, 'mainnet');
+  assert.deepEqual(requests.map(r => r.max_completion_tokens), [700, 2048]);
+  for (const request of requests) {
+    for (const key of ['reasoning', 'response_format', 'provider', 'max_tokens']) assert.equal(request[key], undefined);
+  }
+});
+
+test('bounded transport fallback retains non-reasoning JSON policy', async () => {
+  const requests = [];
+  const api = load(async request => {
+    requests.push(request);
+    if (request.stream) throw new Error('transport unavailable');
+    return reply('{"findingIds":[]}');
+  });
+  await api.analyzeContractStreaming(contract, 'mainnet', () => {});
+  assert.equal(requests.length, 3);
+  for (const request of requests) {
+    assert.equal(request.reasoning.enabled, false);
+    assert.equal(request.response_format.type, 'json_object');
+    assert.equal(request.provider.require_parameters, true);
+  }
+});
+
+test('real SDK serializes non-reasoning JSON parameters in a short selection exchange', async () => {
+  const {OpenAI} = require('../../../../../lib/integrations-openai-ai-server/node_modules/openai');
+  const requests = [];
+  const client = new OpenAI({apiKey: 'test-only', baseURL: 'https://openrouter.ai/api/v1', fetch: async (_url, options) => {
+    requests.push(JSON.parse(options.body));
+    return new Response(JSON.stringify(reply('{"findingIds":[]}')), {status: 200, headers: {'content-type': 'application/json'}});
+  }});
+  const api = load((request, options) => client.chat.completions.create(request, options));
+  const result = await api.analyzeContract(contract, 'mainnet');
+  assert.ok(result.validatedReport);
+  assert.equal(requests.length, 2);
+  for (const request of requests) {
+    assert.deepEqual(request.reasoning, {enabled: false});
+    assert.deepEqual(request.response_format, {type: 'json_object'});
+    assert.deepEqual(request.provider, {require_parameters: true});
+  }
 });
 test('signal truncation stops before a second call and exposes numeric diagnostics only', async () => {
   let calls = 0;

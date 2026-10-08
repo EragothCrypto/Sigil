@@ -108,6 +108,14 @@ Chrome Web Store listing:
 
 https://chromewebstore.google.com/detail/sigil-web3-trust-layer/klogkofhnlifhakklkjmoofhfopnhnkg
 
+## Non-Reasoning Selection Retest (October 8, 2026)
+
+Operator stage logs confirm the latest bounded failure at `ai_transaction`: acquisition completed by 6.6s, then the 60-second AI deadline failed closed at 66.6s total. Older OpenRouter details show 4096 output tokens, `length`, and 261.8s total generation; they are not correlated to this latest request, and reasoning usage is unavailable.
+
+For exact model `deepseek/deepseek-v4-flash`, both selection phases and the bounded transport fallback now request `reasoning.enabled=false`, JSON object output and `provider.require_parameters=true`. Existing 4096/12288 ceilings are unchanged, sent as `max_tokens` for endpoint compatibility. Other models, the shared 60-second AI deadline, zero SDK retries and all finding validation remain unchanged. Public model metadata confirms reasoning is optional; this does not prove the provider will complete the next scan within budget.
+
+After deployment Ready, freshly scan Ethereum Mainnet transaction `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac`. Expect a complete validated report or a precise error without a score. Expand both token-state evidence records separately. No signing, raw prompt capture or I/O logging required. Local verification: 279 affected tests, workspace typechecks, API build, mocked real-SDK short JSON exchange and built API/Vercel-handler import smoke pass; independent review has no blockers. Live paid generation and token success remain unverified. Overall compliance remains NO_GO.
+
 ## Historical Verification (May 26, 2026)
 
 These recorded checks have not been rerun for the pending release. They do not establish current production health, download version, or advisory behavior.

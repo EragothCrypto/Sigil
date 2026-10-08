@@ -43,6 +43,16 @@ function safeTokenCount(value: unknown): number | undefined {
 function completionTokenBudget(step: "signals" | "verdict"): number {
   return getSigilAiModel() === "deepseek/deepseek-v4-flash" ? (step === "signals" ? 4096 : 12288) : (step === "signals" ? 700 : 2048);
 }
+function selectionRequestPolicy(step: "signals" | "verdict") {
+  const model = getSigilAiModel();
+  const limit = completionTokenBudget(step);
+  // OpenRouter must honor disabling reasoning, not merely hide reasoning text.
+  if (model === "deepseek/deepseek-v4-flash") return {
+    model, max_tokens: limit, reasoning: { enabled: false },
+    response_format: { type: "json_object" as const }, provider: { require_parameters: true },
+  };
+  return { model, max_completion_tokens: limit };
+}
 export class AIAnalysisOutputError extends Error {
   readonly code: "analysis_unreliable" | "invalid_ai_output" | "truncated_ai_output";
   readonly phase?: "signals" | "verdict";
@@ -83,7 +93,7 @@ async function runValidatedAnalysis(data: FindingInventory, onEvent?: (event: St
     { role: "user" as const, content: JSON.stringify({ evidence: data.evidence, findings: data.findings }) },
   ];
   onEvent?.({ type: "step", step: 1, label: "Checking acquired evidence..." });
-  const first = await budget.wait(openai.chat.completions.create({ model: getSigilAiModel(), max_completion_tokens: completionTokenBudget("signals"), messages }, requestOptions));
+  const first = await budget.wait(openai.chat.completions.create({ ...selectionRequestPolicy("signals"), messages }, requestOptions));
   const firstContent = first.choices[0]?.message?.content ?? "";
   checkSelection(firstContent, first.choices[0]?.finish_reason, data, "signals", first.usage);
   const finalMessages = [...messages, { role: "assistant" as const, content: firstContent }, { role: "user" as const, content: "Confirm the allowed finding IDs using the same exact JSON-only contract. Do not add any properties." }];
@@ -94,7 +104,7 @@ async function runValidatedAnalysis(data: FindingInventory, onEvent?: (event: St
   let oversized = false;
   if (onEvent) {
     try {
-      const stream = await budget.wait(openai.chat.completions.create({ model: getSigilAiModel(), max_completion_tokens: completionTokenBudget("verdict"), messages: finalMessages, stream: true, stream_options: { include_usage: true } }, requestOptions));
+      const stream = await budget.wait(openai.chat.completions.create({ ...selectionRequestPolicy("verdict"), messages: finalMessages, stream: true, stream_options: { include_usage: true } }, requestOptions));
       const iterator = stream[Symbol.asyncIterator]();
       while (true) {
         const next = await budget.wait(iterator.next());
@@ -111,14 +121,14 @@ async function runValidatedAnalysis(data: FindingInventory, onEvent?: (event: St
       if (isAITimeout(error)) throw new AnalysisTimeoutError();
       // Never retry a known terminal completion or an oversized response.
       if (finishReason === null && !oversized) {
-        const fallback = await budget.wait(openai.chat.completions.create({ model: getSigilAiModel(), max_completion_tokens: completionTokenBudget("verdict"), messages: finalMessages }, requestOptions));
+        const fallback = await budget.wait(openai.chat.completions.create({ ...selectionRequestPolicy("verdict"), messages: finalMessages }, requestOptions));
         content = fallback.choices[0]?.message?.content ?? "";
         finishReason = fallback.choices[0]?.finish_reason;
         usage = fallback.usage;
       }
     }
   } else {
-    const final = await budget.wait(openai.chat.completions.create({ model: getSigilAiModel(), max_completion_tokens: completionTokenBudget("verdict"), messages: finalMessages }, requestOptions));
+    const final = await budget.wait(openai.chat.completions.create({ ...selectionRequestPolicy("verdict"), messages: finalMessages }, requestOptions));
     content = final.choices[0]?.message?.content ?? "";
     finishReason = final.choices[0]?.finish_reason;
     usage = final.usage;

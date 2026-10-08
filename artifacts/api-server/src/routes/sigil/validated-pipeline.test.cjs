@@ -22,8 +22,8 @@ test('stream emits only steps and one server-rendered validated result, never ra
   assert.equal(result.validatedReport.version, 'findings-v2');
   assert.equal(events.filter(e => e.type === 'result').length, 1);
   assert.equal(events.some(e => ['token', 'metadata'].includes(e.type)), false);
-  assert.equal(requests[0].max_completion_tokens, 4096);
-  assert.equal(requests[1].max_completion_tokens, 12288);
+  assert.equal(requests[0].max_tokens, 4096);
+  assert.equal(requests[1].max_tokens, 12288);
   assert.equal(requests[1].stream_options.include_usage, true);
 });
 test('either stage rejects a forged free-text verdict and never emits a result', async () => {
