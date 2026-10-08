@@ -140,6 +140,14 @@ Both analysis routes now log bounded failures as `Token ABI interface rejected`:
 
 After deployment Ready, fresh Scanner / Ethereum Mainnet input: `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac`. If USDC still rejects, inspect its matching Vercel `Token ABI interface rejected` log. The UI error may remain unchanged; this change provides missing provenance rather than promising token coverage. No signing or I/O logging. Workspace typechecks, API build/import smoke and independent review pass; final affected tests tracked in project phase. Actual production leaf diagnosis and overall compliance GO remain open.
 
+## Implementation ABI Selection Retest (October 8, 2026)
+
+Production log identifies the incorrect selection: USDC -> FiatTokenV2_2 `0x43506849d7c04f9138d1a2050bbf3a0c054402dd` -> `0x800c32eaa2a6c93cf4cb51794450ed77fbfbb172`, with zero transfer/balanceOf/decimals matches at the last ABI. Public Sourcify exact-match metadata identifies that address as SignatureChecker with isValidSignatureNow only; public FiatTokenV2_2 ABI passes Sigil's existing detector. This scan completed in 10012ms; AI stage began at 7690ms and save at 9960ms. No claim of generally fixed latency.
+
+Correction: keep the first verified implementation ABI passing the unchanged ERC20/NFT candidate checks, even if explorer metadata labels it proxy. A linked signature library must not replace usable token-interface shape evidence. This intentionally changes the prior strict non-proxy-terminal selection rule, not ABI validation or safety authority. Unknown proxy status still rejects; the initial wrapper cannot shortcut acquisition. Remaining traversal is at most two links with identity/cycle/depth bounds. Original token/recorded-block canonical reads, proxy permission exclusion and current_proxy_abi_only/historical limitations remain mandatory. No token-address whitelist or runtime provider change.
+
+After deployment Ready, fresh Scanner / Ethereum Mainnet Aave input: `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac`. Expect USDC qualified state only if real metadata and original-token RPC checks pass; otherwise record real error, never inferred balances. Expand both token records. Euler control: `0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d`, retain historical exploit finding. No signing. Local 287 affected tests, workspace typechecks, API build/import smoke pass. Independent review/publication tracked in plan/project phase; live USDC coverage and compliance GO remain open.
+
 ## Historical Verification (May 26, 2026)
 
 These recorded checks have not been rerun for the pending release. They do not establish current production health, download version, or advisory behavior.

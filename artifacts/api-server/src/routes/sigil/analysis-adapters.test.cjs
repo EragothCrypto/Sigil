@@ -98,7 +98,7 @@ test('proxy metadata failures have precise reasons and never attempt token state
   [{implementation:'0x'+'0'.repeat(40)},'token_proxy_implementation_unavailable'],
   [{verificationStatus:'unverified'},'token_proxy_abi_unavailable'],
   [{impl:{verificationStatus:'unverified'}},'token_proxy_abi_unavailable'],
-  [{impl:{isProxy:true}},'token_proxy_implementation_unavailable'],
+  [{impl:{isProxy:true,abi:'[]'}},'token_proxy_implementation_unavailable'],
   [{impl:{isProxy:undefined}},'token_proxy_status_unknown'],
   [{impl:{isProxy:null}},'token_proxy_status_unknown'],
   [{impl:{isProxy:'0'}},'token_proxy_status_unknown'],
@@ -124,12 +124,42 @@ test('two-hop proxy uses only the verified leaf ABI and original block-bound tok
  assert.equal(calls.length,3);assert.ok(calls.every(([method,params])=>params[1]==='0x9'&&(method==='eth_getCode'?params[0]:params[0].to)===address));
 });
 
+test('USDC-shaped implementation ABI is not replaced by a linked signature-checker library',async()=>{
+ const api=load();const token='0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';const implementation='0x43506849d7c04f9138d1a2050bbf3a0c054402dd';const library='0x800c32eaa2a6c93cf4cb51794450ed77fbfbb172';
+ const tokenAbi=viem.parseAbi(['function transfer(address,uint256) returns (bool)','function balanceOf(address) view returns (uint256)','function decimals() view returns (uint8)','function allowance(address,address) view returns (uint256)','function permit(address,address,uint256,uint256,bytes)','function permit(address,address,uint256,uint256,uint8,bytes32,bytes32)']);
+ const fetches=[];const requests=[];const diagnostics=[];
+ const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x1706d45',receiptEvidence:{transfers:[{token,kind:'erc20-shaped'}]}},'mainnet',{
+  onDiagnostic:d=>diagnostics.push(d),fetchContract:async key=>{fetches.push(key);return {address:key,verificationStatus:'verified',isProxy:key===token||key===implementation,abi:JSON.stringify(key===implementation?tokenAbi:key===library?viem.parseAbi(['function isValidSignatureNow(address,bytes32,bytes) view returns (bool)']):[]),implementation:key===token?implementation:library};},
+  rpc:{attempts:0,async call(method,params){requests.push([method,params]);return method==='eth_getCode'?'0x6000':'0x'+(params[0].data.startsWith('0x313ce567')?'6':'123').padStart(64,'0');}}});
+ assert.equal(result.tokenStates[0].status,'available');assert.equal(result.tokenStates[0].reason,'current_proxy_abi_only');
+ assert.equal(fetches.includes(library),false);assert.equal(diagnostics.length,0);assert.equal(result.permissionStates.length,0);
+ assert.equal(requests.length,3);assert.ok(requests.every(([method,params])=>params[1]==='0x1706d45'&&(method==='eth_getCode'?params[0]:params[0].to)===token));
+});
+
+test('matching implementation selection retains unknown/NFT/duplicate and RPC rejection guards',async()=>{
+ const api=load();const implementation='0x'+'4'.repeat(40);const library='0x'+'5'.repeat(40);
+ for(const [change,invalidRpc,reason] of [
+  [{isProxy:undefined},false,'token_proxy_status_unknown'],
+  [{verificationStatus:'unverified'},false,'token_proxy_abi_unavailable'],
+  [{abi:JSON.stringify([...abi,...viem.parseAbi(['function ownerOf(uint256) view returns (address)'])])},false,'token_erc20_interface_not_established'],
+  [{abi:JSON.stringify([...abi,abi.find(f=>f.name==='transfer')])},false,'token_erc20_interface_not_established'],
+  [{},true,'token_state_response_invalid'],
+ ]){
+  let reads=0;const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{token:address,kind:'erc20-shaped'}]}},'mainnet',{
+   fetchContract:async key=>({address:key,verificationStatus:'verified',isProxy:key===address||key===implementation,abi:JSON.stringify(key===implementation?abi:[]),implementation:key===address?implementation:library,...(key===implementation?change:{})}),
+   rpc:{attempts:0,async call(method){reads++;return method==='eth_getCode'?'0x6000':invalidRpc?'0x':'0x'+'6'.padStart(64,'0');}}});
+  assert.equal(result.tokenStates[0].status,'unavailable');assert.equal(result.tokenStates[0].reason,reason);
+  assert.equal(result.tokenStates[0].decimals,undefined);assert.equal(result.tokenStates[0].balanceRaw,undefined);
+  assert.equal(reads,invalidRpc?3:0);assert.equal(result.permissionStates.length,0);
+ }
+});
+
 test('interface rejection reports bounded leaf provenance and function counts without raw ABI or state reads',async()=>{
  const api=load();const middle='0x'+'4'.repeat(40);const leaf='0x'+'5'.repeat(40);const diagnostics=[];let reads=0;
  const leafAbi=viem.parseAbi(['function admin() view returns (address)']);
  const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
   onDiagnostic:d=>diagnostics.push(d),
-  fetchContract:async key=>({address:key,verificationStatus:'verified',isProxy:key===address||key===middle,abi:JSON.stringify(key===leaf?leafAbi:abi),implementation:key===address?middle:leaf}),
+  fetchContract:async key=>({address:key,verificationStatus:'verified',isProxy:key===address||key===middle,abi:JSON.stringify(key===leaf?leafAbi:[]),implementation:key===address?middle:leaf}),
   rpc:{attempts:0,call:async()=>{reads++;throw Error('unexpected state read');}}});
  assert.equal(result.tokenStates[0].reason,'token_erc20_interface_not_established');assert.equal(reads,0);
  assert.equal(diagnostics.length,1);const d=diagnostics[0];
@@ -168,7 +198,7 @@ test('bounded proxy chain rejects cycles, excess depth and unusable terminal met
   [{implementation:middle},{},'token_proxy_cycle'],
   [{implementation:'0x'+'0'.repeat(40)},{},'token_proxy_implementation_unavailable'],
   [{verificationStatus:'unverified'},{},'token_proxy_abi_unavailable'],
-  [{},{isProxy:true,implementation:fourth},'token_proxy_depth_limit'],
+  [{},{isProxy:true,implementation:fourth,abi:'[]'},'token_proxy_depth_limit'],
   [{},{isProxy:undefined},'token_proxy_status_unknown'],
   [{},{verificationStatus:'unverified'},'token_proxy_abi_unavailable'],
   [{},{metadataIssue:'etherscan_rate_limited'},'etherscan_rate_limited'],
@@ -177,7 +207,7 @@ test('bounded proxy chain rejects cycles, excess depth and unusable terminal met
  ]){
   const fetches=[];let reads=0;
   const result=await api.collectAnalysisEvidence({to:owner,from:owner,input:'0x',blockNumber:'0x9',receiptEvidence:{transfers:[{kind:'erc20-shaped',token:address}]}},'mainnet',{
-   fetchContract:async key=>{fetches.push(key);return {address:key,verificationStatus:'verified',abi:JSON.stringify(abi),isProxy:key!==leaf,...(key===address?{implementation:middle}:key===middle?{implementation:leaf,...middleChange}:key===leaf?leafChange:{})};},
+   fetchContract:async key=>{fetches.push(key);return {address:key,verificationStatus:'verified',abi:JSON.stringify(key===leaf?abi:[]),isProxy:key!==leaf,...(key===address?{implementation:middle}:key===middle?{implementation:leaf,...middleChange}:key===leaf?leafChange:{})};},
    rpc:{attempts:0,call:async()=>{reads++;throw Error('unexpected RPC');}}});
   assert.equal(result.tokenStates[0].reason,reason);assert.equal(result.tokenStates[0].status,'unavailable');
   assert.equal(result.tokenStates[0].decimals,undefined);assert.equal(result.tokenStates[0].balanceRaw,undefined);

@@ -51,8 +51,13 @@ async function proxyTokenAbi(contract: ContractData, metadata: (address: string)
   for (let depth = 0; depth <= 2; depth++) {
     if (current.metadataIssue) return {reason: current.metadataIssue};
     if (current.verificationStatus !== 'verified') return {reason: tokenAbiFailure(current, 'token_proxy_abi_unavailable')};
+    const abi = parsedAbi(current);
+    // A library delegatecall can produce a proxy flag. Keep a usable implementation ABI
+    // as response-shape evidence instead of replacing it with a linked library's ABI.
+    if (depth > 0 && current.isProxy === true && abi && erc20Candidate(abi)) {
+      return {abi, abiAddress: current.address.toLowerCase(), proxyPath: [...visited]};
+    }
     if (current.isProxy === false) {
-      const abi = parsedAbi(current);
       return abi ? {abi, abiAddress: current.address.toLowerCase(), proxyPath: [...visited]} : {reason: tokenAbiFailure(current, 'token_proxy_abi_unavailable')};
     }
     if (current.isProxy !== true) return {reason: 'token_proxy_status_unknown'};
