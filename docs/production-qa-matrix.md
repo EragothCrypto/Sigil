@@ -148,6 +148,10 @@ Correction: keep the first verified implementation ABI passing the unchanged ERC
 
 After deployment Ready, fresh Scanner / Ethereum Mainnet Aave input: `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac`. Expect USDC qualified state only if real metadata and original-token RPC checks pass; otherwise record real error, never inferred balances. Expand both token records. Euler control: `0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d`, retain historical exploit finding. No signing. Local 287 affected tests, workspace typechecks, API build/import smoke pass. Independent review/publication tracked in plan/project phase; live USDC coverage and compliance GO remain open.
 
+## Aave Token-State Live Result (October 8, 2026)
+
+Operator retest after implementation ABI correction reports both original token records available at block `0x1706d45`: USDC `0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48`, declared decimals 6/raw balance 4490987896; aToken `0x98c23e9d8f34fefb1b7bd6a91b7ff122f4e16f5c`, declared decimals 6/raw balance 499999998. Both retain `current_proxy_abi_only`. Input remains qualified current-only supplyWithPermit intent, and two Transfer-shaped events remain recorded. This closes this Aave token-state control only; no transaction-isolated balance delta, authenticated economics, historical implementation proof or signing clearance. No timing or deployment SHA appears in this supplied result. Fresh Euler control after the correction remains pending; overall compliance NO_GO unchanged.
+
 ## Historical Verification (May 26, 2026)
 
 These recorded checks have not been rerun for the pending release. They do not establish current production health, download version, or advisory behavior.

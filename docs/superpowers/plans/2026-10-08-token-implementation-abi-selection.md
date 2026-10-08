@@ -12,6 +12,7 @@ Original-token recorded-block code/decimals/balance calls and canonical word val
 - [x] Prefer matching verified implementation ABI without replacing it with a library ABI.
 - [x] Workspace typechecks, API build/import smoke and independent review pass (no blockers, 23 focused tests). Follow-up dedicated shortcut tests cover unknown status, unverified source, NFT/duplicate ambiguity and malformed RPC; final total recorded in project phase.
 - [x] Prepare publication; exact SHA and local/remote synchronization recorded in project phase after push.
-- [ ] Fresh live Aave and Euler control after deployment Ready.
+- [x] Operator Aave retest reports both tokens available at 0x1706d45 with current_proxy_abi_only: USDC decimals 6/raw balance 4490987896; aToken decimals 6/raw balance 499999998. Current-only input decoding and two Transfer-shaped events retained. No historical effects or balance-delta assessment established.
+- [ ] Fresh Euler control after this correction; earlier Euler success does not verify the new build.
 
 Aave / Scanner / Ethereum Mainnet: `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac`. Expected: USDC may return qualified decimals/balance only if real current implementation metadata and original-token RPC checks pass; otherwise precise upstream/interface/RPC reason with no guessed values. Euler: `0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d`, retain historical exploit finding. No signing required. Live success and overall compliance GO are not established by local tests.
