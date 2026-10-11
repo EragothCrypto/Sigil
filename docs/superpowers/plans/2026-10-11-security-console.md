@@ -10,12 +10,14 @@
 
 ## Tasks
 
-- [ ] Review spec/plan against approved brief, checking release and data boundaries.
-- [ ] Add failing frontend regression tests for task navigation, immediate main entry, example labels and progressive evidence disclosure. Run with `node --test artifacts/sigil/console-ui.test.cjs`.
-- [ ] Update `artifacts/sigil/src/pages/home.tsx`: preserve stream handler, render compact task-first scanner, prominent wallet-permission entry and secondary tool links; replace marketing sections and emoji toast copy. Worker owns only home and home-specific test changes.
-- [ ] Update `artifacts/sigil/src/components/sigil/AnalysisResultView.tsx`, `ShareButton.tsx` and `pages/analysis.tsx`: preserve validators and thresholds, flatten verdict/summary, subordinate share/scores, full input accessible, all recorded evidence retained. Worker owns only these components and EVM presentation tests.
-- [ ] Update `artifacts/sigil/src/index.css`, `components/layout/Layout.tsx`, `pages/solana-monitor.tsx`: opaque graphite, purposeful focus/hover, named task nav, contextual cluster choices, clear report action/explanation/evidence hierarchy, explicit examples and coverage states. Parent owns these files.
-- [ ] Run focused tests after each slice. Fix regressions without weakening safety assertions. Run `pnpm test:baseline`, `pnpm typecheck`, `pnpm -r --if-present run build` and existing built-wrapper/security gates applicable to frontend changes.
-- [ ] Start local server on a free port, inspect before/after desktop/mobile screenshots using in-app browser; test all six synthetic examples, malformed input, keyboard disclosures, nav, EVM saved report and overflow/contrast. Synthetic examples must not make provider calls or claim actual exposure.
-- [ ] Independent scoped code review for unchanged trust boundaries and UX regressions, resolve blockers.
-- [ ] Update Colosseum roadmap/quality ledger with shipped scope, 20-pattern review, exact verification and residual issues. Commit/push and verify CI plus jury Preview only. Production remains untouched.
+- [x] Review spec/plan against approved brief and release/data boundaries; independent review approved.
+- [x] Red/green frontend tests for task navigation, main entry, example labels, progressive evidence and menu fixes.
+- [x] Main entry implementation; stream handler and cancellation retained.
+- [x] EVM report, saved-report page and compact sharing implementation; validators/thresholds/privacy retained.
+- [x] Shared graphite styles, named navigation and action-first Solana presentation; scan logic and fixtures retained.
+- [x] Focused tests, baseline489+fourTS, types, builds, codegen, wrapper gates; all five same-candidate CI gates green.
+- [x] Actual before/after desktop/mobile screenshots; six examples, invalid input, keyboard, landscape menu, bounds and deployed Aave/Euler/Mainnet controls inspected. Scope and screenshot artifacts recorded in acceptance ledger.
+- [x] Independent scoped review; both menu issues and obsolete verifier selectors fixed. No trust-boundary violation found.
+- [x] Roadmap/20-pattern ledger updated; app240afdc committed/pushed; immutable jury Preview and CI verified. Production untouched.
+
+Evidence and remaining scope: [UX acceptance](../../colosseum-ux-polish.md). Documentation follow-up records this acceptance without changing the accepted application bundle.
