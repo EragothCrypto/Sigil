@@ -17,10 +17,10 @@ These are timeboxes from the planning clock, not estimates that authorize loweri
 | ID | Target | Deliverable | Exit Gate | State |
 | --- | --- | --- | --- | --- |
 | H00 | Hours 0-1 | Reprioritize every original phase and audit group; confirm scope | Approved EVM + narrow Solana scope and persisted plan | Done; independent plan review approved |
-| H01 | Hours 1-7 | Versioned manual Solana scan: validated addresses, bounded RPC, official SPL codecs, ordinary delegate findings | Tested partial/failure semantics; exact integer amounts; both token programs queried; no signing | Local slice done; live Devnet read passed |
+| H01 | Hours 1-7 | Versioned manual Solana scan: validated addresses, bounded RPC, official SPL codecs, ordinary delegate findings | Tested partial/failure semantics; exact integer amounts; both token programs queried; no signing | Slice done; live Devnet and nonempty Mainnet reads passed |
 | H02 | Hours 7-11 | Usable Solana view within existing product; evidence, examples, clear review steps | Desktop/mobile loading, success, partial, unavailable and invalid-input paths | Local slice done; browser smoke passed |
 | H03 | Hours 11-14 | Stabilize EVM demo paths and new endpoint; required build/type/regression checks | Aave/Euler expectations retained; changed routes tested; no crashing malformed response | In progress; baseline/types/build/codegen/API smoke passed; deployed EVM controls still pending |
-| H04 | Hours 14-17 | Release candidate and authorized deployment smoke | Exact candidate identified, headers/API dispatch checked; rollback available | Commit/push/preview authorized; publication in progress |
+| H04 | Hours 14-17 | Release candidate and authorized deployment smoke | Exact candidate identified, headers/API dispatch checked; rollback available | Solana preview acceptance passed on Devnet/Mainnet desktop/mobile; EVM live DDL boundary remains open |
 | H05 | Hours 17-20 | Submission package, demo scripts, factual integration list and development disclosure | Copyable test inputs; videos can be recorded; no unsupported claims | Draft package prepared; founder facts and video recording pending |
 | H06 | Hours 20-24 | Feature freeze, fix demo blockers only, final smoke and submission buffer | Reproducible jury walkthrough; Kevin submits and verifies receipt | Pending |
 

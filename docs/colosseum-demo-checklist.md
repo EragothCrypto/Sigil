@@ -47,7 +47,30 @@ Additional tests:
 - Review example: synthetic delegate250raw / balance500raw, review only, conspicuous Example data label. Not a real wallet/mint relationship or malicious delegate.
 - Unavailable example: no counts established, no successful-negative claim, no outbound request.
 - Load Devnet address alone: changes input; does not scan automatically.
-- Mainnet toggle: separate cluster context, never reuse a Devnet result as Mainnet evidence. Exact successful mainnet fixture not recorded yet.
+- Mainnet toggle: separate cluster context, never reuse a Devnet result as Mainnet evidence. Live Mainnet fixtures and results are recorded below.
+
+### Mainnet: Verified Live Input
+
+Use the current authorized branch preview, not the old `sigil-68fs50830` deployment. Select **Mainnet**, paste this public token-account authority, then Check wallet:
+
+```text
+HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ
+```
+
+This is a protocol/pool authority test input, not a personal wallet or a protocol-position assessment. Actual preview browser reads on 2026-10-11 at 13:01 UTC / 15:01 Berlin passed on desktop1440x1000 and mobile390x844: 27 legacy accounts decoded, zero ordinary delegate observations, two Token-2022 accounts explicitly unsupported. Correct overall status: partial. Finalized slots455660274/455660286. Counts can change; token holdings and raw amounts do not establish economic value or safety.
+
+The Devnet example address above was separately checked on Mainnet: zero legacy and zero Token-2022 accounts at slots455658607/455658618. This empty-case success is not the nonempty acquisition test.
+
+The deployed tests assert HTTP200, `Cache-Control: no-store`, wallet/cluster binding, established legacy coverage, no mobile overflow or page errors, and clearing old evidence when switching clusters. Screenshots and exact reports: `tmp/colosseum/preview-mainnet/`; access-link parameters are not persisted. Tested remote HTML SHA256: `e28006f69dc22bcb13af3fe96fd0dbe6fe2a81b1ae1ef1440fab91ed4c6de8a9`, unchanged from application candidate0abfd98.
+
+Reproduce with the authorized share link supplied through `SIGIL_PREVIEW_URL` only, never committed:
+
+```powershell
+$env:SIGIL_TEST_WALLET='HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ'
+node scripts/verify-solana-demo.mjs --live --mainnet --require-accounts
+```
+
+Only read-only Solana routes were called. Production deployment and EVM database migration permissions remain excluded.
 
 ## EVM: Existing Controls
 

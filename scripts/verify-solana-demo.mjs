@@ -8,8 +8,10 @@ import { startSolanaDemoPreview } from './solana-demo-preview.mjs';
 const {chromium} = createRequire(import.meta.url)('playwright');
 const remoteInput = process.env.SIGIL_PREVIEW_URL;
 const remote = remoteInput ? new URL(remoteInput) : null;
+const cluster = process.argv.includes('--mainnet') ? 'mainnet-beta' : 'devnet';
+const testWallet = process.env.SIGIL_TEST_WALLET || 'A1TMhSGzQxMr1TboBKtgixKz1sS6REASMxPo1qsyTSJd';
 if (remote) assert.ok(remote.protocol === 'https:' && remote.hostname.endsWith('.vercel.app'), 'remote verification requires an authorized HTTPS Vercel preview');
-const output = new URL(remote ? '../tmp/colosseum/preview/' : '../tmp/colosseum/', import.meta.url);
+const output = new URL(cluster === 'mainnet-beta' ? (remote ? '../tmp/colosseum/preview-mainnet/' : '../tmp/colosseum/mainnet/') : (remote ? '../tmp/colosseum/preview/' : '../tmp/colosseum/'), import.meta.url);
 await mkdir(output, {recursive: true});
 const hash = () => readFile(new URL('../artifacts/sigil/dist/public/index.html', import.meta.url)).then(b => createHash('sha256').update(b).digest('hex'));
 const buildHash = await hash();
@@ -71,21 +73,33 @@ try {
     await page.getByRole('alert').filter({hasText: 'The response could not be validated.'}).waitFor();
     await page.unroute('**' + api);
     if (process.argv.includes('--live')) {
+      await page.getByLabel('Public wallet address', {exact: true}).fill(testWallet);
+      await page.getByLabel('Cluster', {exact: true}).selectOption(cluster);
+      assert.equal(await page.getByRole('region', {name: 'Solana check result'}).count(), 0, 'cluster selection must clear old evidence');
+      const apiResponse = page.waitForResponse(r => r.url().endsWith(api) && r.request().method() === 'POST');
       await page.getByRole('button', {name: 'Check wallet', exact: true}).click();
+      const actualResponse = await apiResponse;
+      assert.equal(actualResponse.status(), 200);
+      assert.equal(actualResponse.headers()['cache-control'], 'no-store');
+      const actualReport = await actualResponse.json();
+      assert.equal(actualReport.cluster, cluster);
+      assert.equal(actualReport.wallet, testWallet);
+      assert.ok(actualReport.coverage[0].status === 'complete' || actualReport.coverage[0].status === 'partial', 'live legacy acquisition must be established');
+      if (process.argv.includes('--require-accounts')) assert.ok(actualReport.accountsChecked > 0, 'nonempty mainnet account fixture must be decoded');
       await page.getByRole('region', {name: 'Solana check result'}).waitFor({timeout: 25000});
       await page.getByText('Live RPC snapshot', {exact: true}).waitFor();
       const responseText = await page.getByRole('region', {name: 'Solana check result'}).innerText();
       assert.ok(!responseText.includes('Wallet check unavailable'), 'live scan did not establish legacy acquisition');
       await page.screenshot({path: fileURLToPath(new URL(`solana-${viewport.width}-live.png`, output)), fullPage: true});
-      results.push({viewport, live: responseText, remoteIndexHash});
+      results.push({viewport, live: responseText, actualReport, remoteIndexHash});
     } else results.push({viewport, syntheticOnly: true});
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     assert.deepEqual(errors, []);
     await context.close();
   }
   assert.equal(await hash(), buildHash);
-  await writeFile(new URL('browser-report.json', output), JSON.stringify({generatedAt: new Date().toISOString(), localIndexHash: buildHash, remoteOrigin: remote?.origin, results}, null, 2));
-  console.log(`Solana desktop/mobile smoke passed; live=${process.argv.includes('--live')}; remote=${Boolean(remote)}; localIndex=${buildHash}`);
+  await writeFile(new URL('browser-report.json', output), JSON.stringify({generatedAt: new Date().toISOString(), cluster, localIndexHash: buildHash, remoteOrigin: remote?.origin, results}, null, 2));
+  console.log(`Solana desktop/mobile smoke passed; cluster=${cluster}; live=${process.argv.includes('--live')}; remote=${Boolean(remote)}; localIndex=${buildHash}`);
 } catch (error) {
   throw new Error(String(error.message).replace(/_vercel_share=[^&\s"']+/g, '_vercel_share=REDACTED'));
 } finally {await browser?.close(); if (server) await new Promise(resolve => server.close(resolve));}
