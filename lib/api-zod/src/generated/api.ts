@@ -8,6 +8,157 @@
 import * as zod from "zod";
 
 /**
+ * Bounded finalized legacy SPL delegate observations. Not signing clearance, live threat intelligence or continuous monitoring. Token-2022 semantics are unsupported.
+ * @summary Manual read-only Solana token-account delegate check
+ */
+export const scanSolanaWalletBodyWalletRegExp = new RegExp(
+  "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+);
+
+export const ScanSolanaWalletBody = zod.object({
+  wallet: zod.string().regex(scanSolanaWalletBodyWalletRegExp),
+  cluster: zod.enum(["mainnet-beta", "devnet"]),
+});
+
+export const scanSolanaWalletResponseWalletRegExp = new RegExp(
+  "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+);
+export const scanSolanaWalletResponseSlotRangeTwoMinMin = 0;
+export const scanSolanaWalletResponseSlotRangeTwoMinMax = 9007199254740991;
+
+export const scanSolanaWalletResponseSlotRangeTwoMaxMin = 0;
+export const scanSolanaWalletResponseSlotRangeTwoMaxMax = 9007199254740991;
+
+export const scanSolanaWalletResponseAccountsCheckedMin = 0;
+export const scanSolanaWalletResponseAccountsCheckedMax = 100;
+
+export const scanSolanaWalletResponseCoverageItemReasonMax = 120;
+
+export const scanSolanaWalletResponseCoverageItemSlotMin = 0;
+export const scanSolanaWalletResponseCoverageItemSlotMax = 9007199254740991;
+
+export const scanSolanaWalletResponseCoverageItemAccountCountMin = 0;
+export const scanSolanaWalletResponseCoverageItemAccountCountMax = 1000000;
+
+export const scanSolanaWalletResponseCoverageMin = 2;
+export const scanSolanaWalletResponseCoverageMax = 2;
+
+export const scanSolanaWalletResponseDelegatesItemAccountRegExp = new RegExp(
+  "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+);
+export const scanSolanaWalletResponseDelegatesItemMintRegExp = new RegExp(
+  "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+);
+export const scanSolanaWalletResponseDelegatesItemDelegateRegExp = new RegExp(
+  "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+);
+export const scanSolanaWalletResponseDelegatesItemBalanceRawRegExp = new RegExp(
+  "^(0|[1-9][0-9]{0,19})$",
+);
+export const scanSolanaWalletResponseDelegatesItemDelegatedRawRegExp =
+  new RegExp("^(0|[1-9][0-9]{0,19})$");
+export const scanSolanaWalletResponseDelegatesItemSpendableRawRegExp =
+  new RegExp("^(0|[1-9][0-9]{0,19})$");
+export const scanSolanaWalletResponseDelegatesItemSlotMin = 0;
+export const scanSolanaWalletResponseDelegatesItemSlotMax = 9007199254740991;
+
+export const scanSolanaWalletResponseDelegatesMax = 100;
+
+export const scanSolanaWalletResponseLimitationsItemMax = 500;
+
+export const scanSolanaWalletResponseLimitationsMax = 12;
+
+export const ScanSolanaWalletResponse = zod.object({
+  reportVersion: zod.enum(["solana-manual-v1"]),
+  wallet: zod.string().regex(scanSolanaWalletResponseWalletRegExp),
+  cluster: zod.enum(["mainnet-beta", "devnet"]),
+  generatedAt: zod.date(),
+  status: zod.enum(["review", "no_delegates_found", "partial", "unavailable"]),
+  commitment: zod.enum(["finalized"]),
+  slotRange: zod.union([
+    zod.null(),
+    zod.object({
+      min: zod
+        .number()
+        .int()
+        .min(scanSolanaWalletResponseSlotRangeTwoMinMin)
+        .max(scanSolanaWalletResponseSlotRangeTwoMinMax),
+      max: zod
+        .number()
+        .int()
+        .min(scanSolanaWalletResponseSlotRangeTwoMaxMin)
+        .max(scanSolanaWalletResponseSlotRangeTwoMaxMax),
+    }),
+  ]),
+  accountsChecked: zod
+    .number()
+    .int()
+    .min(scanSolanaWalletResponseAccountsCheckedMin)
+    .max(scanSolanaWalletResponseAccountsCheckedMax),
+  coverage: zod
+    .array(
+      zod.object({
+        program: zod.string(),
+        status: zod.enum(["complete", "partial", "unavailable", "unsupported"]),
+        reason: zod.string().max(scanSolanaWalletResponseCoverageItemReasonMax),
+        slot: zod
+          .number()
+          .int()
+          .min(scanSolanaWalletResponseCoverageItemSlotMin)
+          .max(scanSolanaWalletResponseCoverageItemSlotMax)
+          .nullable(),
+        accountCount: zod
+          .number()
+          .int()
+          .min(scanSolanaWalletResponseCoverageItemAccountCountMin)
+          .max(scanSolanaWalletResponseCoverageItemAccountCountMax)
+          .nullable(),
+      }),
+    )
+    .min(scanSolanaWalletResponseCoverageMin)
+    .max(scanSolanaWalletResponseCoverageMax),
+  delegates: zod
+    .array(
+      zod.object({
+        account: zod
+          .string()
+          .regex(scanSolanaWalletResponseDelegatesItemAccountRegExp),
+        mint: zod
+          .string()
+          .regex(scanSolanaWalletResponseDelegatesItemMintRegExp),
+        program: zod.string(),
+        delegate: zod
+          .string()
+          .regex(scanSolanaWalletResponseDelegatesItemDelegateRegExp),
+        balanceRaw: zod
+          .string()
+          .regex(scanSolanaWalletResponseDelegatesItemBalanceRawRegExp),
+        delegatedRaw: zod
+          .string()
+          .regex(scanSolanaWalletResponseDelegatesItemDelegatedRawRegExp),
+        spendableRaw: zod
+          .string()
+          .regex(scanSolanaWalletResponseDelegatesItemSpendableRawRegExp),
+        state: zod.enum(["initialized", "frozen"]),
+        slot: zod
+          .number()
+          .int()
+          .min(scanSolanaWalletResponseDelegatesItemSlotMin)
+          .max(scanSolanaWalletResponseDelegatesItemSlotMax),
+        reviewReason: zod.enum([
+          "ordinary_delegate_review",
+          "frozen_account_review",
+          "delegate_present_no_current_spendable_units",
+        ]),
+      }),
+    )
+    .max(scanSolanaWalletResponseDelegatesMax),
+  limitations: zod
+    .array(zod.string().max(scanSolanaWalletResponseLimitationsItemMax))
+    .max(scanSolanaWalletResponseLimitationsMax),
+});
+
+/**
  * Returns server health status
  * @summary Health check
  */

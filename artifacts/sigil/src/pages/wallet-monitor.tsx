@@ -83,7 +83,7 @@ function networkLabel(network: WatchlistNetwork): string {
 
 function statusCopy(status: WatchlistStatus): { label: string; classes: string; icon: typeof ShieldCheck } {
   if (status === "clean") {
-    return { label: "Clean", classes: "border-emerald-500/25 bg-emerald-500/10 text-emerald-200", icon: CheckCircle2 };
+    return { label: "No flags", classes: "border-emerald-500/25 bg-emerald-500/10 text-emerald-200", icon: CheckCircle2 };
   }
   if (status === "review") {
     return { label: "Review", classes: "border-yellow-500/25 bg-yellow-500/10 text-yellow-100", icon: ShieldAlert };
@@ -94,7 +94,7 @@ function statusCopy(status: WatchlistStatus): { label: string; classes: string; 
   if (status === "unavailable") {
     return { label: "Unavailable", classes: "border-white/15 bg-white/[0.06] text-white/58", icon: ShieldAlert };
   }
-  return { label: "Unchecked", classes: "border-primary/25 bg-primary/10 text-primary", icon: ShieldCheck };
+  return { label: "Unchecked", classes: "border-primary/25 bg-primary/10 text-primary-text", icon: ShieldCheck };
 }
 
 function riskCopy(risk: WalletMonitorRiskLevel): { label: string; classes: string } {
@@ -105,7 +105,7 @@ function riskCopy(risk: WalletMonitorRiskLevel): { label: string; classes: strin
 }
 
 function scoreTone(score: number | null): string {
-  if (score === null) return "text-white/35";
+  if (score === null) return "text-subtle";
   if (score >= 75) return "text-emerald-300";
   if (score >= 45) return "text-yellow-200";
   return "text-red-300";
@@ -195,34 +195,34 @@ export default function WalletMonitorPage() {
     <div className="space-y-8">
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start">
         <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary-text">
             <Crown className="h-3.5 w-3.5" />
             Sigil Wallet Monitor
           </div>
 
           <div className="space-y-4">
             <h1 className="max-w-4xl font-display text-4xl font-bold tracking-normal text-white sm:text-5xl">
-              Your wallet exposure, sorted by what to fix first.
+              Recorded approval events, sorted for review.
             </h1>
             <p className="max-w-2xl text-base leading-relaxed text-white/58">
-              Save public wallets, refresh approval exposure, and keep a local hygiene score before Phase 4 adds premium alerts and account sync.
+              Save public wallets for event review. Manual refresh sends the selected address and network to Sigil's API and explorer providers. Current allowances are not established; the local heuristic is not a wallet safety assessment.
             </p>
           </div>
 
           <form onSubmit={handleAdd} className="rounded-2xl border border-white/10 bg-black/35 p-5 shadow-2xl shadow-black/20">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px_150px]">
               <label className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/45">Label</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-subtle">Label</span>
                 <input
                   value={label}
                   onChange={(event) => setLabel(event.target.value)}
                   placeholder="Main wallet, vault, multisig..."
-                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-primary/50"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 text-sm text-white outline-none transition-colors placeholder:text-subtle focus:border-primary/50"
                 />
               </label>
 
               <label className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/45">Network</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-subtle">Network</span>
                 <select
                   value={network}
                   onChange={(event) => setNetwork(event.target.value as WatchlistNetwork)}
@@ -237,7 +237,7 @@ export default function WalletMonitorPage() {
               </label>
 
               <label className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/45">Type</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-subtle">Type</span>
                 <select
                   value={kind}
                   onChange={(event) => setKind(event.target.value as WatchlistKind)}
@@ -254,13 +254,13 @@ export default function WalletMonitorPage() {
 
             <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
               <label className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/45">Public wallet address</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-subtle">Public wallet address</span>
                 <input
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
                   placeholder="0x..."
                   spellCheck={false}
-                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 font-mono text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-primary/50"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 font-mono text-sm text-white outline-none transition-colors placeholder:text-subtle focus:border-primary/50"
                 />
               </label>
 
@@ -287,11 +287,11 @@ export default function WalletMonitorPage() {
               className="rounded-2xl border border-primary/15 bg-primary/[0.06] p-4 transition-colors hover:border-primary/30"
             >
               <div className="flex items-start gap-3">
-                <Chrome className="mt-0.5 h-5 w-5 text-primary" />
+                <Chrome className="mt-0.5 h-5 w-5 text-primary-text" />
                 <div>
                   <h2 className="text-sm font-bold text-white">Review the next signing prompt</h2>
                   <p className="mt-1 text-xs leading-relaxed text-white/48">
-                    Wallet Monitor shows existing exposure; the extension adds best-effort advisory context to compatible requests.
+                    Wallet Monitor reviews recorded event candidates; the extension adds best-effort advisory context to compatible requests.
                   </p>
                 </div>
               </div>
@@ -316,28 +316,28 @@ export default function WalletMonitorPage() {
         <aside className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm text-white/45">Wallet hygiene</p>
-              <p className={`mt-2 text-6xl font-bold ${scoreTone(report.hygieneScore)}`}>
-                {report.hygieneScore ?? "--"}
+              <p className="text-sm text-subtle">Event-review heuristic</p>
+              <p className={`mt-2 text-6xl font-bold ${scoreTone(report.eventCoverageComplete ? report.hygieneScore : null)}`}>
+                {report.eventCoverageComplete ? report.hygieneScore : "--"}
               </p>
             </div>
-            <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${risk.classes}`}>
-              {risk.label}
+            <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${report.eventCoverageComplete ? risk.classes : "border-white/15 bg-white/[0.06] text-subtle"}`}>
+              {report.eventCoverageComplete ? risk.label : "Coverage incomplete"}
             </span>
           </div>
 
           <div className="mt-6 grid grid-cols-3 gap-3">
             <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-3">
               <p className="text-2xl font-bold text-white">{report.totalWallets}</p>
-              <p className="mt-1 text-xs text-white/40">Wallets</p>
+              <p className="mt-1 text-xs text-subtle">Wallets</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-3">
-              <p className="text-2xl font-bold text-amber-200">{report.unlimitedApprovals}</p>
-              <p className="mt-1 text-xs text-white/40">Unlimited</p>
+              <p className="text-2xl font-bold text-amber-200">{report.eventCoverageComplete ? report.unlimitedApprovals : "--"}</p>
+              <p className="mt-1 text-xs text-subtle">Large values</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-3">
-              <p className="text-2xl font-bold text-red-200">{report.criticalOrHighApprovals}</p>
-              <p className="mt-1 text-xs text-white/40">High risk</p>
+              <p className="text-2xl font-bold text-red-200">{report.eventCoverageComplete ? report.criticalOrHighApprovals : "--"}</p>
+              <p className="mt-1 text-xs text-subtle">Flagged events</p>
             </div>
           </div>
 
@@ -346,14 +346,14 @@ export default function WalletMonitorPage() {
               type="button"
               onClick={refreshAll}
               disabled={entries.length === 0 || refreshingId !== null}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-3 text-sm font-semibold text-primary transition-colors hover:border-primary/45 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-3 text-sm font-semibold text-primary-text transition-colors hover:border-primary/45 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {refreshingId ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Refresh all
             </button>
             <Link
               href="/watchlist"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3 text-sm font-semibold text-white/70 transition-colors hover:border-primary/30 hover:text-primary"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3 text-sm font-semibold text-white/70 transition-colors hover:border-primary/30 hover:text-primary-text"
             >
               Watchlist
               <ArrowRight className="h-4 w-4" />
@@ -366,10 +366,10 @@ export default function WalletMonitorPage() {
         <div className="rounded-2xl border border-white/10 bg-black/35 p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm text-white/45">Fix this first</p>
+              <p className="text-sm text-subtle">Fix this first</p>
               <h2 className="mt-1 text-2xl font-bold text-white">Priority checklist</h2>
             </div>
-            <ShieldAlert className="h-5 w-5 text-primary" />
+            <ShieldAlert className="h-5 w-5 text-primary-text" />
           </div>
 
           <div className="mt-5 space-y-3">
@@ -380,7 +380,7 @@ export default function WalletMonitorPage() {
                     <p className="font-semibold text-white">{item.title}</p>
                     <p className="mt-1 text-sm leading-relaxed text-white/52">{item.description}</p>
                   </div>
-                  <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white/45">
+                  <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-subtle">
                     {item.priority}
                   </span>
                 </div>
@@ -392,7 +392,7 @@ export default function WalletMonitorPage() {
         <div className="space-y-3">
           {entries.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-black/35 px-5 py-10 text-center">
-              <Wallet className="mx-auto h-9 w-9 text-primary" />
+              <Wallet className="mx-auto h-9 w-9 text-primary-text" />
               <h2 className="mt-4 text-lg font-bold text-white">No monitored wallets yet</h2>
               <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-white/55">
                 Add a public wallet address to start building a local monitor report.
@@ -401,6 +401,7 @@ export default function WalletMonitorPage() {
           ) : (
             entries.map((entry) => {
               const status = statusCopy(entry.status);
+              const hasEventCoverage = entry.coverageStatus === "limited";
               const Icon = status.icon;
               const isRefreshing = refreshingId === entry.id;
               return (
@@ -427,26 +428,30 @@ export default function WalletMonitorPage() {
 
                       <div className="grid gap-3 sm:grid-cols-4">
                         <div>
-                          <p className="text-xs uppercase tracking-wide text-white/35">Active</p>
-                          <p className="mt-1 text-sm font-semibold text-white">{entry.approvalSummary?.totalActive ?? "-"}</p>
+                          <p className="text-xs uppercase tracking-wide text-subtle">Event candidates</p>
+                          <p className="mt-1 text-sm font-semibold text-white">{hasEventCoverage ? entry.approvalSummary?.totalActive ?? "-" : "-"}</p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-wide text-white/35">Unlimited</p>
-                          <p className="mt-1 text-sm font-semibold text-amber-200">{entry.approvalSummary?.unlimited ?? "-"}</p>
+                          <p className="text-xs uppercase tracking-wide text-subtle">Large values</p>
+                          <p className="mt-1 text-sm font-semibold text-amber-200">{hasEventCoverage ? entry.approvalSummary?.unlimited ?? "-" : "-"}</p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-wide text-white/35">High</p>
-                          <p className="mt-1 text-sm font-semibold text-red-200">{(entry.approvalSummary?.critical ?? 0) + (entry.approvalSummary?.high ?? 0) || "-"}</p>
+                          <p className="text-xs uppercase tracking-wide text-subtle">Flagged events</p>
+                          <p className="mt-1 text-sm font-semibold text-red-200">{hasEventCoverage ? (entry.approvalSummary?.critical ?? 0) + (entry.approvalSummary?.high ?? 0) : "-"}</p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-wide text-white/35">Health</p>
-                          <p className="mt-1 text-sm font-semibold text-white">{entry.approvalSummary?.healthScore ?? "-"}</p>
+                          <p className="text-xs uppercase tracking-wide text-subtle">Event heuristic</p>
+                          <p className="mt-1 text-sm font-semibold text-white">{hasEventCoverage ? entry.approvalSummary?.healthScore ?? "-" : "-"}</p>
                         </div>
                       </div>
 
                       <p className="max-w-3xl text-sm leading-relaxed text-white/50">
                         {entry.coverageMessage ??
-                          (entry.lastCheckedAt
+                          (hasEventCoverage
+                            ? "Saved event summary; not a verified scan or current allowance assessment."
+                            : entry.status === "unavailable"
+                              ? "Saved scan coverage is unavailable; no current allowance assessment."
+                              : entry.lastCheckedAt
                             ? `Last checked ${new Date(entry.lastCheckedAt).toLocaleString()}`
                             : "Not checked yet.")}
                       </p>
@@ -457,14 +462,14 @@ export default function WalletMonitorPage() {
                         type="button"
                         onClick={() => refreshEntry(entry)}
                         disabled={refreshingId !== null}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-3 text-sm font-semibold text-primary transition-colors hover:border-primary/45 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-3 text-sm font-semibold text-primary-text transition-colors hover:border-primary/45 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                         Check
                       </button>
                       <Link
                         href={`/approvals?address=${entry.address}&network=${entry.network}`}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3 text-sm font-semibold text-white/70 transition-colors hover:border-primary/30 hover:text-primary"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3 text-sm font-semibold text-white/70 transition-colors hover:border-primary/30 hover:text-primary-text"
                       >
                         Approvals
                         <ArrowRight className="h-4 w-4" />
@@ -472,7 +477,7 @@ export default function WalletMonitorPage() {
                       <button
                         type="button"
                         onClick={() => setEntries((current) => removeWatchlistEntry(current, entry.id))}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.05] text-white/45 transition-colors hover:border-red-500/30 hover:text-red-200"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.05] text-subtle transition-colors hover:border-red-500/30 hover:text-red-200"
                         aria-label={`Remove ${entry.label}`}
                       >
                         <Trash2 className="h-4 w-4" />

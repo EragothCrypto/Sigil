@@ -1,51 +1,22 @@
 import { Share2, Twitter } from 'lucide-react';
 import type { AnalysisResult } from '@workspace/api-client-react';
+import { parseValidatedReport } from '@/lib/validated-report';
 
 function buildTweetText(data: AnalysisResult): string {
   const appUrl = window.location.origin;
-  const verdict = data.verdict ?? 'caution';
-
-  const topPattern = data.patterns?.[0];
-  const patternNote = topPattern
-    ? topPattern.type === 'drainer'
-      ? 'It matches patterns from known wallet drainers.'
-      : topPattern.type === 'honeypot'
-      ? 'It matches a honeypot token pattern.'
-      : topPattern.type === 'fake_approval'
-      ? 'It hides a token approval inside a harmless-looking signature.'
-      : topPattern.type === 'rug_pull'
-      ? 'It has rug pull indicators.'
-      : `It matches a ${topPattern.name} pattern.`
-    : null;
-
-  const shortInput =
-    data.input.length > 20
-      ? `${data.input.slice(0, 10)}…${data.input.slice(-6)}`
-      : data.input;
-
-  let tweet = '';
-
-  if (verdict === 'dangerous') {
-    tweet = `🚨 This transaction looked normal but Sigil flagged it as DANGEROUS (risk ${data.riskScore}/100).\n\n`;
-    if (patternNote) tweet += `${patternNote}\n\n`;
-    tweet += `"${data.verdictReason}"\n\n`;
-    tweet += `Always decode before you sign 👇\n${appUrl}`;
-  } else if (verdict === 'caution') {
-    tweet = `⚠️ Ran this transaction through Sigil. Verdict: Proceed with Caution (risk ${data.riskScore}/100).\n\n`;
-    tweet += `"${data.verdictReason}"\n\n`;
-    tweet += `Decode any tx before signing 👇\n${appUrl}`;
-  } else {
-    tweet = `✅ Just verified a transaction with Sigil — risk score ${data.riskScore}/100. Came back clean.\n\n`;
-    tweet += `"${data.summary}"\n\n`;
-    tweet += `${appUrl} — decode any tx before you sign it.`;
+  const report = parseValidatedReport(data.details);
+  let status = 'Legacy or unvalidated report. Review current evidence before relying on it.';
+  if (report?.version === 'findings-v1') {
+    status = 'Legacy validated report with narrower coverage.';
+  } else if (report?.version === 'findings-v2') {
+    const finding = report.findings.some(item => item.category === 'risk')
+      ? 'Attributed risk findings recorded.'
+      : 'No concrete risk findings in acquired data.';
+    const coverage = report.coverage === 'complete_for_supported_checks' ? 'supported checks only' : report.coverage;
+    status = `${finding} Coverage: ${coverage}.`;
   }
-
-  if (tweet.length > 270) {
-    const cutAt = tweet.lastIndexOf('\n', 250);
-    tweet = tweet.slice(0, cutAt > 0 ? cutAt : 250) + `\n\n${appUrl}`;
-  }
-
-  return tweet;
+  // Share only bounded status and the app origin, never private IDs or model-authored narrative.
+  return `Sigil: ${status} No safety guarantee or signing clearance.\n${appUrl}`;
 }
 
 const VERDICT_STYLE = {
@@ -70,7 +41,10 @@ const VERDICT_STYLE = {
 } as const;
 
 export function ShareButton({ data }: { data: AnalysisResult }) {
-  const verdict = (data.verdict ?? 'caution') as keyof typeof VERDICT_STYLE;
+  const report = parseValidatedReport(data.details);
+  const verdict = (report?.version === 'findings-v2'
+    ? report.decisionScore <= 25 ? 'safe' : report.decisionScore <= 60 ? 'caution' : 'dangerous'
+    : data.verdict ?? 'caution') as keyof typeof VERDICT_STYLE;
   const style = VERDICT_STYLE[verdict] || VERDICT_STYLE.caution;
 
   const handleShare = () => {

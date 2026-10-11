@@ -1,8 +1,34 @@
 import { motion } from 'framer-motion';
+import { useSyncExternalStore } from 'react';
+import { Shield } from 'lucide-react';
+
+function subscribeToMotionPreference(onChange: () => void) {
+  const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+  preference.addEventListener('change', onChange);
+  return () => preference.removeEventListener('change', onChange);
+}
+
+function motionPreferenceSnapshot() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 export function ScanAnimation() {
+  const reduceMotion = useSyncExternalStore(subscribeToMotionPreference, motionPreferenceSnapshot, () => true);
+
+  if (reduceMotion) {
+    return (
+      <div role="status" aria-live="polite" className="flex flex-col items-center justify-center min-h-[60vh] w-full gap-6">
+        <Shield aria-hidden="true" className="w-12 h-12 text-primary" />
+        <div className="text-center space-y-2">
+          <p className="font-display font-bold text-lg text-white/80">Checking</p>
+          <p className="text-sm font-mono text-white/60">Checking available execution context...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
+    <div role="status" aria-live="polite" className="flex flex-col items-center justify-center min-h-[60vh] w-full">
       <div className="relative flex flex-col items-center gap-8">
 
         {/* Concentric rings */}
@@ -42,10 +68,10 @@ export function ScanAnimation() {
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
           >
-            Analyzing
+            Checking
           </motion.p>
           <p className="text-sm font-mono text-white/30">
-            Running AI heuristics and bytecode analysis…
+            Checking available execution context...
           </p>
         </div>
 

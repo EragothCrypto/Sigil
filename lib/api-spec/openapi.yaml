@@ -12,6 +12,31 @@ tags:
   - name: sigil
     description: Sigil transaction and contract analysis
 paths:
+  /sigil/monitor/v2/solana/scan:
+    post:
+      operationId: scanSolanaWallet
+      tags: [sigil]
+      summary: Manual read-only Solana token-account delegate check
+      description: Bounded finalized legacy SPL delegate observations. Not signing clearance, live threat intelligence or continuous monitoring. Token-2022 semantics are unsupported.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolanaScanBody'
+      responses:
+        '200':
+          description: Scoped review, no-delegates, partial or unavailable report. HTTP success does not establish complete coverage.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolanaScanReport'
+        '400':
+          description: Invalid wallet or cluster
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /healthz:
     get:
       operationId: healthCheck
@@ -852,6 +877,128 @@ components:
         - warnings
         - positives
         - createdAt
+
+    SolanaScanBody:
+      type: object
+      required: [wallet, cluster]
+      properties:
+        wallet:
+          type: string
+          pattern: '^[1-9A-HJ-NP-Za-km-z]{32,44}$'
+        cluster:
+          type: string
+          enum: [mainnet-beta, devnet]
+
+    SolanaScanReport:
+      type: object
+      required: [reportVersion, wallet, cluster, generatedAt, status, commitment, slotRange, coverage, accountsChecked, delegates, limitations]
+      properties:
+        reportVersion:
+          type: string
+          enum: [solana-manual-v1]
+        wallet:
+          type: string
+          pattern: '^[1-9A-HJ-NP-Za-km-z]{32,44}$'
+        cluster:
+          type: string
+          enum: [mainnet-beta, devnet]
+        generatedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [review, no_delegates_found, partial, unavailable]
+        commitment:
+          type: string
+          enum: [finalized]
+        slotRange:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [min, max]
+              properties:
+                min:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                max:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+        accountsChecked:
+          type: integer
+          minimum: 0
+          maximum: 100
+        coverage:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: object
+            required: [program, status, reason, slot, accountCount]
+            properties:
+              program:
+                type: string
+              status:
+                type: string
+                enum: [complete, partial, unavailable, unsupported]
+              reason:
+                type: string
+                maxLength: 120
+              slot:
+                type: [integer, 'null']
+                minimum: 0
+                maximum: 9007199254740991
+              accountCount:
+                type: [integer, 'null']
+                minimum: 0
+                maximum: 1000000
+        delegates:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/SolanaDelegateObservation'
+        limitations:
+          type: array
+          maxItems: 12
+          items:
+            type: string
+            maxLength: 500
+
+    SolanaDelegateObservation:
+      type: object
+      required: [account, mint, program, delegate, balanceRaw, delegatedRaw, spendableRaw, state, slot, reviewReason]
+      properties:
+        account:
+          type: string
+          pattern: '^[1-9A-HJ-NP-Za-km-z]{32,44}$'
+        mint:
+          type: string
+          pattern: '^[1-9A-HJ-NP-Za-km-z]{32,44}$'
+        program:
+          type: string
+        delegate:
+          type: string
+          pattern: '^[1-9A-HJ-NP-Za-km-z]{32,44}$'
+        balanceRaw:
+          type: string
+          pattern: '^(0|[1-9][0-9]{0,19})$'
+        delegatedRaw:
+          type: string
+          pattern: '^(0|[1-9][0-9]{0,19})$'
+        spendableRaw:
+          type: string
+          pattern: '^(0|[1-9][0-9]{0,19})$'
+        state:
+          type: string
+          enum: [initialized, frozen]
+        slot:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        reviewReason:
+          type: string
+          enum: [ordinary_delegate_review, frozen_account_review, delegate_present_no_current_spendable_units]
 
     ErrorResponse:
       type: object

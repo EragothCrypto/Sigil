@@ -18,6 +18,7 @@ export interface WalletMonitorFix {
 }
 
 export interface WalletMonitorReport {
+  eventCoverageComplete: boolean;
   totalWallets: number;
   networksMonitored: number;
   checkedWallets: number;
@@ -38,6 +39,10 @@ function clampScore(score: number): number {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
+function hasEventCoverage(entry: WatchlistEntry): boolean {
+  return entry.coverageStatus === "limited" && entry.status !== "unavailable" && entry.status !== "unchecked" && !!entry.approvalSummary;
+}
+
 function riskLevelFromScore(score: number | null, highRiskWallets: number): WalletMonitorRiskLevel {
   if (highRiskWallets > 0 || (score !== null && score < 45)) return "high";
   if (score !== null && score < 70) return "medium";
@@ -53,7 +58,7 @@ function scoreEntries(entries: WatchlistEntry[]): number | null {
 
   // ⚡ Bolt: Use a single O(N) pass to compute scores and penalties instead of multiple filter/reduce calls.
   for (const entry of entries) {
-    if (entry.approvalSummary) {
+    if (hasEventCoverage(entry) && entry.approvalSummary) {
       scoredCount++;
       totalScore += entry.approvalSummary.healthScore ?? 0;
     }
@@ -69,15 +74,15 @@ function scoreEntries(entries: WatchlistEntry[]): number | null {
 }
 
 function addFixesForEntry(entry: WatchlistEntry, fixes: WalletMonitorFix[]) {
-  const summary = entry.approvalSummary;
+  const summary = hasEventCoverage(entry) ? entry.approvalSummary : undefined;
   const riskyApprovals = (summary?.critical ?? 0) + (summary?.high ?? 0);
 
   if (riskyApprovals > 0) {
     fixes.push({
       kind: "high-risk-approvals",
       priority: summary?.critical ? "critical" : "high",
-      title: `Review high-risk approvals on ${entry.label}`,
-      description: `${riskyApprovals} critical or high-risk approvals need attention before this wallet is considered healthy.`,
+      title: `Review flagged approval events on ${entry.label}`,
+      description: `${riskyApprovals} approval-event candidates have high review priority; current allowances and wallet safety are not established.`,
       entryId: entry.id,
     });
   }
@@ -86,8 +91,8 @@ function addFixesForEntry(entry: WatchlistEntry, fixes: WalletMonitorFix[]) {
     fixes.push({
       kind: "unlimited-approvals",
       priority: "high",
-      title: `Reduce unlimited approvals on ${entry.label}`,
-      description: `${summary?.unlimited} unlimited approvals can keep token exposure open after you leave a dApp.`,
+      title: `Review large event values on ${entry.label}`,
+      description: `${summary?.unlimited} approval-event candidates contain large raw values; verify current allowances before deciding whether to revoke.`,
       entryId: entry.id,
     });
   }
@@ -150,7 +155,7 @@ export function buildWalletMonitorReport(entries: WatchlistEntry[]): WalletMonit
     else if (entry.status === "review") reviewWallets++;
     else if (entry.status === "clean") cleanWallets++;
 
-    if (entry.approvalSummary) {
+    if (hasEventCoverage(entry) && entry.approvalSummary) {
       activeApprovals += entry.approvalSummary.totalActive ?? 0;
       unlimitedApprovals += entry.approvalSummary.unlimited ?? 0;
       criticalOrHighApprovals += (entry.approvalSummary.critical ?? 0) + (entry.approvalSummary.high ?? 0);
@@ -165,14 +170,15 @@ export function buildWalletMonitorReport(entries: WatchlistEntry[]): WalletMonit
     fixes.push({
       kind: "maintenance",
       priority: "low",
-      title: entries.length ? "Keep monitoring on a regular cadence" : "Add a wallet to start monitoring",
+      title: entries.length ? "Continue manual refresh and event review" : "Add a wallet for manual event review",
       description: entries.length
-        ? "No urgent approval exposure is visible from the latest scans."
+        ? "No flagged approval-event candidates in the latest scans. Current allowances are not established; this is not a safety assessment."
         : "Paste a public wallet address to build your first Sigil Wallet Monitor report.",
     });
   }
 
   return {
+    eventCoverageComplete: entries.length > 0 && entries.every(hasEventCoverage),
     totalWallets: entries.length,
     networksMonitored: networks.size,
     checkedWallets,

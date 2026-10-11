@@ -2,6 +2,35 @@
 
 Last updated: October 7, 2026
 
+## Current P00 Checkpoint: 2026-10-10
+
+Latest import correction supersedes current build identity below:448 Node+four TS baseline/types/web build pass; --events30views/22 manual synthetic GETs/7038passing/zero detected violations/217 incomplete contrast occurrences OPEN, index0c5840a3d9e7a8cc0eb5b62813a31b1b61288a98608da0da810d9096877678a8. Actual file import/invalid address/contradictory saved coverage and status/unique IDs across existing list/reload/remove-refresh original-wallet preservation pass on desktop/mobile. Synthetic manual fixture docs/fixtures/p00-watchlist-import.json expected unchecked/unavailable/high-risk, not actual explorer evidence. Scoped source review no remaining concrete parser/merge issue; did not independently execute or review final fallback copy. Prior157-view706503 consolidation is historical, not new-candidate acceptance. Next: full manual-refresh HTTP200 payload/context runtime validation; broader/manual/installed/deployed/remote/vendor/legal/operational acceptance remains OPEN, P00 NO_GO/P01 not started. Details p00-current-candidate-verification.md; no deployment.
+
+Latest changed-build consolidation: all six declared browser suites exit0 on actual web index706503eaee61a09ad4bef31958c5ea85f16cd2eae0ddc3565b6b7e8919b8a352:157scans/32580passing/zero detected violating nodes/1253 incomplete contrast occurrences OPEN. New event-only approval/monitor controls include exact raw integers, unchecked/unavailable/mixed coverage and success-then503 aggregate masking.438 Node+four TS baseline/types/web+API builds/isolated API/wrapper smoke pass at preceding same-source checkpoint; fresh actual isolated codegen/drift/types pass now, generated trees unchanged. Prior d0af50 reports retained; no cross-build count aggregation. Mobile home/desktop privacy broad-layout screenshots inspected. This supersedes older common-candidate identity below only for declared local scopes; inconsistent imported states, wider workflows/manual contrast/real fonts/zoom/AT/installed/deployed/remote/vendor/legal/operational/provenance acceptance remains OPEN. Details p00-current-candidate-verification.md; P00 NO_GO/P01 not started, nothing deployed.
+
+Common-candidate local verification now covers all five declared browser suites on web indexd0af50e160fdc81f24b2a7e4104738222b87c6a2ea8624dac0696591236339f4:133 scans/27519passing/zero detected violations/1098 incomplete color-contrast occurrences OPEN. Workspace types/API build/isolated codegen/built mock API/wrappers pass; two identical source-exact extension packages and fresh469-version inventory/SBOM verified. Scope/artifact fingerprints and remaining owner-bound acceptance: p00-current-candidate-verification.md. This is not installed/deployed/full manual acceptance; P00 remains NO_GO.
+
+Latest native-keyboard checkpoint: mobile Tab scrolling reproduced a real tooltip dismissal, corrected with bounded delayed focus opening and cancellable activation generation.40 focused/431 Node+four TS tests, web types/build pass. Final37-state --variants run:7075passing/zero detected violations/376incomplete occurrences for manual review, stable indexd0af50e160fdc81f24b2a7e4104738222b87c6a2ea8624dac0696591236339f4. Native Tab order/mobile autoscroll/own visible description/Escape cleanup/Enter without refocus pass; local screenshot inspected. This supersedes31-state keyboard limitation below for the three tested legacy approval fixtures only; not complete keyboard workflow, assistive-technology or deployed acceptance. No deployment.
+
+Latest superseding local tooltip QA: fresh427 Node+four TS baseline and36 focused tests pass; final31-state --variants browser run exits0,5884 passing checks/zero detected violations/312 incomplete nodes requiring manual review. Candidate index65cc6de878efb1e85e366dfdaf95864ab68a7188dec50269a4616a2694f27cd2. Focus/Escape/hover/repeated associations/emulated touch/outside dismissal verified on synthetic fixtures; mobile popup inspected. This supersedes prior tooltip-pending status only, not installed/deployed acceptance or whole-project accessibility. No deployment initiated; P00 NO_GO remains.
+
+Deployment identity update: Kevin reports current Vercel commit 7d6f53a5cbb5da8bdb1865b5e299ea90c9430994. Actual git show confirms neither Vercel config at that revision contains a headers block. Header corrections are present only in the current uncommitted candidate. The previously requested SHA is now operator-supplied; effective Vercel project root/configuration and approved rollout acceptance remain pending. No deployment was initiated. Earlier operator records below retain their original missing-SHA scope.
+
+Latest local legacy-approval QA: bounded/large/zero renderer-only cases reproduced and corrected title/price contrast and mobile history-label contact. Final16-view --variants check passes with129 incomplete nodes requiring manual review;424 Node+four TS baseline and web types/build pass. This is not deployed/installed acceptance; remaining tooltip/card/branch/manual coverage is documented in docs/p00-web-contrast-check.md.
+
+This current checkpoint supplements the historical operator records below; it does not overwrite them or establish release approval. Current local source candidate remains uncommitted on codex/vnext-p00-baseline at base HEAD7d6f53a5cbb5da8bdb1865b5e299ea90c9430994. Workspace typecheck, API build, isolated full generated drift and built mock API/wrapper smoke freshly pass. Full and explicit development dependency audits report zero advisories at this check. Local runtime/browser checkpoints are documented separately in ../.compliance/VNEXT_P00_BASELINE.md; they are not installed or deployed acceptance.
+
+Safe public header recheck: GET https://sigil.s3ntrylabs.com/ and /api/healthz both return200. Root only has HSTS among the inspected headers; CSP, X-Content-Type-Options, X-Frame-Options and Referrer-Policy are absent. Health has CSP, nosniff, SAMEORIGIN and no-referrer. Root rollout verification remains FAILED/OPEN despite matching local Vercel configurations/tests. Next operator evidence: deployed Git SHA/deployment link, effective project root/configuration, then an explicitly approved corrected rollout and root/API/header recheck. No AI request, real user record access or production operation was performed by this check.
+
+Known full Ethereum-mainnet transaction controls, carried from the canonical roadmap and earlier accepted focused test, not guessed from screenshots or rerun today:
+
+| Control | Complete input | Expected scope |
+| --- | --- | --- |
+| Aave current-only ABI/token evidence | `0x431294ff0238c1b66a8e85bf08210825606cbf3bde284345ed2a02cf950145ac` | Qualified decoded intent/reported token state; current ABI is not historical implementation authentication, signing clearance or a balance-delta assessment. |
+| Euler exact historical exploit | `0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d` | Existing source-backed exploit_execution attribution retained; not proof of current exploitability or this user's loss. |
+
+Use a private window only after recording deployed SHA/time/network. A new analysis may use the configured paid provider, so do not run it solely to repeat this documentation checkpoint. No wallet/signature/approval is required. Full WETH/Uniswap transaction hashes still must come from the original explorer links; addresses below remain separate contract controls. P00 organizational/installed/manual gates remain OPEN/NO_GO.
+
 Status: Advisory-only version 1.0.4 is packaged locally, pending release, and not yet published. The historical published Store build is not evidence that this update is deployed. Production and installed-build manual QA remain pending. Synthetic desktop/mobile checks passed locally; see `.compliance/ANALYSIS_QUALITY_2026-10-07.md`.
 
 ## Next Operator Round After Vercel Ready
@@ -189,9 +218,9 @@ The installed Chrome Web Store build cannot be installed and driven from this en
 
 ## Manual Installed-Store QA Script
 
-Run this against the identified 1.0.3 candidate in a test profile, then repeat against the installed Store update after publication. Record the version, wallet, dApp, and network; do not report the historical Store build as verification of the pending update.
+Run this against the identified 1.0.4 candidate in a test profile, then repeat against the installed Store update after publication. Record the version, candidate hash, wallet, dApp, and network; do not report the historical Store build as verification of the pending update. Current gate consolidation: [P00 ledger](../.compliance/VNEXT_P00_BASELINE.md).
 
-1. Install the identified candidate or published update and confirm its version is 1.0.3.
+1. Install the identified candidate or published update and confirm its version is 1.0.4.
 2. Open the popup and confirm the API endpoint is `https://sigil.s3ntrylabs.com`.
 3. Switch Alert Sensitivity between Quiet, Standard, and Strict; confirm settings persist and affect alerts only.
 4. Set Notification Policy to Critical only, then Critical + high risk; confirm settings persist.

@@ -2,6 +2,8 @@
 
 ## Must Pass Before Release
 
+Current consolidation (2026-10-09): see [P00 gate evidence ledger](VNEXT_P00_BASELINE.md). Extension candidate is 1.0.4; older package evidence below is historical, not installed/Store approval. `NO_GO` unchanged.
+
 - [ ] Deploy and live-test evidence-first transaction analysis: Euler curated example versus unrelated transaction, zero native value with receipt token transfers, missing/reverted receipt and explorer failure. Confirm coverage is visible and no unsupported safety/public-selector/compiler claims occur. Local regression verification is not production AI-quality sign-off; internal tracing remains unimplemented.
 
 - [x] Remove page-event wallet authorization; independently test provider preservation and bounded best-effort advisory observations. Hostile-page warning suppression remains an explicitly disclosed limitation.
@@ -21,7 +23,7 @@
 - [ ] Complete asset/license clearance, signed provenance and installed-profile QA.
 - [ ] Test production headers, CORS, rate limits, health endpoints and deletion/retention behavior.
 - [x] Generate deterministic v1.0.3 ZIP and SHA-256 evidence with a runtime-file allowlist.
-- [ ] Submit v1.0.3 with updated advisory disclosures after release-gate approval.
+- [ ] Submit the current v1.0.4 candidate with updated advisory disclosures after release-gate approval; verify actual installed publication.
 - [x] Operator confirms Production secret/retention setup, deployment `d03a89c` Ready and daily cron job visible in Vercel.
 - [x] Operator confirms integrated Neon Free plan and 6-hour project History Window. Other backup copies, region and contractual retention remain unverified.
 - [x] Operator subsequently confirms Neon region AWS `us-east-1` (N. Virginia), USA. Region information is now complete; applicable US transfer safeguards/contract evidence remain open.

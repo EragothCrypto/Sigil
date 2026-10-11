@@ -5,6 +5,7 @@ import path from "node:path";
 import vm from "node:vm";
 import ts from "../node_modules/typescript/lib/typescript.js";
 import { generate } from "../lib/api-spec/node_modules/orval/dist/index.mjs";
+import { compareGeneratedTrees } from "./codegen-drift.mjs";
 
 const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, "..");
@@ -60,4 +61,16 @@ assert.match(record, /input:\s*string/);
 const client = await readFile(path.join(config["api-client-react"].output.workspace, "generated/api.ts"), "utf8");
 assert.ok(client.includes("`/api/sigil/history?id=${encodeURIComponent(id)}`"));
 assert.ok(!client.includes("`/api/sigil/history/${id}`"));
-console.log("AnalysisRecord retains required input; committed generated files were not modified");
+for (const packageName of ["api-client-react", "api-zod"]) {
+  const packageRoot = path.join(root, "lib", packageName);
+  const drift = await compareGeneratedTrees(
+    path.join(packageRoot, "tmp/codegen/generated"),
+    path.join(packageRoot, "src/generated"),
+    { relocatedMutator: packageName === "api-client-react" },
+  );
+  assert.deepEqual(drift, [], `${packageName}: generated output drift (paths only)`);
+}
+const generatedIndex = await readFile(path.join(config.zod.output.workspace, "index.ts"), "utf8");
+const committedIndex = await readFile(path.join(root, "lib/api-zod/src/index.ts"), "utf8");
+assert.equal(generatedIndex.replace(/\r\n/g, "\n"), committedIndex.replace(/\r\n/g, "\n"), "api-zod: generated export index drift");
+console.log("All generated trees and Zod index match; required input/history retained; committed files were not modified");

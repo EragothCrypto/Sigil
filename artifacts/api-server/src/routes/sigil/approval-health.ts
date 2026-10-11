@@ -145,17 +145,6 @@ export function normalizeApprovalLogs(
   return [...latestByPair.values()].filter((approval) => approval.amount > 0n);
 }
 
-function amountLabel(amount: bigint, isUnlimited: boolean): string {
-  if (isUnlimited) return "Unlimited";
-  const asText = amount.toString();
-  if (asText.length > 24) {
-    const whole = amount / 10n ** 18n;
-    const fraction = ((amount % 10n ** 18n) / 10n ** 14n).toString().padStart(4, "0");
-    return `${whole.toString()}.${fraction} token units`;
-  }
-  return asText;
-}
-
 function riskLevel(score: number): ApprovalHealthItem["riskLevel"] {
   if (score >= 85) return "critical";
   if (score >= 65) return "high";
@@ -164,10 +153,10 @@ function riskLevel(score: number): ApprovalHealthItem["riskLevel"] {
 }
 
 function recommendation(level: ApprovalHealthItem["riskLevel"]): string {
-  if (level === "critical") return "Revoke this approval unless you explicitly need it right now.";
-  if (level === "high") return "Review this approval and revoke it after use if it is not actively needed.";
-  if (level === "medium") return "Keep this only if you still use the dApp or token flow regularly.";
-  return "Lower priority, but still worth reviewing during wallet cleanup.";
+  if (level === "critical") return "Prioritize this recorded approval event; verify the current allowance before deciding whether to revoke.";
+  if (level === "high") return "Review this recorded approval event and verify the current allowance before deciding whether to revoke.";
+  if (level === "medium") return "Review this recorded approval event; verify the current allowance against your intended use.";
+  return "Lower event-review priority; the current allowance and wallet safety are not established.";
 }
 
 function explorerUrl(network: string, address: string): string {
@@ -199,7 +188,7 @@ export function scoreApproval(approval: RawApproval): ApprovalHealthItem {
     spender: approval.spender,
     spenderEntity: entity,
     amountRaw: approval.amount.toString(),
-    amountLabel: amountLabel(approval.amount, isUnlimited),
+    amountLabel: approval.amount.toString(),
     isUnlimited,
     riskScore: score,
     riskLevel: level,

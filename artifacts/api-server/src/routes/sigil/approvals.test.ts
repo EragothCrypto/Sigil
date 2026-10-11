@@ -52,3 +52,12 @@ assert.equal(scored.isUnlimited, true);
 assert.equal(scored.riskLevel, "medium", "trusted unlimited approvals should be flagged without panic");
 assert.equal(scored.spenderEntity?.name, "Uniswap V2 Router");
 assert.ok(scored.revokeUrl.includes("chainId=1"));
+
+assert.equal(scored.amountLabel, BigInt(maxUint).toString(), "No token decimals were established; the MAX event value must remain raw");
+assert.match(scored.recommendation, /verify (?:the )?current allowance/i);
+for (const amount of [500000000n, 999999999999999999999999999n, 1000000000000000000000000000000n]) {
+  const raw = scoreApproval({ token, spender, amount, blockNumber: 16n, transactionHash: logs[0].transactionHash,
+    timestamp: null, network: 'mainnet', wallet: owner });
+  assert.equal(raw.amountLabel, amount.toString(), "An event value must not assume18 decimals or effective unlimited permission");
+  assert.match(raw.recommendation, /current allowance/i);
+}

@@ -2,6 +2,7 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { MotionConfig } from "framer-motion";
 
 import { Layout } from "@/components/layout/Layout";
 import Home from "@/pages/home";
@@ -12,6 +13,7 @@ import ExtensionPage from "@/pages/extension";
 import ApprovalsPage from "@/pages/approvals";
 import WatchlistPage from "@/pages/watchlist";
 import WalletMonitorPage from "@/pages/wallet-monitor";
+import SolanaMonitorPage from "@/pages/solana-monitor";
 import SitesPage from "@/pages/sites";
 import OnboardingPage from "@/pages/onboarding";
 import { CookiePage, ImpressumPage, PrivacyPage, TermsPage } from "@/pages/legal";
@@ -32,6 +34,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/approvals" component={ApprovalsPage} />
       <Route path="/monitor" component={WalletMonitorPage} />
+      <Route path="/solana" component={SolanaMonitorPage} />
       <Route path="/watchlist" component={WatchlistPage} />
       <Route path="/sites" component={SitesPage} />
       <Route path="/simulate" component={SimulatePage} />
@@ -51,6 +54,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <MotionConfig reducedMotion="user">
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <Layout>
@@ -59,6 +63,7 @@ function App() {
         </WouterRouter>
         <Toaster />
       </TooltipProvider>
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

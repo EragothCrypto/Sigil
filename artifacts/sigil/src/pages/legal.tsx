@@ -31,9 +31,9 @@ function LegalShell({
   return (
     <div className="w-full max-w-4xl mx-auto pb-24">
       <div className="mb-8">
-        <p className="text-xs font-mono uppercase tracking-widest text-primary/55 mb-3">{eyebrow}</p>
+        <p className="text-xs font-mono uppercase tracking-widest text-primary-text mb-3">{eyebrow}</p>
         <h1 className="text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight">{title}</h1>
-        <p className="mt-4 text-sm text-white/40">Last updated: September 30, 2026</p>
+        <p className="mt-4 text-sm text-subtle">Last updated: September 30, 2026</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-8 items-start">
@@ -44,7 +44,7 @@ function LegalShell({
               href={href}
               className="flex items-center gap-2 rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2 text-sm text-white/55 hover:text-white hover:border-primary/20 transition-colors"
             >
-              <Icon className="w-4 h-4 text-primary/55" />
+              <Icon className="w-4 h-4 text-primary-text" />
               {label}
             </Link>
           ))}
@@ -73,7 +73,7 @@ function OperatorBlock() {
       <p className="font-display font-bold text-white">{OPERATOR.name}</p>
       <p className="text-white/60 mb-2">{OPERATOR.brand}</p>
       <div className="flex gap-2 text-white/60">
-        <MapPin className="w-4 h-4 mt-1 text-primary/70 shrink-0" />
+        <MapPin className="w-4 h-4 mt-1 text-primary-text shrink-0" />
         <p>
           {OPERATOR.addressLine1}<br />
           {OPERATOR.addressLine2}<br />
@@ -82,10 +82,10 @@ function OperatorBlock() {
         </p>
       </div>
       <div className="flex gap-2 text-white/60 mt-3">
-        <Mail className="w-4 h-4 mt-1 text-primary/70 shrink-0" />
+        <Mail className="w-4 h-4 mt-1 text-primary-text shrink-0" />
         <p>
-          Email: <a className="text-primary hover:text-primary/80" href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a><br />
-          Website: <a className="text-primary hover:text-primary/80" href={OPERATOR.website} target="_blank" rel="noopener noreferrer">{OPERATOR.website}</a>
+          Email: <a className="text-primary-text underline underline-offset-4 hover:text-primary-text" href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a><br />
+          Website: <a className="text-primary-text underline underline-offset-4 hover:text-primary-text" href={OPERATOR.website} target="_blank" rel="noopener noreferrer">{OPERATOR.website}</a>
         </p>
       </div>
     </div>
@@ -102,7 +102,7 @@ export function ImpressumPage() {
       <Section title="Kontakt">
         <p>
           Bei rechtlichen Fragen sowie Datenschutz- und Sicherheitsanfragen erreichen Sie uns unter{' '}
-          <a className="text-primary hover:text-primary/80" href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>.
+          <a className="text-primary-text underline underline-offset-4 hover:text-primary-text" href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>.
         </p>
       </Section>
 
@@ -211,7 +211,7 @@ export function PrivacyPage() {
           the competent authority.
         </p>
         <p>
-          Send requests to <a className="text-primary hover:text-primary/80" href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>.
+          Send requests to <a className="text-primary-text underline underline-offset-4 hover:text-primary-text" href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>.
         </p>
       </Section>
 
@@ -267,7 +267,7 @@ export function TermsPage() {
       <Section title="Contact">
         <p>
           Questions about these terms can be sent to{' '}
-          <a className="text-primary hover:text-primary/80" href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>.
+          <a className="text-primary-text underline underline-offset-4 hover:text-primary-text" href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>.
         </p>
       </Section>
     </LegalShell>

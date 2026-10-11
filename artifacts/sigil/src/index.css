@@ -16,8 +16,10 @@
   --color-card-foreground: #f0ecff;
   --color-card-border: rgba(139, 92, 246, 0.18);
 
-  --color-primary: #8b5cf6;
+  --color-primary: #7c3aed;
   --color-primary-foreground: #ffffff;
+  --color-primary-text: #c4b5fd;
+  --color-subtle: #b3acc7;
 
   --color-secondary: rgba(139, 92, 246, 0.08);
   --color-secondary-foreground: #c4b5fd;
@@ -46,6 +48,43 @@
 
 :root {
   color-scheme: dark;
+}
+
+:focus-visible {
+  outline: 2px solid #fff !important;
+  outline-offset: 3px;
+}
+
+nav[aria-label="Main navigation"] a:focus-visible {
+  outline-offset: -2px;
+}
+
+#main-content {
+  scroll-margin-top: 88px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: #06040f;
+  color: #fff;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @layer base {

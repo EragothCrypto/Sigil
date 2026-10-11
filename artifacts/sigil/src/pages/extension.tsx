@@ -15,7 +15,7 @@ const STEPS: Array<{ num: string; title: string; desc: string; action?: ReactNod
         href={CHROME_STORE_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-primary border border-primary/25 bg-primary/8 hover:bg-primary/15 transition-all"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-primary-text border border-primary/25 bg-primary/8 hover:bg-primary/15 transition-all"
       >
         <Store className="w-4 h-4" />
         Chrome Web Store
@@ -40,7 +40,7 @@ const STEPS: Array<{ num: string; title: string; desc: string; action?: ReactNod
       <a
         href={EXTENSION_ZIP}
         download="sigil-extension.zip"
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-white/70 border border-white/12 bg-white/[0.04] hover:border-primary/25 hover:text-primary transition-all"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-white/70 border border-white/12 bg-white/[0.04] hover:border-primary/25 hover:text-primary-text transition-all"
       >
         <Download className="w-4 h-4" />
         sigil-extension.zip
@@ -57,7 +57,7 @@ const STEPS: Array<{ num: string; title: string; desc: string; action?: ReactNod
 const FEATURES = [
   {
     icon: Zap,
-    color: "text-primary",
+    color: "text-primary-text",
     bg: "bg-primary/10",
     border: "border-primary/15",
     title: "Reviews Compatible Wallet Requests",
@@ -108,7 +108,7 @@ export default function ExtensionPage() {
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="text-center pt-10 space-y-6"
       >
-        <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-mono font-semibold uppercase tracking-widest">
+        <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary-text text-xs font-mono font-semibold uppercase tracking-widest">
           <Puzzle className="w-3.5 h-3.5" />
           Browser Extension
         </div>
@@ -124,7 +124,7 @@ export default function ExtensionPage() {
           </span>
         </h1>
 
-        <p className="text-lg text-white/40 max-w-xl mx-auto leading-relaxed">
+        <p className="text-lg text-subtle max-w-xl mx-auto leading-relaxed">
           Sigil reviews compatible wallet requests and shows advisory risk context while you evaluate them in your wallet.
         </p>
 
@@ -140,7 +140,7 @@ export default function ExtensionPage() {
             <Store className="relative z-10 w-4 h-4" />
             <span className="relative z-10">Install from Chrome Web Store</span>
           </a>
-          <div className="flex items-center gap-2 text-sm text-white/30">
+          <div className="flex items-center gap-2 text-sm text-subtle">
             <Chrome className="w-4 h-4" />
             Chrome & Chromium-based
           </div>
@@ -166,7 +166,7 @@ export default function ExtensionPage() {
                 </div>
                 <div>
                   <h3 className="font-display font-semibold text-white text-sm mb-1.5">{f.title}</h3>
-                  <p className="text-sm text-white/35 leading-relaxed">{f.desc}</p>
+                  <p className="text-sm text-subtle leading-relaxed">{f.desc}</p>
                 </div>
               </motion.div>
             );
@@ -190,17 +190,17 @@ export default function ExtensionPage() {
                 <div className="w-12 h-12 rounded-2xl bg-white/3 border border-white/6 flex items-center justify-center text-xl">
                   {step.icon}
                 </div>
-                <p className="text-xs text-white/35 whitespace-pre-line leading-snug">{step.label}</p>
+                <p className="text-xs text-subtle whitespace-pre-line leading-snug">{step.label}</p>
               </div>
               {i < arr.length - 1 && (
-                <ArrowRight className="w-4 h-4 text-white/12 shrink-0 hidden md:block" />
+                <ArrowRight className="w-4 h-4 text-subtle shrink-0 hidden md:block" />
               )}
             </div>
           ))}
         </div>
       </section>
 
-      <p className="text-sm text-white/35 leading-relaxed border border-white/8 bg-white/[0.03] rounded-xl p-4">
+      <p className="text-sm text-subtle leading-relaxed border border-white/8 bg-white/[0.03] rounded-xl p-4">
         Automatic observation is best-effort and can be bypassed or suppressed by a hostile page. The wallet remains the only place that approves or rejects an action, and confirmation may happen before Sigil finishes an analysis.
       </p>
 
@@ -217,20 +217,20 @@ export default function ExtensionPage() {
               className="flex gap-5 items-start p-5 rounded-2xl border border-white/5 bg-white/2 hover:border-primary/15 transition-colors group"
             >
               <div className="w-10 h-10 rounded-xl bg-primary/8 border border-primary/15 flex items-center justify-center shrink-0">
-                <span className="text-xs font-mono font-bold text-primary">{step.num}</span>
+                <span className="text-xs font-mono font-bold text-primary-text">{step.num}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-display font-semibold text-white/90 text-sm mb-1">{step.title}</h3>
-                <p className="text-sm text-white/35 leading-relaxed mb-2">{step.desc}</p>
+                <p className="text-sm text-subtle leading-relaxed mb-2">{step.desc}</p>
                 {step.action}
                 {'code' in step && step.code && (
-                  <div className="inline-flex items-center gap-2 bg-white/4 border border-white/8 rounded-lg px-3 py-1.5 font-mono text-xs text-primary/70 mt-1">
+                  <div className="inline-flex items-center gap-2 bg-white/4 border border-white/8 rounded-lg px-3 py-1.5 font-mono text-xs text-primary-text mt-1">
                     <Code2 className="w-3 h-3 shrink-0" />
                     {step.code}
                   </div>
                 )}
               </div>
-              <CheckCircle2 className="w-4 h-4 text-white/8 shrink-0 mt-1 group-hover:text-primary/20 transition-colors" />
+              <CheckCircle2 className="w-4 h-4 text-white/8 shrink-0 mt-1 group-hover:text-primary-text transition-colors" />
             </motion.div>
           ))}
         </div>
@@ -247,7 +247,7 @@ export default function ExtensionPage() {
             >
               <span className="text-2xl">{w.emoji}</span>
               <span className="text-sm font-semibold text-white/80">{w.name}</span>
-              <span className="text-[10px] text-white/25 font-mono">{w.note}</span>
+              <span className="text-[10px] text-subtle font-mono">{w.note}</span>
             </div>
           ))}
         </div>
@@ -261,7 +261,7 @@ function SectionLabel({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-4">
       <div className="h-px flex-1 bg-white/5" />
-      <span className="text-[10px] font-mono text-white/25 uppercase tracking-widest">{label}</span>
+      <span className="text-[10px] font-mono text-subtle uppercase tracking-widest">{label}</span>
       <div className="h-px flex-1 bg-white/5" />
     </div>
   );

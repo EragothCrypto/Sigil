@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "test:baseline": "node --test \"scripts/*.test.mjs\" \"artifacts/api-server/src/**/*.test.cjs\" \"artifacts/sigil/*.test.cjs\" \"artifacts/sigil-extension/*.test.cjs\" && pnpm --filter @workspace/scripts exec tsx ../artifacts/api-server/src/routes/sigil/approvals.test.ts && pnpm --filter @workspace/scripts exec tsx ../artifacts/sigil/src/lib/watchlist.test.ts && pnpm --filter @workspace/scripts exec tsx ../artifacts/sigil/src/lib/wallet-monitor.test.ts && pnpm --filter @workspace/scripts exec tsx ../artifacts/sigil/src/lib/site-reputation.test.ts",
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent $npm_execpath\" in *pnpm*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",

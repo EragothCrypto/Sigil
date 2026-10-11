@@ -31,6 +31,8 @@ import type {
   SimulateTransactionBody,
   SimulateTransactionV2Body,
   SimulationResultV2,
+  SolanaScanBody,
+  SolanaScanReport,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";

@@ -55,7 +55,7 @@ export function ApprovalInspector({ info }: { info: ApprovalInfo }) {
     ? { bg: "bg-red-500/8",     border: "border-red-500/30",     header: "text-red-400",     glow: "shadow-red-500/15"     }
     : isUnlimited
     ? { bg: "bg-amber-500/8",   border: "border-amber-500/25",   header: "text-amber-400",   glow: "shadow-amber-500/10"   }
-    : { bg: "bg-primary/5",     border: "border-primary/20",     header: "text-primary",     glow: "shadow-primary/5"      };
+    : { bg: "bg-primary/5",     border: "border-primary/20",     header: "text-primary-text", glow: "shadow-primary/5"      };
 
   const titleIcon = isRevoke
     ? <CheckCircle2 className="w-5 h-5 text-emerald-400" />
@@ -106,7 +106,7 @@ export function ApprovalInspector({ info }: { info: ApprovalInfo }) {
                   }`}>
                     Broad token access may be requested
                   </p>
-                  <p className="text-xs text-white/40 mt-0.5 font-mono">
+                  <p className="text-xs text-subtle mt-0.5 font-mono">
                     Token currently trading at{' '}
                     <span className="text-white/60 font-bold">
                       ${info.tokenPriceUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} per token
@@ -120,7 +120,7 @@ export function ApprovalInspector({ info }: { info: ApprovalInfo }) {
                     <span className="text-white font-bold text-base">{info.approvalUsdLabel}</span>
                     {' '}at current market price
                   </p>
-                  <p className="text-xs text-white/35 mt-0.5 font-mono">
+                  <p className="text-xs text-subtle mt-0.5 font-mono">
                     {info.amountFormatted} tokens × ${info.tokenPriceUsd.toLocaleString('en-US', {
                       minimumFractionDigits: 2, maximumFractionDigits: 6
                     })} per token
@@ -245,9 +245,9 @@ export function ApprovalInspector({ info }: { info: ApprovalInfo }) {
               {info.priorApprovals.map((prior) => (
                 <div
                   key={prior.id}
-                  className="flex items-center justify-between bg-black/40 border border-white/8 rounded-xl px-4 py-3 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-3 bg-black/40 border border-white/8 rounded-xl px-4 py-3 text-sm"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 flex-wrap items-center gap-3">
                     <span className={`w-2 h-2 rounded-full ${prior.isUnlimited ? "bg-amber-400" : "bg-primary"}`} />
                     <span className="text-white/80 font-mono">
                       {prior.isUnlimited ? "Unlimited approval" : `${prior.amountFormatted} tokens`}

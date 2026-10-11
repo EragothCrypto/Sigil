@@ -127,14 +127,25 @@ export function updateWatchlistEntry(entries: WatchlistEntry[], updated: Watchli
   return entries.map((entry) => (entry.id === updated.id ? { ...updated, updatedAt: nowIso() } : entry));
 }
 
+function parseSavedApprovalSummary(value: unknown): WatchlistEntry["approvalSummary"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const summary = value as Record<string, unknown>;
+  const keys = ["healthScore", "totalActive", "unlimited", "critical", "high"] as const;
+  if (keys.some(key => typeof summary[key] !== "number" || !Number.isSafeInteger(summary[key]) || (summary[key] as number) < 0)) return undefined;
+  const { healthScore, totalActive, unlimited, critical, high } = summary as Record<typeof keys[number], number>;
+  if (healthScore > 100 || unlimited > totalActive || critical > totalActive - high) return undefined;
+  return { healthScore, totalActive, unlimited, critical, high };
+}
+
 export function importWatchlistEntries(value: unknown): WatchlistEntry[] {
   if (!Array.isArray(value)) return [];
 
   const imported: WatchlistEntry[] = [];
+  const ids = new Set<string>();
   for (const item of value) {
     if (!item || typeof item !== "object") continue;
     const candidate = item as Partial<WatchlistEntry>;
-    if (!candidate.address || !isWatchlistAddress(candidate.address)) continue;
+    if (typeof candidate.address !== "string" || !isWatchlistAddress(candidate.address)) continue;
     if (!candidate.network || !NETWORKS.has(candidate.network)) continue;
     if (!candidate.kind || !KINDS.has(candidate.kind)) continue;
 
@@ -142,20 +153,36 @@ export function importWatchlistEntries(value: unknown): WatchlistEntry[] {
     if (imported.some((entry) => entry.network === candidate.network && entry.address === address)) continue;
 
     const timestamp = nowIso();
+    const approvalSummary = parseSavedApprovalSummary(candidate.approvalSummary);
+    const savedStatus = candidate.status;
+    const coverageStatus = candidate.coverageStatus === "unavailable" || savedStatus === "unavailable"
+      ? "unavailable"
+      : candidate.coverageStatus === "limited" && approvalSummary && ["clean", "review", "high-risk"].includes(savedStatus ?? "")
+        ? "limited"
+        : undefined;
+    const status = coverageStatus === "unavailable" ? "unavailable"
+      : coverageStatus === "limited" && approvalSummary ? statusFromApprovalSummary({ coverageStatus, ...approvalSummary })
+        : "unchecked";
+    const fallbackId = `${candidate.network}:${address}`;
+    let id = typeof candidate.id === "string" && candidate.id ? candidate.id : fallbackId;
+    if (ids.has(id)) {
+      id = fallbackId;
+      let suffix = 1;
+      while (ids.has(id)) id = `${fallbackId}:${suffix++}`;
+    }
+    ids.add(id);
     imported.push({
-      id: typeof candidate.id === "string" && candidate.id ? candidate.id : `${candidate.network}:${address}`,
+      id,
       label: typeof candidate.label === "string" && candidate.label.trim() ? candidate.label.trim() : "Imported address",
       address,
       network: candidate.network,
       kind: candidate.kind,
-      status: candidate.status && ["unchecked", "clean", "review", "high-risk", "unavailable"].includes(candidate.status)
-        ? candidate.status
-        : "unchecked",
+      status,
       createdAt: typeof candidate.createdAt === "string" ? candidate.createdAt : timestamp,
       updatedAt: typeof candidate.updatedAt === "string" ? candidate.updatedAt : timestamp,
       lastCheckedAt: typeof candidate.lastCheckedAt === "string" ? candidate.lastCheckedAt : undefined,
-      approvalSummary: candidate.approvalSummary,
-      coverageStatus: candidate.coverageStatus,
+      approvalSummary,
+      coverageStatus,
       coverageMessage: typeof candidate.coverageMessage === "string" ? candidate.coverageMessage : undefined,
     });
   }
@@ -165,4 +192,10 @@ export function importWatchlistEntries(value: unknown): WatchlistEntry[] {
 
 export function exportWatchlistEntries(entries: WatchlistEntry[]): string {
   return JSON.stringify(entries, null, 2);
+}
+
+export function mergeWatchlistEntries(entries: WatchlistEntry[], value: unknown): WatchlistEntry[] {
+  const current = importWatchlistEntries(entries);
+  const merged = importWatchlistEntries([...current, ...(Array.isArray(value) ? value : [])]);
+  return [...merged.slice(current.length).reverse(), ...merged.slice(0, current.length)];
 }

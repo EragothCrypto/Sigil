@@ -633,6 +633,163 @@ export interface AnalysisRecord {
   hallOfShameLabel?: string;
 }
 
+export type SolanaScanBodyCluster =
+  (typeof SolanaScanBodyCluster)[keyof typeof SolanaScanBodyCluster];
+
+export const SolanaScanBodyCluster = {
+  "mainnet-beta": "mainnet-beta",
+  devnet: "devnet",
+} as const;
+
+export interface SolanaScanBody {
+  /** @pattern ^[1-9A-HJ-NP-Za-km-z]{32,44}$ */
+  wallet: string;
+  cluster: SolanaScanBodyCluster;
+}
+
+export type SolanaScanReportReportVersion =
+  (typeof SolanaScanReportReportVersion)[keyof typeof SolanaScanReportReportVersion];
+
+export const SolanaScanReportReportVersion = {
+  "solana-manual-v1": "solana-manual-v1",
+} as const;
+
+export type SolanaScanReportCluster =
+  (typeof SolanaScanReportCluster)[keyof typeof SolanaScanReportCluster];
+
+export const SolanaScanReportCluster = {
+  "mainnet-beta": "mainnet-beta",
+  devnet: "devnet",
+} as const;
+
+export type SolanaScanReportStatus =
+  (typeof SolanaScanReportStatus)[keyof typeof SolanaScanReportStatus];
+
+export const SolanaScanReportStatus = {
+  review: "review",
+  no_delegates_found: "no_delegates_found",
+  partial: "partial",
+  unavailable: "unavailable",
+} as const;
+
+export type SolanaScanReportCommitment =
+  (typeof SolanaScanReportCommitment)[keyof typeof SolanaScanReportCommitment];
+
+export const SolanaScanReportCommitment = {
+  finalized: "finalized",
+} as const;
+
+export type SolanaScanReportSlotRange = {
+  /**
+   * @minimum 0
+   * @maximum 9007199254740991
+   */
+  min: number;
+  /**
+   * @minimum 0
+   * @maximum 9007199254740991
+   */
+  max: number;
+} | null;
+
+export type SolanaScanReportCoverageItemStatus =
+  (typeof SolanaScanReportCoverageItemStatus)[keyof typeof SolanaScanReportCoverageItemStatus];
+
+export const SolanaScanReportCoverageItemStatus = {
+  complete: "complete",
+  partial: "partial",
+  unavailable: "unavailable",
+  unsupported: "unsupported",
+} as const;
+
+export type SolanaScanReportCoverageItem = {
+  program: string;
+  status: SolanaScanReportCoverageItemStatus;
+  /** @maxLength 120 */
+  reason: string;
+  /**
+   * @minimum 0
+   * @maximum 9007199254740991
+   * @nullable
+   */
+  slot: number | null;
+  /**
+   * @minimum 0
+   * @maximum 1000000
+   * @nullable
+   */
+  accountCount: number | null;
+};
+
+export type SolanaDelegateObservationState =
+  (typeof SolanaDelegateObservationState)[keyof typeof SolanaDelegateObservationState];
+
+export const SolanaDelegateObservationState = {
+  initialized: "initialized",
+  frozen: "frozen",
+} as const;
+
+export type SolanaDelegateObservationReviewReason =
+  (typeof SolanaDelegateObservationReviewReason)[keyof typeof SolanaDelegateObservationReviewReason];
+
+export const SolanaDelegateObservationReviewReason = {
+  ordinary_delegate_review: "ordinary_delegate_review",
+  frozen_account_review: "frozen_account_review",
+  delegate_present_no_current_spendable_units:
+    "delegate_present_no_current_spendable_units",
+} as const;
+
+export interface SolanaDelegateObservation {
+  /** @pattern ^[1-9A-HJ-NP-Za-km-z]{32,44}$ */
+  account: string;
+  /** @pattern ^[1-9A-HJ-NP-Za-km-z]{32,44}$ */
+  mint: string;
+  program: string;
+  /** @pattern ^[1-9A-HJ-NP-Za-km-z]{32,44}$ */
+  delegate: string;
+  /** @pattern ^(0|[1-9][0-9]{0,19})$ */
+  balanceRaw: string;
+  /** @pattern ^(0|[1-9][0-9]{0,19})$ */
+  delegatedRaw: string;
+  /** @pattern ^(0|[1-9][0-9]{0,19})$ */
+  spendableRaw: string;
+  state: SolanaDelegateObservationState;
+  /**
+   * @minimum 0
+   * @maximum 9007199254740991
+   */
+  slot: number;
+  reviewReason: SolanaDelegateObservationReviewReason;
+}
+
+export interface SolanaScanReport {
+  reportVersion: SolanaScanReportReportVersion;
+  /** @pattern ^[1-9A-HJ-NP-Za-km-z]{32,44}$ */
+  wallet: string;
+  cluster: SolanaScanReportCluster;
+  generatedAt: string;
+  status: SolanaScanReportStatus;
+  commitment: SolanaScanReportCommitment;
+  slotRange: SolanaScanReportSlotRange;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  accountsChecked: number;
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  coverage: SolanaScanReportCoverageItem[];
+  /** @maxItems 100 */
+  delegates: SolanaDelegateObservation[];
+  /**
+   * @maxItems 12
+   * @items.maxLength 500
+   */
+  limitations: string[];
+}
+
 export interface ErrorResponse {
   error: string;
   message: string;

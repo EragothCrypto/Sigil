@@ -1,12 +1,16 @@
 # Sigil Project Overview
 
-Stand: 7. Oktober 2026
+Stand: 9. Oktober 2026
 Produktions-URL: [sigil.s3ntrylabs.com](https://sigil.s3ntrylabs.com)  
 Chrome Web Store: [Sigil - Web3 Trust Layer](https://chromewebstore.google.com/detail/sigil-web3-trust-layer/klogkofhnlifhakklkjmoofhfopnhnkg)
 
 > Statushinweis: Dieses Dokument beschreibt den aktuellen Repository-Worktree. Findings-v2 und rein beratende Execution-Checks sind lokal implementiert; Extension 1.0.4 ist paketiert, aber noch nicht im Store veroeffentlicht oder produktiv/manuell geprueft. Lokale Typpruefungen, Builds und synthetische Desktop-/Mobil-Browsertests bestehen. Der historische Store-Build ist kein Nachweis fuer dieses Update. Die EU/DE-Audit-Entscheidung `NO_GO` bleibt bis zur Gate-Neubewertung und den offenen organisatorischen Nachweisen bestehen. Details: `.compliance/ANALYSIS_QUALITY_2026-10-07.md`.
 
 ## 1. README / Projektbeschreibung
+
+### Neue Produktplanung (2026-10-08)
+
+Der vorgeschlagene Umbau zum Cross-Chain-Wallet-Exposure-Monitor mit Solana als erster tief integrierter Monitoring-Chain ist in der [Sigil-vNext-Roadmap](docs/sigil-vnext-exposure-monitoring-roadmap.md) beschrieben. Sie konsolidiert die neue Produktspezifikation und die offenen EU/DE-Release-Gates in 21 abhaengigen Phasen. Das ist eine Planung, keine bereits implementierte Transformation oder Release-Freigabe; der bestehende Audit-Status `NO_GO` bleibt unveraendert. Wiederaufnahme und Anforderungszuordnung stehen unter `.planning/`.
 
 **Sigil** ist die Web3-Sicherheitsplattform von S3ntryLabs. Das Produkt soll Nutzern helfen, Wallet-, Vertrags- und Transaktionsrisiken zu verstehen, bevor sie eine Signatur oder Transaktion bestaetigen.
 
@@ -34,8 +38,8 @@ Im lokal implementierten Update wird der originale Wallet-Provider pro umschloss
 | Read-only Execution Check | Lokal implementiert; Produktionspruefung offen | Strukturiertes JSON kann einen blockgebundenen `eth_call` ausloesen. Reine Calldata/Prosa bleibt beratend; fehlende Daten werden als unavailable ausgewiesen. Keine vollstaendige Simulation, Balance-Deltas oder erfundenen Effekt-/Sicherheits-Scores. |
 | Contract Risk | Implementiert | Verifikations-, Bytecode-, Proxy-, bekannte Entitaeten- und Reputationssignale. |
 | Approval Inspector | Implementiert | Erkennt Approval-Operationen, Spender, unbegrenzte Freigaben und bekannte Gegenparteien. |
-| Approval Health Check | Implementiert | Scannt eine manuell eingegebene oeffentliche Wallet-Adresse und priorisiert aktive, riskante oder unbegrenzte Approvals. |
-| Wallet Monitor v1 | Implementiert | Lokale Watchlist, Approval-basierter Hygiene-Score und priorisierte "Fix this first"-Liste. |
+| Approval Health Check | Implementiert, begrenzte Event-Abdeckung | Priorisiert aus Approval-Events abgeleitete Kandidaten einer manuell eingegebenen Adresse. Keine vollstaendige Historie, aktuelle Allowance oder effektive Berechtigung nachgewiesen. |
+| Wallet Monitor v1 | Implementiert, manuell | Lokale Watchlist, manuell aktualisierte Approval-Event-Kandidaten und heuristischer Hygiene-Score; kein Hintergrund-Monitoring oder bestaetigter Exposure-Status. |
 | Address Watchlist | Implementiert | Wallets, Vaults, Multisigs und Contracts lokal speichern, aktualisieren sowie als JSON importieren/exportieren. |
 | Site Reputation | Implementiert | Schneller lokaler Heuristik-Check fuer bekannte Domains, verdachtige Clone-Muster und unbekannte Sites. |
 | History / Intel Feed | Lokal implementiert; Produktionspruefung offen | Oeffentliche Historie zeigt nur kuratierte Hall-of-Shame-Faelle. Nicht kuratierte gespeicherte Analysen sind ueber private UUID-Links abrufbar, nicht als globale Nutzerhistorie. Wer einen Link besitzt, kann das Ergebnis waehrend der Aufbewahrung abrufen; kein kontobasierter Zugriffsschutz. |
@@ -137,16 +141,16 @@ Nach Code- und Testbestand sind folgende End-to-End-Bausteine vorhanden:
 
 - Eingabe und Klassifikation von Transaction Hashes, Contract-Adressen und rohen Signing-/Transaktionsdaten.
 - Streaming-Analyse ueber `/api/sigil/analyze-stream` und normale Analyse ueber `/api/sigil/analyze`.
-- Deterministische Risiko-, Approval-, Pattern-, Known-Entity- und OFAC-Pruefungen mit AI-gestuetzter Erklaerung.
+- Strukturierte Findings-v2 mit deterministischer Evidenzvalidierung, Unsicherheitsgrenzen und AI-gestuetzter Auswahl/Erklaerung; lokale Entitaets- und historische Incident-Referenzen sind keine Live-Sanktionspruefung oder vollstaendige Exploit-Erkennung.
 - Abruf von EVM-Daten ueber RPC/Etherscan und Preisabfragen ueber CoinGecko.
 - Speicherung und Abruf von Analysen ueber PostgreSQL sowie Health-/Readiness-Endpunkte.
-- Approval Health Check mit Health Score, unbegrenzten Freigaben, Risikopriorisierung und Revoke.cash-Handoff.
+- Approval Health Check mit heuristischer Event-Priorisierung und Revoke.cash-Handoff; keine aktuelle Allowance-/Rechtebestaetigung.
 - Lokale Watchlist und Wallet Monitor v1 mit Import/Export und Fix-first-Priorisierung.
 - Lokaler Site-Reputation-Check und Copy/Paste-Klassifikation.
 - Onboarding-, Extension-, Legal-, History-, Simulation- und Analyseansichten in der Web-App.
 - Extension-Popup, lokale Historie, dApp-Session-Zusammenfassungen, optionale Settings-Synchronisierung und API-Handoff.
 - Lokal implementierte beratende Best-effort-Beobachtung kompatibler Wallet-Anfragen, ohne Wallet-Entscheidungsautoritaet; Analyse kann nach Prompt/Bestaetigung eintreffen.
-- Historisches Chrome-Store-Listing und produktive API-Domain-Konfiguration; Update 1.0.3 noch nicht veroeffentlicht.
+- Historisches Chrome-Store-Listing und produktive API-Domain-Konfiguration; aktueller Kandidat 1.0.4 noch ohne verifizierte Store-/Installed-Freigabe.
 
 Wichtige Einschraenkung: "Implementiert" bedeutet, dass der entsprechende Codepfad vorhanden und teilweise automatisiert getestet ist. Es bedeutet nicht, dass jeder externe Provider, jedes Netzwerk oder jeder produktive Browserpfad aktuell verifiziert ist. Am 30. September 2026 bestanden Workspace-Typecheck sowie API- und Web-Produktionsbuild; TLS-Verifikation blieb aktiviert. Produktive Wallet-, Datenbank- und Provider-Pruefungen stehen aus.
 
@@ -156,7 +160,7 @@ Wichtige Einschraenkung: "Implementiert" bedeutet, dass der entsprechende Codepf
 
 - Lokal implementiert: rein beratendes Modell, originaler Wallet-Provider exakt einmal und unabhaengig von Sigil; keine Blockier-, Proceed- oder Cancel-Autoritaet. Unterdrueckte oder gefaelschte Beobachtungen bleiben moeglich, steuern aber nicht die Wallet-Ausfuehrung.
 - Lokal implementiert: Untrusted-Observation-Gate mit Groessen-, Tiefen-, Alters-, Rate-, Queue- und Deduplication-Limits sowie Advisory-Overlay ohne Wallet-Steuerung und beobachtungsbezogenen Session-Zustaenden.
-- Lokal verifiziert: Update-Paket 1.0.3 zweimal reproduzierbar erzeugt; SHA-256 `9DB2340A093D84CB7155FBAB66C9FF3BEDBDB3223CDF3FABE3067B922CEF030B`. Store-Einreichung und Veroeffentlichung stehen aus.
+- Historischer Paketnachweis: Update 1.0.3 zweimal reproduzierbar erzeugt; SHA-256 `9DB2340A093D84CB7155FBAB66C9FF3BEDBDB3223CDF3FABE3067B922CEF030B`. Aktueller Kandidat ist 1.0.4; neue lokale Evidence-/CI-Checks und offene Rollout-Gates stehen im [P00-Ledger](.compliance/VNEXT_P00_BASELINE.md). Kein historischer Hash bestaetigt die aktuelle Store-Installation.
 - Ausstehend: Produktions-Smoke-Tests und manuelle QA im echten Chrome-Profil fuer kompatible Wallets, gefaelschte/unterdrueckte Beobachtungen, API-Ausfall, Trusted Lists und verspaetete Analyse.
 - Ausstehend: Security-Regressionsergebnisse und organisatorische Nachweise fuer die Neubewertung des EU/DE-Release-Gates konsolidieren. Lokale Implementierung allein hebt `NO_GO` nicht auf.
 

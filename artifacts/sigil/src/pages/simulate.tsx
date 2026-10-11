@@ -78,13 +78,13 @@ export default function SimulatePage() {
             <div className="flex items-center justify-between">
               <Link
                 href="/"
-                className="inline-flex items-center gap-2 text-sm text-white/35 hover:text-primary transition-colors group cursor-pointer font-mono"
+                className="inline-flex items-center gap-2 text-sm text-subtle hover:text-primary-text transition-colors group cursor-pointer font-mono"
               >
                 ← Back to Scanner
               </Link>
               <button
                 onClick={handleReset}
-                className="inline-flex items-center gap-2 text-sm text-white/35 hover:text-white/70 transition-colors font-mono"
+                className="inline-flex items-center gap-2 text-sm text-subtle hover:text-white/70 transition-colors font-mono"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Check another
@@ -105,7 +105,7 @@ export default function SimulatePage() {
           >
             {/* Header */}
             <div className="text-center space-y-4">
-              <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-mono font-semibold uppercase tracking-widest">
+              <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary-text text-xs font-mono font-semibold uppercase tracking-widest">
                 <Zap className="w-3.5 h-3.5" />
                 Read-only Execution Check
               </div>
@@ -118,7 +118,7 @@ export default function SimulatePage() {
                   Before Signing
                 </span>
               </h1>
-              <p className="text-base text-white/35 max-w-xl mx-auto leading-relaxed">
+              <p className="text-base text-subtle max-w-xl mx-auto leading-relaxed">
                 No complete execution simulation or signing clearance is available.
               </p>
             </div>
@@ -129,6 +129,7 @@ export default function SimulatePage() {
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <select
+                    id="execution-network"
                     value={network}
                     onChange={e => setNetwork(e.target.value as SimulateTransactionV2BodyNetwork)}
                     className="bg-white/4 border border-white/8 text-white/80 font-mono text-sm px-4 py-2.5 rounded-xl focus:outline-none focus:border-primary/40 appearance-none pr-8 cursor-pointer hover:bg-white/6 transition-colors tracking-wider"
@@ -137,9 +138,9 @@ export default function SimulatePage() {
                       <option key={n.value} value={n.value} className="bg-[#0e0a1e] text-white">{n.label}</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-subtle pointer-events-none" />
                 </div>
-                <span className="text-xs text-white/20 font-mono">Select network</span>
+                <label htmlFor="execution-network" className="text-xs text-subtle font-mono">Select network</label>
               </div>
 
               {/* Textarea */}
@@ -151,12 +152,14 @@ export default function SimulatePage() {
                 }}
               >
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                <label htmlFor="execution-input" className="sr-only">Read-only call input</label>
                 <textarea
+                  id="execution-input"
                   value={rawData}
                   onChange={e => setRawData(e.target.value)}
                   placeholder={`Paste any of these:\n• Raw hex calldata:  0x095ea7b3000000...\n• JSON tx object:   {"to":"0x...","data":"0x..."}\n• Wallet prompt:    "MetaMask is asking permission..."`}
                   rows={8}
-                  className="w-full bg-transparent px-5 py-5 text-white/80 font-mono text-sm focus:outline-none placeholder:text-white/15 resize-none leading-relaxed"
+                  className="w-full bg-transparent px-5 py-5 text-white/80 font-mono text-sm focus:outline-none placeholder:text-subtle resize-none leading-relaxed"
                 />
               </div>
 
@@ -164,10 +167,8 @@ export default function SimulatePage() {
               <button
                 onClick={handleSimulate}
                 disabled={!rawData.trim()}
-                className="relative w-full flex items-center justify-center gap-2.5 py-4 rounded-xl font-display font-bold text-base text-white uppercase tracking-wider transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed group overflow-hidden"
-                style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)' }}
+                className="relative w-full flex items-center justify-center gap-2.5 py-4 rounded-xl bg-primary hover:bg-[#6d28d9] font-display font-bold text-base text-white uppercase tracking-wider transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed group overflow-hidden"
               >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)' }} />
                 <Zap className="relative z-10 w-4 h-4" strokeWidth={2} />
                 <span className="relative z-10">Check Read-only Call</span>
                 <ArrowRight className="relative z-10 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -175,6 +176,7 @@ export default function SimulatePage() {
 
               {(simulateMutation.isError || invalidReport) && (
                 <motion.div
+                  role="alert"
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-center gap-3 p-4 bg-destructive/8 border border-destructive/20 rounded-xl text-destructive/90 font-mono text-sm"
@@ -187,7 +189,7 @@ export default function SimulatePage() {
 
             {/* Examples */}
             <div className="space-y-3">
-              <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest">Try an example</p>
+              <p className="text-[10px] font-mono text-subtle uppercase tracking-widest">Try an example</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {EXAMPLE_INPUTS.map((ex, i) => (
                   <button
@@ -195,8 +197,8 @@ export default function SimulatePage() {
                     onClick={() => setRawData(ex.value)}
                     className="text-left p-4 rounded-xl border border-white/5 bg-white/2 hover:bg-white/4 hover:border-primary/20 transition-all group"
                   >
-                    <span className="text-xs font-mono text-primary/60 font-semibold group-hover:text-primary transition-colors">{ex.label}</span>
-                    <p className="text-[10px] text-white/20 mt-1 font-mono truncate">{ex.value.substring(0, 28)}…</p>
+                    <span className="text-xs font-mono text-primary-text font-semibold group-hover:text-primary-text transition-colors">{ex.label}</span>
+                    <p className="text-[10px] text-subtle mt-1 font-mono truncate">{ex.value.substring(0, 28)}…</p>
                   </button>
                 ))}
               </div>

@@ -66,7 +66,7 @@ const DAILY_RULES = [
 ];
 
 const toneClass = {
-  primary: 'border-primary/20 bg-primary/10 text-primary',
+  primary: 'border-primary/20 bg-primary/10 text-primary-text',
   emerald: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300',
   amber: 'border-amber-500/20 bg-amber-500/10 text-amber-300',
   blue: 'border-sky-500/20 bg-sky-500/10 text-sky-300',
@@ -92,14 +92,14 @@ export default function OnboardingPage() {
         className="grid gap-8 pt-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end"
       >
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-mono font-semibold uppercase tracking-widest text-primary">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-mono font-semibold uppercase tracking-widest text-primary-text">
             <ListChecks className="h-3.5 w-3.5" />
             Two-minute safety setup
           </div>
           <h1 className="mt-6 max-w-3xl font-display text-4xl font-extrabold leading-tight tracking-tight text-white md:text-6xl">
             Understand wallet risk before the next click.
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/45 md:text-lg">
+          <p className="mt-5 max-w-2xl text-base leading-relaxed text-subtle md:text-lg">
             A compact first-run flow for approvals, signatures, Sigil verdicts, the Chrome extension, and wallet monitoring.
           </p>
         </div>
@@ -111,13 +111,13 @@ export default function OnboardingPage() {
             </div>
             <div>
               <p className="font-display text-sm font-semibold text-white">Daily signing rule</p>
-              <p className="text-sm text-white/40">If the request is vague, pause and scan.</p>
+              <p className="text-sm text-subtle">If the request is vague, pause and scan.</p>
             </div>
           </div>
           <div className="mt-5 grid gap-2">
             {DAILY_RULES.map((rule) => (
               <div key={rule} className="flex items-center gap-2 rounded-xl border border-white/6 bg-black/15 px-3 py-2 text-sm text-white/55">
-                <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+                <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-primary-text" />
                 {rule}
               </div>
             ))}
@@ -140,15 +140,15 @@ export default function OnboardingPage() {
                 <div className={`flex h-12 w-12 items-center justify-center rounded-xl border ${toneClass[lesson.tone as Tone]}`}>
                   <Icon className="h-5 w-5" />
                 </div>
-                <span className="font-mono text-xs font-bold text-white/25">{lesson.label}</span>
+                <span className="font-mono text-xs font-bold text-subtle">{lesson.label}</span>
               </div>
               <div>
                 <h2 className="font-display text-base font-bold text-white">{lesson.title}</h2>
-                <p className="mt-1 max-w-2xl text-sm leading-relaxed text-white/42">{lesson.text}</p>
+                <p className="mt-1 max-w-2xl text-sm leading-relaxed text-subtle">{lesson.text}</p>
               </div>
               <Link
                 href={lesson.action.href}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-2 text-sm font-semibold text-white/65 transition-colors hover:border-primary/25 hover:text-primary"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-2 text-sm font-semibold text-white/65 transition-colors hover:border-primary/25 hover:text-primary-text"
               >
                 {lesson.action.label}
                 <ArrowRight className="h-4 w-4" />
@@ -161,7 +161,7 @@ export default function OnboardingPage() {
       <section className="grid gap-4 rounded-2xl border border-primary/15 bg-primary/[0.055] p-5 md:grid-cols-[1fr_auto] md:items-center">
         <div>
           <h2 className="font-display text-lg font-bold text-white">Ready for daily protection</h2>
-          <p className="mt-1 text-sm leading-relaxed text-white/45">
+          <p className="mt-1 text-sm leading-relaxed text-subtle">
             Install from the Chrome Web Store, keep Standard mode on, then use Wallet Monitor for ongoing exposure checks.
           </p>
         </div>
@@ -178,7 +178,7 @@ export default function OnboardingPage() {
           <button
             type="button"
             onClick={() => finishOnboarding('/monitor')}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-2 text-sm font-semibold text-white/70 transition-colors hover:border-primary/25 hover:text-primary"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-2 text-sm font-semibold text-white/70 transition-colors hover:border-primary/25 hover:text-primary-text"
           >
             Mark complete
             <ArrowRight className="h-4 w-4" />

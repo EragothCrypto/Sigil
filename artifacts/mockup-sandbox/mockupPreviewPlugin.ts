@@ -1,6 +1,6 @@
-import { mkdirSync, writeFileSync } from "fs";
+import fs, { mkdirSync, writeFileSync } from "fs";
 import path from "path";
-import glob from "fast-glob";
+import { glob } from "tinyglobby";
 import chokidar from "chokidar";
 import type { FSWatcher } from "chokidar";
 import type { Plugin } from "vite";
@@ -40,10 +40,31 @@ export function mockupPreviewPlugin(): Plugin {
   }
 
   async function discoverComponents(): Promise<Array<DiscoveredComponent>> {
+    let scanError: NodeJS.ErrnoException | undefined;
+    // Fail on unreadable directories; unresolved links remain skippable.
+    function checkedFsMethod<T>(method: T): T {
+      return ((...args: unknown[]) => {
+        const callback = args.pop() as (error: NodeJS.ErrnoException | null, ...values: unknown[]) => void;
+        (method as (...args: unknown[]) => void)(...args, (error: NodeJS.ErrnoException | null, ...values: unknown[]) => {
+          if (error && error.code !== "ENOENT") scanError ??= error;
+          callback(error, ...values);
+        });
+      }) as T;
+    }
     const files = await glob(`${MOCKUPS_DIR}/**/*.tsx`, {
       cwd: root,
       ignore: ["**/_*/**", "**/_*.tsx"],
+      expandDirectories: false,
+      onlyFiles: true,
+      dot: false,
+      followSymbolicLinks: true,
+      fs: {
+        readdir: checkedFsMethod(fs.readdir),
+        realpath: fs.realpath,
+        stat: fs.stat,
+      },
     });
+    if (scanError) throw scanError;
 
     return files.map((f) => ({
       globKey: "./" + f.slice("src/".length),

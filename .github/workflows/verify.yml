@@ -1,0 +1,170 @@
+name: Engineering baseline
+
+on:
+  pull_request:
+  push:
+    branches: [main, 'codex/**']
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baseline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.19.0'
+      - name: Install pinned package manager
+        run: npm install --global pnpm@10.28.0
+      - name: Frozen workspace installation
+        run: pnpm install --frozen-lockfile
+      - name: Regression baseline
+        run: pnpm run test:baseline
+      - name: Workspace types
+        run: pnpm run typecheck
+      - name: Isolated regeneration and committed drift
+        run: node scripts/check-codegen.mjs
+      - name: API bundle
+        run: pnpm --filter @workspace/api-server run build
+      - name: Web bundle
+        run: pnpm --filter @workspace/sigil run build
+      - name: Built API and both wrapper smoke (localhost-only placeholders)
+        run: node scripts/verify-api-build.mjs
+      - name: Current installed component inventory (not license clearance)
+        run: |
+          mkdir -p tmp/p00-ci
+          pnpm licenses list --json > tmp/p00-ci/licenses.json
+          node scripts/generate-sbom.mjs --inventory tmp/p00-ci/licenses.json --output tmp/p00-ci/sbom.cdx.json
+          node scripts/collect-license-texts.mjs --inventory tmp/p00-ci/licenses.json --output tmp/p00-ci/original-license-texts
+      - name: Whitespace
+        run: git diff --check
+
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.19.0'
+      - name: Evidence-mode isolation regressions
+        run: node --test scripts/evidence-output.test.mjs
+      - name: Two isolated extension packages
+        shell: pwsh
+        run: |
+          ./scripts/package-extension.ps1 -EvidenceDirectory tmp/p00-ci/package-a
+          ./scripts/package-extension.ps1 -EvidenceDirectory tmp/p00-ci/package-b
+          $first = Get-ChildItem tmp/p00-ci/package-a -Filter *.zip | Get-FileHash -Algorithm SHA256
+          $second = Get-ChildItem tmp/p00-ci/package-b -Filter *.zip | Get-FileHash -Algorithm SHA256
+          if ($first.Hash -ne $second.Hash) { throw 'Extension package is not reproducible' }
+          git diff --exit-code -- artifacts/release artifacts/sigil/public/sigil-extension.zip .compliance
+          if ($LASTEXITCODE -ne 0) { throw 'Evidence packaging modified release artifacts' }
+
+  retention:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4
+        env:
+          POSTGRES_DB: sigil_p00_retention
+          POSTGRES_USER: sigil_p00
+          POSTGRES_PASSWORD: synthetic-ci-only
+        ports:
+          - '127.0.0.1:5432:5432'
+        options: >-
+          --health-cmd "pg_isready -U sigil_p00 -d sigil_p00_retention"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+      - name: Install pinned package manager
+        run: npm install --global pnpm@10.28.0
+      - name: Frozen workspace installation
+        run: pnpm install --frozen-lockfile
+      - name: Real isolated PostgreSQL retention and synthetic restore drill
+        run: |
+          mkdir -p tmp/p00-ci
+          node scripts/verify-retention-postgres.mjs
+          if node scripts/verify-retention-postgres.mjs --force-database-failure 2>tmp/p00-ci/retention-forced-failure.json; then
+            echo 'Expected database failure did not occur'
+            exit 1
+          fi
+          node --input-type=module -e 'import assert from "node:assert/strict"; import {readFileSync} from "node:fs"; const report=JSON.parse(readFileSync("tmp/p00-ci/retention-forced-failure.json","utf8")); assert.equal(report.stage,"forced_database_failure"); assert.equal(report.code,"42P01");'
+          node scripts/verify-retention-postgres.mjs
+        env:
+          SIGIL_P00_DATABASE_URL: postgresql://sigil_p00:synthetic-ci-only@127.0.0.1:5432/sigil_p00_retention
+      - name: Build API for real HTTP retention integration
+        run: pnpm --filter @workspace/api-server run build
+      - name: Built HTTP retention against isolated PostgreSQL
+        run: node scripts/verify-retention-http.mjs
+        env:
+          SIGIL_P00_DATABASE_URL: postgresql://sigil_p00:synthetic-ci-only@127.0.0.1:5432/sigil_p00_retention
+
+  privacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4
+        env:
+          POSTGRES_DB: sigil_p00_retention
+          POSTGRES_USER: sigil_p00
+          POSTGRES_PASSWORD: synthetic-ci-only
+        ports:
+          - '127.0.0.1:5432:5432'
+        options: >-
+          --health-cmd "pg_isready -U sigil_p00 -d sigil_p00_retention"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+      - name: Install pinned package manager
+        run: npm install --global pnpm@10.28.0
+      - name: Frozen workspace installation
+        run: pnpm install --frozen-lockfile
+      - name: Build API for private-history integration
+        run: pnpm --filter @workspace/api-server run build
+      - name: Built HTTP legacy migration and private-history access controls
+        run: node scripts/verify-retention-http.mjs --privacy
+        env:
+          SIGIL_P00_DATABASE_URL: postgresql://sigil_p00:synthetic-ci-only@127.0.0.1:5432/sigil_p00_retention
+
+  advisories:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.19.0'
+      - name: Install pinned package manager
+        run: npm install --global pnpm@10.28.0
+      - name: Frozen workspace installation
+        run: pnpm install --frozen-lockfile
+      - name: Full advisory audit (advisories or transport failures block)
+        run: pnpm audit --audit-level=low

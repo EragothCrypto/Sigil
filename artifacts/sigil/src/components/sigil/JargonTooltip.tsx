@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, memo, useMemo } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { JARGON_GLOSSARY } from '@/lib/jargon-glossary';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 // ── Base tooltip component ─────────────────────────────────────────────────
 
@@ -10,67 +11,51 @@ interface JargonTooltipProps {
 }
 
 export function JargonTooltip({ term, definition, children }: JargonTooltipProps) {
-  const [visible, setVisible] = useState(false);
-  const [above, setAbove] = useState(true);
-  const ref = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    if (!visible || !ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    setAbove(rect.top > 120);
-  }, [visible]);
-
+  const [open, setOpen] = useState(false);
+  const focusGeneration = useRef(0);
   return (
-    <span
-      ref={ref}
-      className="relative inline"
-      onMouseEnter={() => setVisible(true)}
-      onMouseLeave={() => setVisible(false)}
-      onFocus={() => setVisible(true)}
-      onBlur={() => setVisible(false)}
-    >
-      {/* The jargon term — dotted underline signals it's hoverable */}
-      <span
-        className="border-b border-dotted border-white/30 cursor-help text-white/85 hover:text-white hover:border-primary/60 transition-colors"
+    <Tooltip open={open} onOpenChange={setOpen}>
+      <TooltipTrigger
+        type="button"
         tabIndex={0}
-        aria-describedby={visible ? `jargon-${term.replace(/\s+/g, '-')}` : undefined}
+        onFocus={event => {
+          const trigger = event.currentTarget;
+          if (!trigger.matches(':focus-visible')) return;
+          event.preventDefault();
+          const generation = ++focusGeneration.current;
+          // Native focus scrolling otherwise closes Radix's just-opened tooltip.
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (generation === focusGeneration.current && document.activeElement === trigger) setOpen(true);
+          }));
+        }}
+        onBlur={() => { focusGeneration.current++; }}
+        onKeyDown={event => {
+          if (event.key === 'Escape') focusGeneration.current++;
+        }}
+        onClick={event => {
+          event.preventDefault();
+          focusGeneration.current++;
+          setOpen(true);
+        }}
+        className="inline min-h-6 align-baseline border-b border-dotted border-white/30 cursor-help text-inherit hover:text-white hover:border-primary/60 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text focus-visible:outline-offset-2"
       >
         {children}
-      </span>
-
-      {/* Tooltip card */}
-      {visible && (
-        <span
-          id={`jargon-${term.replace(/\s+/g, '-')}`}
-          role="tooltip"
-          className={`
-            absolute z-50 left-1/2 -translate-x-1/2 w-64 pointer-events-none
-            ${above ? 'bottom-full mb-2' : 'top-full mt-2'}
-          `}
-          style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.6))' }}
-        >
-          <span
-            className="block rounded-xl border border-white/10 px-3.5 py-3"
-            style={{ background: 'rgba(13, 8, 32, 0.97)' }}
-          >
-            <span className="block font-mono text-[10px] text-primary/70 uppercase tracking-widest mb-1.5">
-              {term}
-            </span>
-            <span className="block text-xs text-white/70 leading-relaxed">
-              {definition}
-            </span>
-          </span>
-          {/* Arrow */}
-          <span
-            className={`absolute left-1/2 -translate-x-1/2 w-0 h-0 ${
-              above
-                ? 'top-full border-t-8 border-t-white/10 border-x-8 border-x-transparent -mt-px'
-                : 'bottom-full border-b-8 border-b-white/10 border-x-8 border-x-transparent -mb-px'
-            }`}
-          />
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        sideOffset={8}
+        collisionPadding={8}
+        aria-label={`${term}: ${definition}`}
+        className="w-64 max-w-[calc(100vw-16px)] whitespace-normal border border-white/10 bg-[#0d0820] px-3.5 py-3 text-white shadow-xl"
+      >
+        <span className="block font-mono text-[10px] text-primary-text uppercase tracking-widest mb-1.5">
+          {term}
         </span>
-      )}
-    </span>
+        <span className="block text-xs text-subtle leading-relaxed">
+          {definition}
+        </span>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

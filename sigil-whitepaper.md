@@ -1,7 +1,22 @@
 # Sigil — The Trust Layer of Web3
 ## Technical Whitepaper · v1.0 · April 2026
 
-Current-claims update: September 30, 2026. The Chrome Web Store has a historical published build. Advisory-only extension version 1.0.3 is implemented locally, pending release, and not yet published; production and installed-build manual QA remain pending. Historical roadmap completion does not establish deployment or verification of this update.
+Current-claims update: October 9, 2026. **This April whitepaper is a historical design archive, not the current capability specification.** The current advisory-only extension candidate is 1.0.4; installed/Store rollout and general production QA remain unverified. Later chapters' model names, scores/formulas, ten-chain/per-scan counts, sanctions/reputation claims, full simulation and Delivered checklists are historical proposals, not evidence of current protection. Current architecture and phased implementation: [vNext roadmap](docs/sigil-vnext-exposure-monitoring-roadmap.md); current release evidence: [P00 ledger](.compliance/VNEXT_P00_BASELINE.md). `NO_GO` unchanged.
+
+### Current Capability Baseline (October 9, 2026)
+
+| Area | Actual bounded repository capability |
+| --- | --- |
+| Web scanner | Five selectable EVM networks: Ethereum, Polygon, Arbitrum, Optimism, Base. Acquisition availability varies; no uniform all-chain QA claim. |
+| Analysis | Validated findings-v2 separates attributed risk, uncertainty, observations and support. No fixed number of signals, audited accuracy, loss probability or signing clearance. |
+| AI | Configurable provider/model; default deepseek/deepseek-v4-flash for constrained finding selection/explanation. Provider account behavior must be independently evidenced. |
+| Input / state | Bounded ABI call intent and contract-reported token responses at recorded block. Current-only proxy ABI cannot establish historical execution semantics. |
+| Execution check | Legacy simulate returns 422. simulate-v2 is bounded read-only eth_call or advisory/unavailable, not traces, isolated wallet deltas or effects simulation. |
+| Approvals / monitor | Event-derived candidates and local manual refresh. Not current effective rights, full permission history or continuous background exposure monitoring. |
+| Registry / site | Local curated entities/incidents and domain heuristics. Not live sanctions verification, domain-age acquisition or a comprehensive threat feed. |
+| Privacy / extension | UUID bearer links, curated public cases, bounded advisory observation; wallet alone authorizes. Installed rollout and actual retention/vendor evidence remain open. |
+
+The archived sections below are retained for traceability only. Do not quote their checkmarks, formulas or capability claims as shipped/verified product behavior; the baseline above supersedes them.
 
 ---
 
@@ -34,7 +49,7 @@ Sigil is a multi-chain Web3 security platform that translates on-chain transacti
 
 Wallet requests can expose users to permissions and asset movements that are difficult to interpret. Sigil combines deterministic static analysis, AI explanations, sanctions signals, and contract reputation into an advisory "Trust Layer" alongside the user's wallet, not an authorization gate for on-chain actions.
 
-**Core capabilities at a glance:**
+**Archived April design claims (superseded by the current baseline above):**
 
 | Capability | Detail |
 |---|---|

@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Scanner', icon: ScanLine },
   { href: '/approvals', label: 'Approvals', icon: ShieldCheck },
   { href: '/monitor', label: 'Monitor', icon: WalletCards },
+  { href: '/solana', label: 'Solana', icon: WalletCards },
   { href: '/watchlist', label: 'Watchlist', icon: ListChecks },
   { href: '/sites', label: 'Sites', icon: Globe2 },
   { href: '/simulate', label: 'Simulate', icon: Zap, pulse: true },
@@ -27,6 +28,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <a href="#main-content" className="skip-link">Skip to content</a>
 
       {/* Ambient background orbs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden>
@@ -43,14 +45,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
             : 'bg-transparent border-b border-transparent'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[72px] flex items-center justify-between gap-6">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group cursor-pointer shrink-0">
             <div className="relative w-9 h-9 flex items-center justify-center shrink-0">
               <div className="absolute inset-0 bg-primary/40 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 scale-110" />
               <img src={logo} alt="Sigil" className="relative w-9 h-9 object-contain drop-shadow-[0_0_8px_rgba(139,92,246,0.5)] group-hover:drop-shadow-[0_0_12px_rgba(139,92,246,0.8)] transition-all duration-300" />
             </div>
-            <span className="font-display font-bold text-xl tracking-[0.15em] text-white group-hover:text-primary transition-colors duration-200 uppercase">
+            <span className="font-display font-bold text-xl tracking-[0.15em] text-white group-hover:text-primary-text transition-colors duration-200 uppercase">
               Sigil
             </span>
           </Link>
@@ -64,15 +66,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   key={href}
                   href={href}
                   aria-label={label}
+                  aria-current={isActive ? 'page' : undefined}
+                  onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })}
                   title={label}
                   className={`relative flex shrink-0 items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer group
                     ${isActive
-                      ? 'bg-primary/12 text-primary border border-primary/20'
+                      ? 'bg-primary/12 text-primary-text border border-primary/20'
                       : 'text-white/50 hover:text-white/90 hover:bg-white/5 border border-transparent'
                     }`}
                 >
                   <Icon
-                    className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-primary' : 'text-white/30 group-hover:text-white/60'}`}
+                    className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-primary-text' : 'text-subtle group-hover:text-white/60'}`}
                     strokeWidth={isActive ? 2 : 1.5}
                   />
                   <span className="tracking-wide hidden sm:inline">{label}</span>
@@ -90,18 +94,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main */}
-      <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col">
+      <main id="main-content" tabIndex={-1} className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col">
         {children}
       </main>
 
       <footer className="relative z-10 border-t border-white/6 bg-background/70">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/35">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-subtle">
           <p>© 2026 S3ntryLabs. Sigil provides security analysis, not financial advice.</p>
           <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-            <Link href="/impressum" className="hover:text-primary transition-colors">Impressum</Link>
-            <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
-            <Link href="/cookies" className="hover:text-primary transition-colors">Cookies</Link>
+            <Link href="/impressum" className="hover:text-primary-text transition-colors">Impressum</Link>
+            <Link href="/privacy" className="hover:text-primary-text transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-primary-text transition-colors">Terms</Link>
+            <Link href="/cookies" className="hover:text-primary-text transition-colors">Cookies</Link>
           </nav>
         </div>
       </footer>

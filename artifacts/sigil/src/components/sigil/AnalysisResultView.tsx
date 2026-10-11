@@ -20,7 +20,7 @@ function DecodedIntent({ input }: { input: ReportInput }) {
     {input.provenance.abiAddress && <p>ABI address: {input.provenance.abiAddress}</p>}
     <p>{input.historicalCertainty ? 'Historically bound ABI.' : 'Historical execution semantics are not established.'} {input.reason}</p>
     {input.arguments?.map((argument, index) => <p key={index} className="font-mono">{argument.name || `Argument ${index + 1}`} ({argument.type}): {JSON.stringify(argument.value)}</p>)}
-    {input.subcalls?.map((subcall, index) => <details key={index} className="border-l border-white/10 pl-3"><summary>Subcall {index + 1}</summary><DecodedIntent input={subcall} /></details>)}
+    {input.subcalls?.map((subcall, index) => <details key={index} className="border-l border-white/10 pl-3"><summary className="min-h-6 py-1 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text focus-visible:outline-offset-2">Subcall {index + 1}</summary><DecodedIntent input={subcall} /></details>)}
   </div>;
 }
 
@@ -30,7 +30,7 @@ function AdditionalEvidence({ evidence }: { evidence: ReportEvidence }) {
       <p>{evidence.incident.name} - {evidence.incident.role}; {evidence.incident.date}. Reviewed {evidence.incident.reviewedAt}.</p>
       <p className="font-mono break-all">{evidence.incident.network}: {evidence.incident.hash}</p>
       <ul className="space-y-2">{evidence.incident.sources.map((source, index) => <li key={index}>
-        <a href={source.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline break-all">{source.title}<ExternalLink className="w-3 h-3 shrink-0" /></a>
+        <a href={source.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline underline-offset-4 text-primary-text break-all">{source.title}<ExternalLink className="w-3 h-3 shrink-0" /></a>
         <p>{source.claim}</p>
       </li>)}</ul>
     </div>}
@@ -141,9 +141,13 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
   const config = VERDICT_CONFIG[verdict] || VERDICT_CONFIG.caution;
   const VerdictIcon = config.icon;
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: "Copied", description: "Address copied to clipboard" });
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Copied", description: "Input copied to clipboard." });
+    } catch {
+      toast({ title: "Copy failed", description: "Clipboard access is unavailable. Nothing was copied.", variant: "destructive" });
+    }
   };
 
   if (data.details && typeof data.details === 'object' && 'validatedReport' in data.details && !validatedReport) {
@@ -204,10 +208,10 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
 
         <div className="flex-1 space-y-4 text-center md:text-left">
           <div className="flex flex-wrap items-center gap-2 justify-center md:justify-start">
-            <span className="px-3 py-1 bg-primary/8 border border-primary/15 text-primary rounded-full font-mono text-[10px] font-bold tracking-wider uppercase">
+            <span className="px-3 py-1 bg-primary/8 border border-primary/15 text-primary-text rounded-full font-mono text-[10px] font-bold tracking-wider uppercase">
               {data.network}
             </span>
-            <span className="px-3 py-1 bg-white/4 border border-white/8 rounded-full font-mono text-[10px] text-white/35 tracking-wider uppercase">
+            <span className="px-3 py-1 bg-white/4 border border-white/8 rounded-full font-mono text-[10px] text-subtle tracking-wider uppercase">
               {data.inputType}
             </span>
           </div>
@@ -216,7 +220,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
             <JargonText text={data.summary} />
           </h2>
 
-          <div className="inline-flex items-center gap-2.5 text-white/30 bg-white/3 border border-white/6 px-4 py-2 rounded-xl mx-auto md:mx-0">
+          <div className="inline-flex items-center gap-2.5 text-subtle bg-white/3 border border-white/6 px-4 py-2 rounded-xl mx-auto md:mx-0">
             <span className="font-mono text-xs break-all">
               {data.input.length > 22
                 ? `${data.input.slice(0, 10)}…${data.input.slice(-8)}`
@@ -224,7 +228,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
             </span>
             <button
               onClick={() => handleCopy(data.input)}
-              className="hover:text-primary transition-colors shrink-0"
+              className="hover:text-primary-text transition-colors shrink-0"
               aria-label="Copy"
             >
               <Copy className="w-3.5 h-3.5" />
@@ -283,8 +287,8 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
                       <details className="mt-2 text-xs text-white/50">
                         <summary className="cursor-pointer hover:text-white/80">Recorded evidence</summary>
                         <dl className="mt-2 space-y-1 break-all">
-                          <div><dt className="inline text-white/35">Subject: </dt><dd className="inline font-mono">{evidence.subject}</dd></div>
-                          <div><dt className="inline text-white/35">Observation: </dt><dd className="inline">{evidence.value}</dd></div>
+                          <div><dt className="inline text-subtle">Subject: </dt><dd className="inline font-mono">{evidence.subject}</dd></div>
+                          <div><dt className="inline text-subtle">Observation: </dt><dd className="inline">{evidence.value}</dd></div>
                         </dl>
                         <AdditionalEvidence evidence={evidence} />
                         {evidence.transfers && evidence.transfers.length > 0 && <ul className="mt-2 divide-y divide-white/10">{evidence.transfers.map((transfer, index) => <li key={index} className="py-2 space-y-1 font-mono break-all">
@@ -294,7 +298,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
                         </li>)}</ul>}
                       </details>
                     </li>;
-                  })}</ul> : <p className="text-sm text-white/40">{group.empty}</p>}
+                  })}</ul> : <p className="text-sm text-subtle">{group.empty}</p>}
                 </div>
               );
             })}
@@ -310,7 +314,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
               <ShieldAlert className="w-4.5 h-4.5" strokeWidth={1.7} /> Threat Vectors
             </h3>
             {data.warnings.length === 0 ? (
-              <p className="text-white/25 text-sm font-mono p-3 rounded-xl border border-white/5 bg-white/2">No threats detected.</p>
+              <p className="text-subtle text-sm font-mono p-3 rounded-xl border border-white/5 bg-white/2">No threats detected.</p>
             ) : (
               <ul className="space-y-3">
                 {data.warnings.map((w, i) => (
@@ -329,7 +333,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
               <ShieldCheck className="w-4.5 h-4.5" strokeWidth={1.7} /> Trust Indicators
             </h3>
             {data.positives.length === 0 ? (
-              <p className="text-white/25 text-sm font-mono p-3 rounded-xl border border-white/5 bg-white/2">No positive indicators found.</p>
+              <p className="text-subtle text-sm font-mono p-3 rounded-xl border border-white/5 bg-white/2">No positive indicators found.</p>
             ) : (
               <ul className="space-y-3">
                 {data.positives.map((p, i) => (

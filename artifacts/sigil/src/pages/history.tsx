@@ -14,11 +14,11 @@ export default function HistoryPage() {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <Activity className="w-4 h-4 text-primary" strokeWidth={1.7} />
+              <Activity className="w-4 h-4 text-primary-text" strokeWidth={1.7} />
             </div>
             <h1 className="text-2xl font-display font-bold text-white tracking-tight">Public Threat Intel</h1>
           </div>
-          <p className="text-sm text-white/35 pl-12">Curated high-risk contracts and incidents. Personal scans stay private by default.</p>
+          <p className="text-sm text-subtle pl-12">Curated high-risk contracts and incidents. Personal scans stay private by default.</p>
         </div>
       </motion.div>
       <HallOfShameSection />

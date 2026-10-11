@@ -1,0 +1,31 @@
+[
+  {
+    "id": "p00-import-demo",
+    "label": "TEST - Missing saved coverage",
+    "address": "0x3333333333333333333333333333333333333333",
+    "network": "mainnet",
+    "kind": "wallet",
+    "status": "clean",
+    "approvalSummary": { "healthScore": 100, "totalActive": 0, "unlimited": 0, "critical": 0, "high": 0 }
+  },
+  {
+    "id": "p00-import-demo",
+    "label": "TEST - Unavailable saved coverage",
+    "address": "0x5555555555555555555555555555555555555555",
+    "network": "mainnet",
+    "kind": "wallet",
+    "status": "clean",
+    "coverageStatus": "unavailable",
+    "approvalSummary": { "healthScore": 100, "totalActive": 0, "unlimited": 0, "critical": 0, "high": 0 }
+  },
+  {
+    "id": "p00-import-demo",
+    "label": "TEST - Conflicting saved label",
+    "address": "0x6666666666666666666666666666666666666666",
+    "network": "mainnet",
+    "kind": "wallet",
+    "status": "clean",
+    "coverageStatus": "limited",
+    "approvalSummary": { "healthScore": 10, "totalActive": 1, "unlimited": 1, "critical": 1, "high": 0 }
+  }
+]

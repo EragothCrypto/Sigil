@@ -47,7 +47,7 @@ export default function SitesPage() {
     <div className="space-y-8">
       <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary-text">
             <Globe2 className="h-3.5 w-3.5" />
             Site Reputation
           </div>
@@ -64,13 +64,13 @@ export default function SitesPage() {
           <form onSubmit={handleCheck} className="rounded-2xl border border-white/10 bg-black/35 p-5 shadow-2xl shadow-black/20">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
               <label className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/45">Domain or URL</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-subtle">Domain or URL</span>
                 <input
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   placeholder="https://app.example.xyz"
                   spellCheck={false}
-                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 font-mono text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-primary/50"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 font-mono text-sm text-white outline-none transition-colors placeholder:text-subtle focus:border-primary/50"
                 />
               </label>
 
@@ -92,7 +92,7 @@ export default function SitesPage() {
                     setInput(example);
                     setSubmitted(example);
                   }}
-                  className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-xs text-white/50 transition-colors hover:border-primary/30 hover:text-primary"
+                  className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-xs text-white/50 transition-colors hover:border-primary/30 hover:text-primary-text"
                 >
                   {example.replace(/^https?:\/\//, '')}
                 </button>
@@ -104,7 +104,7 @@ export default function SitesPage() {
         <aside className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm text-white/45">Domain risk</p>
+              <p className="text-sm text-subtle">Domain risk</p>
               <p className={`mt-2 text-5xl font-bold ${style.score}`}>{result.riskScore}</p>
             </div>
             <div className={`rounded-2xl border p-3 ${style.badge}`}>
@@ -114,18 +114,18 @@ export default function SitesPage() {
 
           <div className="mt-6 space-y-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-white/35">Host</p>
+              <p className="text-xs uppercase tracking-wide text-subtle">Host</p>
               <p className="mt-1 break-all font-mono text-sm text-white/80">{result.host || 'Unreadable domain'}</p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wide text-white/35">Verdict</p>
+              <p className="text-xs uppercase tracking-wide text-subtle">Verdict</p>
               <span className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${style.badge}`}>
                 {result.verdict}
               </span>
             </div>
             {result.brand && (
               <div>
-                <p className="text-xs uppercase tracking-wide text-white/35">Brand signal</p>
+                <p className="text-xs uppercase tracking-wide text-subtle">Brand signal</p>
                 <p className="mt-1 text-sm font-semibold text-white">{result.brand}</p>
               </div>
             )}
@@ -141,7 +141,7 @@ export default function SitesPage() {
               Site reputation is a fast local check. It helps catch obvious clones and suspicious campaign domains, but it does not replace transaction simulation or contract analysis.
             </p>
           </div>
-          <ShieldCheck className="h-6 w-6 shrink-0 text-primary" />
+          <ShieldCheck className="h-6 w-6 shrink-0 text-primary-text" />
         </div>
 
         {result.warnings.length > 0 && (

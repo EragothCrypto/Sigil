@@ -21,14 +21,14 @@ const NETWORKS = [
 const EXAMPLES = [
   { label: 'USDC Contract',          value: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', warning: false },
   { label: 'Uniswap V2',             value: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', warning: false },
-  { label: 'Tornado Cash (OFAC)',    value: '0xA160cdAB225685dA1d56aa342Ad8841c3b53f291', warning: true },
+  { label: 'Tornado Cash (historical)', value: '0xA160cdAB225685dA1d56aa342Ad8841c3b53f291', warning: true },
   { label: 'Euler Finance Exploit',  value: '0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d', warning: true },
 ];
 
 const STATS = [
-  { value: '$10B+',  label: 'in on-chain risk analyzed' },
-  { value: '50+',   label: 'risk signals checked per scan' },
-  { value: '10',    label: 'EVM chains supported' },
+  { value: String(NETWORKS.length), label: 'selectable EVM networks' },
+  { value: 'Read-only', label: 'no wallet authorization' },
+  { value: 'Partial', label: 'evidence coverage' },
 ];
 
 const START_PATHS = [
@@ -43,14 +43,14 @@ const START_PATHS = [
     href: '/monitor',
     icon: WalletCards,
     title: 'Monitor a wallet',
-    desc: 'Track approval exposure, hygiene score, and what to fix first.',
+    desc: 'Review approval-event candidates with manual refresh, not background monitoring.',
     tone: 'emerald',
   },
   {
     href: '/approvals',
     icon: ShieldCheck,
     title: 'Check approvals',
-    desc: 'Find unlimited token approvals and unknown spenders.',
+    desc: 'Review recorded approval events, not current allowances or effective rights.',
     tone: 'amber',
   },
   {
@@ -67,69 +67,69 @@ const HOW_IT_WORKS = [
     step: '01',
     icon: ClipboardList,
     title: 'Paste any address or hash',
-    desc: 'Drop a transaction hash or smart contract address. Works with Ethereum, Polygon, Arbitrum, Base and every major EVM chain.',
+    desc: 'Drop a complete transaction hash or contract address and select Ethereum, Polygon, Arbitrum, Optimism or Base.',
   },
   {
     step: '02',
     icon: ScanSearch,
-    title: 'AI scans on-chain signals',
-    desc: "Sigil combines deterministic checks, public blockchain data, and AI-assisted explanations to surface transaction and contract risk.",
+    title: 'Review acquired evidence',
+    desc: 'Sigil combines bounded blockchain data, deterministic findings and AI-assisted explanations. Missing data remains an analysis limit.',
   },
   {
     step: '03',
     icon: CheckCircle2,
-    title: 'Understand before you sign',
-    desc: 'Get a 0–100 risk score, plain-English verdict, specific warnings, and actionable guidance — before touching any wallet.',
+    title: 'Evaluate the findings',
+    desc: 'Review attributed findings, heuristic scores and coverage limits. No warning is not a safety guarantee or signing clearance.',
   },
 ];
 
 const FEATURES = [
   {
     icon: Zap,
-    title: 'Instant Decode',
-    desc: 'Translate raw bytecode to plain English in under 2 seconds. Know exactly what any contract does.',
+    title: 'Bounded Decode',
+    desc: 'Inspect available metadata and ABI-based call intent. Decoding does not prove execution effects or historical implementation semantics.',
     accent: '#8b5cf6',
   },
   {
     icon: ShieldCheck,
-    title: 'Risk Scoring',
-    desc: '0–100 risk score based on bytecode analysis, approval scope, exploit history and on-chain reputation.',
+    title: 'Evidence and Uncertainty',
+    desc: 'Separate evidence-backed risk from uncertainty. Decision scores are product heuristics, not probabilities of loss.',
     accent: '#8b5cf6',
   },
   {
     icon: Bug,
-    title: 'Pattern Detection',
-    desc: 'Detects honeypots, wallet drainers, fake approvals, rug pulls, flash loan attacks and more.',
+    title: 'Attributed Findings',
+    desc: 'Review findings tied to acquired evidence and curated historical incidents. Unknown attacks may not be detected.',
     accent: '#f43f5e',
   },
   {
     icon: Unlock,
     title: 'Approval Inspector',
-    desc: 'Every token approval decoded — unlimited grants flagged critical, with your full approval history surfaced.',
+    desc: 'Inspect bounded approval-event candidates and spender hints. Current permissions and complete history are not established.',
     accent: '#f59e0b',
   },
   {
     icon: Star,
-    title: 'Contract Trust Score',
-    desc: 'A contract credit score based on age, verification status, deployer history, and transaction volume.',
+    title: 'Contract Metadata',
+    desc: 'Review source-verification and local registry observations. Verified source or a familiar name is not an audit.',
     accent: '#3b82f6',
   },
   {
     icon: Ban,
-    title: 'OFAC Sanctions Check',
-    desc: 'Instantly flags OFAC-sanctioned addresses like Tornado Cash pools — with legal context and severity.',
+    title: 'Curated Entity Context',
+    desc: 'Local registry and historical incident context, not live sanctions verification or legal clearance.',
     accent: '#f43f5e',
   },
   {
     icon: Globe,
     title: 'Multi-chain Support',
-    desc: 'Ethereum, Polygon, Arbitrum, Optimism, Base and every major EVM chain in a single interface.',
+    desc: 'Select Ethereum, Polygon, Arbitrum, Optimism or Base. Evidence availability varies by network and request.',
     accent: '#8b5cf6',
   },
   {
     icon: Flame,
     title: 'Hall of Shame',
-    desc: 'A curated database of real exploits: Bybit ($1.5B), Ronin ($625M), Euler Finance ($197M) and more.',
+    desc: 'Explore curated historical cases with source references. Historical attribution does not establish current wallet exposure.',
     accent: '#f97316',
   },
 ];
@@ -299,10 +299,10 @@ export default function Home() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.05, duration: 0.4 }}
-                className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-mono font-semibold uppercase tracking-widest mb-6"
+                className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary-text text-xs font-mono font-semibold uppercase tracking-widest mb-6"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                On-Chain Risk Engine · 50+ Signals · 10 Chains
+                Evidence-Based Review · {NETWORKS.length} EVM Networks
               </motion.div>
 
               <h1 className="text-5xl md:text-[4.75rem] font-display font-extrabold text-white leading-[1.05] tracking-tight max-w-3xl">
@@ -316,8 +316,8 @@ export default function Home() {
                 {' '}of Web3
               </h1>
 
-              <p className="mt-5 text-lg text-white/45 max-w-xl mx-auto leading-relaxed font-sans">
-                Scan contracts, monitor wallet exposure, and use advisory browser alerts to understand compatible wallet prompts.
+              <p className="mt-5 text-lg text-subtle max-w-xl mx-auto leading-relaxed font-sans">
+                Review contract and transaction evidence, recorded approval events, and best-effort advisory browser alerts.
               </p>
 
               {/* Stats row */}
@@ -330,7 +330,7 @@ export default function Home() {
                 {STATS.map((s, i) => (
                   <div key={i} className="flex flex-col items-center gap-0.5">
                     <span className="text-2xl font-display font-bold text-white">{s.value}</span>
-                    <span className="text-[11px] text-white/35 font-mono uppercase tracking-wider">{s.label}</span>
+                    <span className="text-[11px] text-subtle font-mono uppercase tracking-wider">{s.label}</span>
                   </div>
                 ))}
               </motion.div>
@@ -346,11 +346,11 @@ export default function Home() {
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
-                      <GraduationCap className="h-4 w-4 text-primary" />
+                      <GraduationCap className="h-4 w-4 text-primary-text" />
                     </div>
                     <div>
                       <p className="text-sm font-display font-semibold text-white">New to Sigil?</p>
-                      <p className="mt-1 text-sm leading-relaxed text-white/45">
+                      <p className="mt-1 text-sm leading-relaxed text-subtle">
                         Take the two-minute safety tour before your next approval, signature, or wallet scan.
                       </p>
                     </div>
@@ -358,7 +358,7 @@ export default function Home() {
                   <div className="flex shrink-0 items-center gap-2">
                     <Link
                       href="/onboarding"
-                      className="inline-flex items-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
+                      className="inline-flex items-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary-text transition-colors hover:bg-primary/15"
                     >
                       Start onboarding
                       <ArrowRight className="h-4 w-4" />
@@ -370,7 +370,7 @@ export default function Home() {
                         setShowOnboardingPrompt(false);
                       }}
                       aria-label="Dismiss onboarding"
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white/35 transition-colors hover:text-white/70"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-subtle transition-colors hover:text-white/70"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -390,7 +390,9 @@ export default function Home() {
                 <div className="flex flex-col md:flex-row">
                   {/* Network selector */}
                   <div className="relative md:w-44 border-b md:border-b-0 md:border-r border-white/6 shrink-0">
+                    <label htmlFor="scan-network" className="sr-only">Network</label>
                     <select
+                      id="scan-network"
                       value={network}
                       onChange={e => setNetwork(e.target.value)}
                       className="w-full bg-transparent px-5 py-5 text-white/80 font-mono text-sm focus:outline-none appearance-none cursor-pointer hover:bg-white/3 transition-colors uppercase tracking-widest"
@@ -399,27 +401,27 @@ export default function Home() {
                         <option key={n.value} value={n.value} className="bg-[#0e0a1e] text-white">{n.label}</option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" />
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                   </div>
 
                   {/* Input */}
+                  <label htmlFor="scan-input" className="sr-only">Transaction hash or contract address</label>
                   <input
+                    id="scan-input"
                     type="text"
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
                     placeholder="Paste tx hash or contract address (0x…)"
-                    className="flex-1 bg-transparent px-5 py-5 text-white font-mono text-sm focus:outline-none placeholder:text-white/18"
+                    className="flex-1 bg-transparent px-5 py-5 text-white font-mono text-sm focus:outline-none placeholder:text-subtle"
                   />
 
                   {/* Analyze button */}
                   <button
                     onClick={handleAnalyze}
                     disabled={!input.trim()}
-                    className="relative flex items-center justify-center gap-2.5 px-8 py-5 font-display font-bold text-sm text-white uppercase tracking-widest transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed group overflow-hidden"
-                    style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)' }}
+                    className="relative flex items-center justify-center gap-2.5 px-8 py-5 bg-primary hover:bg-[#6d28d9] font-display font-bold text-sm text-white uppercase tracking-widest transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed group overflow-hidden"
                   >
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)' }} />
                     <span className="relative z-10">Analyze</span>
                     <ArrowRight className="relative z-10 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                   </button>
@@ -428,7 +430,7 @@ export default function Home() {
 
               {/* Quick examples — clicking auto-analyzes */}
               <div className="flex items-center gap-2.5 flex-wrap pt-1">
-                <span className="text-xs text-white/25 font-mono uppercase tracking-wider shrink-0">Try:</span>
+                <span className="text-xs text-subtle font-mono uppercase tracking-wider shrink-0">Try:</span>
                 {EXAMPLES.map(ex => (
                   <button
                     key={ex.label}
@@ -439,7 +441,7 @@ export default function Home() {
                     className={`inline-flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-lg border transition-all
                       ${ex.warning
                         ? 'text-amber-400/70 hover:text-amber-400 border-amber-500/15 hover:border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10'
-                        : 'text-primary/60 hover:text-primary border-primary/10 hover:border-primary/30 bg-primary/4 hover:bg-primary/8'
+                        : 'text-primary-text hover:text-primary-text border-primary/10 hover:border-primary/30 bg-primary/4 hover:bg-primary/8'
                       }`}
                   >
                     {ex.warning && <AlertTriangle className="w-3 h-3" />}
@@ -472,7 +474,7 @@ export default function Home() {
                       ? 'border-amber-500/15 bg-amber-500/[0.06] text-amber-200'
                       : item.tone === 'blue'
                         ? 'border-sky-500/15 bg-sky-500/[0.06] text-sky-200'
-                        : 'border-primary/20 bg-primary/10 text-primary';
+                        : 'border-primary/20 bg-primary/10 text-primary-text';
 
                 return (
                   <Link
@@ -484,8 +486,8 @@ export default function Home() {
                       <Icon className="h-5 w-5" strokeWidth={1.7} />
                     </div>
                     <h2 className="text-sm font-display font-bold text-white">{item.title}</h2>
-                    <p className="mt-2 text-xs leading-relaxed text-white/42">{item.desc}</p>
-                    <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary/70 transition-colors group-hover:text-primary">
+                    <p className="mt-2 text-xs leading-relaxed text-subtle">{item.desc}</p>
+                    <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-text transition-colors group-hover:text-primary-text">
                       Open
                       <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                     </div>
@@ -497,8 +499,8 @@ export default function Home() {
             {/* ── How it works ──────────────────────────────────────────────── */}
             <div className="w-full max-w-3xl mt-20">
               <div className="text-center mb-10">
-                <p className="text-xs font-mono uppercase tracking-widest text-primary/50 mb-2">How Sigil Works</p>
-                <h2 className="text-2xl font-display font-bold text-white tracking-tight">Three steps to full clarity</h2>
+                <p className="text-xs font-mono uppercase tracking-widest text-primary-text mb-2">How Sigil Works</p>
+                <h2 className="text-2xl font-display font-bold text-white tracking-tight">Review evidence and limits</h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -515,13 +517,13 @@ export default function Home() {
                       {/* Step number */}
                       <div className="flex items-center justify-between">
                         <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center">
-                          <Icon className="w-5 h-5 text-primary" strokeWidth={1.6} />
+                          <Icon className="w-5 h-5 text-primary-text" strokeWidth={1.6} />
                         </div>
-                        <span className="font-mono text-2xl font-bold text-white/6">{step.step}</span>
+                        <span className="font-mono text-2xl font-bold text-subtle">{step.step}</span>
                       </div>
                       <div>
                         <h3 className="font-display font-semibold text-white text-sm mb-2">{step.title}</h3>
-                        <p className="text-xs text-white/35 leading-relaxed">{step.desc}</p>
+                        <p className="text-xs text-subtle leading-relaxed">{step.desc}</p>
                       </div>
                       {/* Connector line on desktop */}
                       {i < HOW_IT_WORKS.length - 1 && (
@@ -536,8 +538,8 @@ export default function Home() {
             {/* ── Feature grid ──────────────────────────────────────────────── */}
             <div className="w-full max-w-3xl mt-20">
               <div className="text-center mb-10">
-                <p className="text-xs font-mono uppercase tracking-widest text-primary/50 mb-2">Built-in Intelligence</p>
-                <h2 className="text-2xl font-display font-bold text-white tracking-tight">Every signal, in one place</h2>
+                <p className="text-xs font-mono uppercase tracking-widest text-primary-text mb-2">Built-in Intelligence</p>
+                <h2 className="text-2xl font-display font-bold text-white tracking-tight">Available evidence in context</h2>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -560,7 +562,7 @@ export default function Home() {
                       </div>
                       <div>
                         <h4 className="font-display font-semibold text-white/90 text-sm mb-1">{f.title}</h4>
-                        <p className="text-xs text-white/35 leading-relaxed">{f.desc}</p>
+                        <p className="text-xs text-subtle leading-relaxed">{f.desc}</p>
                       </div>
                     </motion.div>
                   );
@@ -589,7 +591,7 @@ export default function Home() {
                         <h3 className="font-display font-bold text-white text-sm">Hall of Shame</h3>
                         <span className="text-[10px] font-mono text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Live</span>
                       </div>
-                      <p className="text-xs text-white/35">Browse real exploits — Bybit ($1.5B), Ronin ($625M), Euler Finance ($197M) — and see exactly how Sigil would have flagged each one.</p>
+                      <p className="text-xs text-subtle">Review curated historical cases and their sources, not a verified retrospective detection record.</p>
                     </div>
                   </div>
                   <ArrowRight className="w-5 h-5 text-rose-400/50 group-hover:text-rose-400 group-hover:translate-x-1 transition-all duration-200 shrink-0 ml-4" />

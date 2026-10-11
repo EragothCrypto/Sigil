@@ -80,7 +80,7 @@ router.get("/approvals/health", async (req, res) => {
       coverage: {
         status: "limited",
         message:
-          "Explorer approval logs were scanned. Current allowance state can differ if a token uses non-standard behavior or explorer logs are incomplete.",
+          "Explorer approval-event candidates were scanned. Current allowances and token units were not checked; log coverage is bounded and incomplete. Scores are event-review heuristics, not wallet safety assessments.",
       },
       summary: {
         healthScore: Math.max(0, 100 - maxRisk),

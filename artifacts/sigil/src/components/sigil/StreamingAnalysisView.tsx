@@ -13,13 +13,13 @@ export function StreamingAnalysisView({ phase, onCancel }: Props) {
   const currentStep = phase.kind === 'step1' ? 1 : phase.kind === 'validating' ? 2 : 0;
   return (
     <section className="relative w-full max-w-2xl mx-auto border-y border-white/10 py-8 space-y-6" aria-live="polite" aria-busy={phase.kind !== 'error'}>
-      <button onClick={onCancel} aria-label="Cancel analysis" title="Cancel analysis" className="absolute top-6 right-0 w-8 h-8 flex items-center justify-center text-white/40 hover:text-white">
+      <button onClick={onCancel} aria-label="Cancel analysis" title="Cancel analysis" className="absolute top-6 right-0 w-8 h-8 flex items-center justify-center text-subtle hover:text-white">
         <X className="w-4 h-4" />
       </button>
       <h2 className="flex items-center gap-3 text-lg font-semibold text-white"><Activity className="w-5 h-5 text-primary" />Analyzing</h2>
       <ol className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
         {[{step: 1, label: 'Check evidence'}, {step: 2, label: 'Validate findings'}].map(item => (
-          <li key={item.step} className={`flex items-center gap-2 ${item.step === currentStep ? 'text-white/80' : 'text-white/35'}`}>
+          <li key={item.step} className={`flex items-center gap-2 ${item.step === currentStep ? 'text-white/80' : 'text-subtle'}`}>
             {item.step < currentStep ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <LoaderCircle className={`w-4 h-4 ${item.step === currentStep ? 'animate-spin' : ''}`} />}
             {item.label}
           </li>

@@ -21,6 +21,7 @@ import {
   addWatchlistEntry,
   exportWatchlistEntries,
   importWatchlistEntries,
+  mergeWatchlistEntries,
   statusFromApprovalSummary,
   updateWatchlistEntry,
   removeWatchlistEntry,
@@ -67,7 +68,7 @@ function shortAddress(address: string): string {
 
 function statusCopy(status: WatchlistStatus): { label: string; classes: string; icon: typeof ShieldCheck } {
   if (status === 'clean') {
-    return { label: 'Clean', classes: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-200', icon: CheckCircle2 };
+    return { label: 'No flags', classes: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-200', icon: CheckCircle2 };
   }
   if (status === 'review') {
     return { label: 'Review', classes: 'border-yellow-500/25 bg-yellow-500/10 text-yellow-100', icon: ShieldAlert };
@@ -78,7 +79,7 @@ function statusCopy(status: WatchlistStatus): { label: string; classes: string; 
   if (status === 'unavailable') {
     return { label: 'Unavailable', classes: 'border-white/15 bg-white/[0.06] text-white/58', icon: ShieldAlert };
   }
-  return { label: 'Unchecked', classes: 'border-primary/25 bg-primary/10 text-primary', icon: ShieldCheck };
+  return { label: 'Unchecked', classes: 'border-primary/25 bg-primary/10 text-primary-text', icon: ShieldCheck };
 }
 
 function networkLabel(network: WatchlistNetwork): string {
@@ -205,14 +206,8 @@ export default function WatchlistPage() {
 
     try {
       const text = await file.text();
-      const imported = importWatchlistEntries(JSON.parse(text));
-      const merged = imported.reduce((current, entry) => {
-        if (current.some((existing) => existing.network === entry.network && existing.address === entry.address)) {
-          return current;
-        }
-        return [entry, ...current];
-      }, entries);
-      setEntries(merged);
+      const imported = JSON.parse(text);
+      setEntries(current => mergeWatchlistEntries(current, imported));
       setError(null);
     } catch {
       setError('Could not import this watchlist file.');
@@ -225,7 +220,7 @@ export default function WatchlistPage() {
     <div className="space-y-8">
       <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary-text">
             <ShieldCheck className="h-3.5 w-3.5" />
             Address Watchlist
           </div>
@@ -235,24 +230,24 @@ export default function WatchlistPage() {
               Keep important addresses in one calm security view.
             </h1>
             <p className="max-w-2xl text-base leading-relaxed text-white/58">
-              Track wallets, vaults, multisigs, and contracts locally. Use Wallet Monitor for the higher-level hygiene score and fix-first checklist.
+              Save addresses locally for event review. Manual refresh sends the selected address and network to Sigil's API and explorer providers. Current allowances are not established; no background monitoring or wallet safety assessment.
             </p>
           </div>
 
           <form onSubmit={handleAdd} className="rounded-2xl border border-white/10 bg-black/35 p-5 shadow-2xl shadow-black/20">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px_160px]">
               <label className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/45">Label</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-subtle">Label</span>
                 <input
                   value={label}
                   onChange={(event) => setLabel(event.target.value)}
                   placeholder="Treasury, vault, cold wallet..."
-                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-primary/50"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 text-sm text-white outline-none transition-colors placeholder:text-subtle focus:border-primary/50"
                 />
               </label>
 
               <label className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/45">Network</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-subtle">Network</span>
                 <select
                   value={network}
                   onChange={(event) => setNetwork(event.target.value as WatchlistNetwork)}
@@ -267,7 +262,7 @@ export default function WatchlistPage() {
               </label>
 
               <label className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/45">Type</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-subtle">Type</span>
                 <select
                   value={kind}
                   onChange={(event) => setKind(event.target.value as WatchlistKind)}
@@ -284,13 +279,13 @@ export default function WatchlistPage() {
 
             <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
               <label className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/45">Address</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-subtle">Address</span>
                 <input
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
                   placeholder="0x..."
                   spellCheck={false}
-                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 font-mono text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-primary/50"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 font-mono text-sm text-white outline-none transition-colors placeholder:text-subtle focus:border-primary/50"
                 />
               </label>
 
@@ -321,7 +316,7 @@ export default function WatchlistPage() {
                 <div>
                   <h2 className="text-sm font-bold text-white">Open Wallet Monitor</h2>
                   <p className="mt-1 text-xs leading-relaxed text-white/48">
-                    Turn saved wallets into a hygiene score and prioritized cleanup list.
+                    Review saved approval-event candidates and a local prioritization heuristic.
                   </p>
                 </div>
               </div>
@@ -331,7 +326,7 @@ export default function WatchlistPage() {
               className="rounded-2xl border border-primary/15 bg-primary/[0.06] p-4 transition-colors hover:border-primary/30"
             >
               <div className="flex items-start gap-3">
-                <Chrome className="mt-0.5 h-5 w-5 text-primary" />
+                <Chrome className="mt-0.5 h-5 w-5 text-primary-text" />
                 <div>
                   <h2 className="text-sm font-bold text-white">Install live protection</h2>
                   <p className="mt-1 text-xs leading-relaxed text-white/48">
@@ -346,10 +341,10 @@ export default function WatchlistPage() {
         <aside className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm text-white/45">Watchlist</p>
+              <p className="text-sm text-subtle">Watchlist</p>
               <p className="mt-2 text-5xl font-bold text-white">{summary.total}</p>
             </div>
-            <div className="rounded-2xl border border-primary/20 bg-primary/10 p-3 text-primary">
+            <div className="rounded-2xl border border-primary/20 bg-primary/10 p-3 text-primary-text">
               <ShieldCheck className="h-6 w-6" />
             </div>
           </div>
@@ -357,19 +352,19 @@ export default function WatchlistPage() {
           <div className="mt-6 grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-3">
               <p className="text-2xl font-bold text-emerald-200">{summary.clean}</p>
-              <p className="mt-1 text-xs text-white/40">Clean</p>
+              <p className="mt-1 text-xs text-subtle">No flags</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-3">
               <p className="text-2xl font-bold text-yellow-100">{summary.review}</p>
-              <p className="mt-1 text-xs text-white/40">Review</p>
+              <p className="mt-1 text-xs text-subtle">Review</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-3">
               <p className="text-2xl font-bold text-red-200">{summary.highRisk}</p>
-              <p className="mt-1 text-xs text-white/40">High risk</p>
+              <p className="mt-1 text-xs text-subtle">High risk</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-3">
-              <p className="text-2xl font-bold text-primary">{summary.unchecked}</p>
-              <p className="mt-1 text-xs text-white/40">Unchecked</p>
+              <p className="text-2xl font-bold text-primary-text">{summary.unchecked}</p>
+              <p className="mt-1 text-xs text-subtle">Unchecked</p>
             </div>
           </div>
 
@@ -378,7 +373,7 @@ export default function WatchlistPage() {
               type="button"
               onClick={refreshAll}
               disabled={entries.length === 0 || refreshingId !== null}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-3 text-sm font-semibold text-primary transition-colors hover:border-primary/45 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-3 text-sm font-semibold text-primary-text transition-colors hover:border-primary/45 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {refreshingId ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Refresh
@@ -387,7 +382,7 @@ export default function WatchlistPage() {
               type="button"
               onClick={handleExport}
               disabled={entries.length === 0}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3 text-sm font-semibold text-white/70 transition-colors hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3 text-sm font-semibold text-white/70 transition-colors hover:border-primary/30 hover:text-primary-text disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Download className="h-4 w-4" />
               Export
@@ -395,7 +390,7 @@ export default function WatchlistPage() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3 text-sm font-semibold text-white/70 transition-colors hover:border-primary/30 hover:text-primary"
+              className="col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3 text-sm font-semibold text-white/70 transition-colors hover:border-primary/30 hover:text-primary-text"
             >
               <FileUp className="h-4 w-4" />
               Import JSON
@@ -408,14 +403,14 @@ export default function WatchlistPage() {
       <section className="space-y-4">
         {entries.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-black/35 px-5 py-10 text-center">
-            <ShieldCheck className="mx-auto h-9 w-9 text-primary" />
+            <ShieldCheck className="mx-auto h-9 w-9 text-primary-text" />
             <h2 className="mt-4 text-lg font-bold text-white">No addresses yet</h2>
             <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-white/55">
-              Add the wallets, vaults, multisigs, or contracts you check most often. Everything stays in this browser unless you export it; Wallet Monitor can turn the same saved addresses into a cleanup dashboard.
+              Entries are stored in this browser; export downloads a local file. Manual refresh submits selected addresses for an explorer-log scan. Current permissions are not established.
             </p>
             <Link
               href="/monitor"
-              className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:border-primary/50"
+              className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary-text transition-colors hover:border-primary/50"
             >
               Open Wallet Monitor
               <WalletCards className="h-4 w-4" />
@@ -424,6 +419,7 @@ export default function WatchlistPage() {
         ) : (
           entries.map((entry) => {
             const status = statusCopy(entry.status);
+            const hasEventCoverage = entry.coverageStatus === 'limited';
             const Icon = status.icon;
             const isRefreshing = refreshingId === entry.id;
             return (
@@ -450,28 +446,32 @@ export default function WatchlistPage() {
 
                     <div className="grid gap-3 sm:grid-cols-4">
                       <div>
-                        <p className="text-xs uppercase tracking-wide text-white/35">Active</p>
-                        <p className="mt-1 text-sm font-semibold text-white">{entry.approvalSummary?.totalActive ?? '-'}</p>
+                        <p className="text-xs uppercase tracking-wide text-subtle">Event candidates</p>
+                        <p className="mt-1 text-sm font-semibold text-white">{hasEventCoverage ? entry.approvalSummary?.totalActive ?? '-' : '-'}</p>
                       </div>
                       <div>
-                        <p className="text-xs uppercase tracking-wide text-white/35">Unlimited</p>
-                        <p className="mt-1 text-sm font-semibold text-amber-200">{entry.approvalSummary?.unlimited ?? '-'}</p>
+                        <p className="text-xs uppercase tracking-wide text-subtle">Large values</p>
+                        <p className="mt-1 text-sm font-semibold text-amber-200">{hasEventCoverage ? entry.approvalSummary?.unlimited ?? '-' : '-'}</p>
                       </div>
                       <div>
-                        <p className="text-xs uppercase tracking-wide text-white/35">High</p>
-                        <p className="mt-1 text-sm font-semibold text-red-200">{(entry.approvalSummary?.critical ?? 0) + (entry.approvalSummary?.high ?? 0) || '-'}</p>
+                        <p className="text-xs uppercase tracking-wide text-subtle">Flagged events</p>
+                        <p className="mt-1 text-sm font-semibold text-red-200">{hasEventCoverage ? (entry.approvalSummary?.critical ?? 0) + (entry.approvalSummary?.high ?? 0) : '-'}</p>
                       </div>
                       <div>
-                        <p className="text-xs uppercase tracking-wide text-white/35">Health</p>
-                        <p className="mt-1 text-sm font-semibold text-white">{entry.approvalSummary?.healthScore ?? '-'}</p>
+                        <p className="text-xs uppercase tracking-wide text-subtle">Event heuristic</p>
+                        <p className="mt-1 text-sm font-semibold text-white">{hasEventCoverage ? entry.approvalSummary?.healthScore ?? '-' : '-'}</p>
                       </div>
                     </div>
 
                     <p className="max-w-3xl text-sm leading-relaxed text-white/50">
                       {entry.coverageMessage ??
-                        (entry.lastCheckedAt
+                        (hasEventCoverage
+                          ? 'Saved event summary; not a verified scan or current allowance assessment.'
+                          : entry.status === 'unavailable'
+                            ? 'Saved scan coverage is unavailable; no current allowance assessment.'
+                            : entry.lastCheckedAt
                           ? `Last checked ${new Date(entry.lastCheckedAt).toLocaleString()}`
-                          : 'Not checked yet. Refresh to pull the latest approval-health status.')}
+                          : 'Not checked yet. Refresh to review recorded approval-event candidates.')}
                     </p>
                   </div>
 
@@ -480,14 +480,14 @@ export default function WatchlistPage() {
                       type="button"
                       onClick={() => refreshEntry(entry)}
                       disabled={refreshingId !== null}
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-3 text-sm font-semibold text-primary transition-colors hover:border-primary/45 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-3 text-sm font-semibold text-primary-text transition-colors hover:border-primary/45 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                       Check
                     </button>
                     <Link
                       href={`/approvals?address=${entry.address}&network=${entry.network}`}
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3 text-sm font-semibold text-white/70 transition-colors hover:border-primary/30 hover:text-primary"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3 text-sm font-semibold text-white/70 transition-colors hover:border-primary/30 hover:text-primary-text"
                     >
                       Approvals
                       <ExternalLink className="h-4 w-4" />
@@ -495,7 +495,7 @@ export default function WatchlistPage() {
                     <button
                       type="button"
                       onClick={() => handleRemove(entry.id)}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.05] text-white/45 transition-colors hover:border-red-500/30 hover:text-red-200"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.05] text-subtle transition-colors hover:border-red-500/30 hover:text-red-200"
                       aria-label={`Remove ${entry.label}`}
                     >
                       <Trash2 className="h-4 w-4" />
