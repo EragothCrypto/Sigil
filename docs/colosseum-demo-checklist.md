@@ -4,6 +4,8 @@ Updated 2026-10-11. This is demo QA, not signing clearance or full audit accepta
 
 ## Published Candidate
 
+Routing retest on 9f3068e established real API dispatch but exposed restricted-CORS HTTP500 for the branch origin (same invalid request without Origin400). Preview allowlist now derives only exact trusted Vercel deployment/branch hostnames in the preview environment; foreign Vercel origins remain denied. Fresh local baseline468 and four TS scripts/typecheck/API build/actual built dispatch pass. Final preview live read remains a separate gate until its actual successful retest.
+
 2026-10-11 follow-up: Kevin supplied a branch shareable link (access parameter intentionally omitted from this repository). Authenticated desktop access to `/solana` succeeded, but its API POST returned HTTP405/static response on f7f0e6f. Added an explicit rewrite through the existing API entrypoint in both Vercel layouts, with red/green routing tests and actual built dispatch smoke. Final remote retest is required after the follow-up push. `SIGIL_PREVIEW_URL` lets `scripts/verify-solana-demo.mjs --live` reuse authorized preview access; reports omit the share parameter.
 
 EVM deployed live scans are currently not executed by the agent: existing `ensureAnalysesSchema` runs CREATE/ALTER/INDEX statements before analysis, and Kevin excluded database migrations. Use prior recorded Aave/Euler controls until a no-DDL runtime path or explicit isolated-database authorization is established. Do not infer that a preview has an isolated database.

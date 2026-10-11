@@ -51,6 +51,13 @@ export function createCorsOptions(): CorsOptions {
     ...parseCsv(process.env.SIGIL_ALLOWED_ORIGINS),
     ...parseCsv(process.env.CORS_ALLOWED_ORIGINS),
   ]);
+  if (process.env.VERCEL === "1" && process.env.VERCEL_ENV === "preview") {
+    for (const host of [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL]) {
+      if (host && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.vercel\.app$/i.test(host)) {
+        allowedOrigins.add(`https://${host.toLowerCase()}`);
+      }
+    }
+  }
 
   return {
     origin(origin, callback) {

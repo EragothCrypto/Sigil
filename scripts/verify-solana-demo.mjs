@@ -43,6 +43,10 @@ try {
         const r = await fetch(api, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({wallet: 'bad', cluster: 'devnet'})});
         return {status: r.status, cache: r.headers.get('cache-control'), type: r.headers.get('content-type'), matched: r.headers.get('x-matched-path'), body: (await r.text()).slice(0, 120)};
       }, api);
+      if (invalid.status !== 400) {
+        const direct = await context.request.post(url + api, {data: {wallet: 'bad', cluster: 'devnet'}});
+        console.log(`Invalid-input diagnostic: browserOrigin=${invalid.status}; withoutOrigin=${direct.status()}`);
+      }
       assert.equal(invalid.status, 400, JSON.stringify(invalid));
       calls = 0;
       assert.ok(documentResponse.headers()['content-security-policy']?.includes("object-src 'none'"));
