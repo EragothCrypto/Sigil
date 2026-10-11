@@ -95,6 +95,7 @@ try {
     await page.getByRole('button', {name: 'Unavailable example', exact: true}).click();
     await page.getByRole('heading', {name: 'Wallet check unavailable'}).waitFor();
     await page.getByText('No count established').first().waitFor();
+    await page.getByText('Check input', {exact: true}).click();
     await page.getByRole('button', {name: 'Load Mainnet address', exact: true}).click();
     assert.equal(await page.getByLabel('Public wallet address', {exact: true}).inputValue(), 'HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ');
     assert.equal(await page.getByLabel('Cluster', {exact: true}).inputValue(), 'mainnet-beta');

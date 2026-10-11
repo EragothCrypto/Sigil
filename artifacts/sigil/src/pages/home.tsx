@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useLocation, Link } from 'wouter';
-import { ArrowRight, AlertTriangle, WalletCards, GraduationCap, X } from 'lucide-react';
+import { ArrowRight, AlertTriangle, GraduationCap, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { StreamingAnalysisView, type StreamPhase } from '@/components/sigil/StreamingAnalysisView';
 
@@ -153,10 +153,21 @@ export default function Home() {
       ) : (
         <>
           <section aria-labelledby="check-heading">
+            <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:gap-8">
+            <div>
             <h1 id="check-heading" className="text-2xl font-display font-semibold text-foreground">Check a transaction or contract</h1>
             <p className="mt-2 text-sm text-subtle">
-              Read-only evidence review across {NETWORKS.length} selectable EVM networks. No wallet authorization.
+              {NETWORKS.length} selectable EVM networks. Read-only. No wallet authorization.
             </p>
+            </div>
+            <section aria-labelledby="permissions-heading" className="border-l-2 border-primary-text pl-4">
+              <Link href="/solana" className="console-link inline-flex min-h-11 items-center gap-3 text-xl font-display font-semibold">
+                <span id="permissions-heading">Check wallet permissions</span>
+                <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+              </Link>
+              <p className="mt-1 text-sm text-subtle">Solana legacy SPL Token delegates. Token-2022 and other authority types are not supported.</p>
+            </section>
+            </div>
 
             <form
               className="mt-5 grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-end"
@@ -194,7 +205,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={!input.trim()}
-                className="console-button inline-flex h-11 items-center justify-center gap-2"
+                className="console-button entry-analyze inline-flex h-11 items-center justify-center gap-2"
               >
                 Analyze
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -208,8 +219,8 @@ export default function Home() {
               </div>
             )}
 
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span className="text-sm text-subtle">Examples (runs analysis):</span>
+            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1 sm:flex sm:flex-wrap sm:items-center sm:gap-x-5">
+              <span className="col-span-2 text-xs text-subtle">Examples (runs analysis):</span>
               {EXAMPLES.map(ex => (
                 <button
                   key={ex.label}
@@ -218,32 +229,22 @@ export default function Home() {
                     setInput(ex.value);
                     handleAnalyzeValue(ex.value);
                   }}
-                  className="inline-flex min-h-9 items-center gap-1.5 rounded-md text-sm text-primary-text underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+                  className="example-action inline-flex min-h-11 items-center justify-between gap-2 text-left text-sm text-primary-text"
                 >
                   {ex.warning && <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
                   {ex.label}
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 </button>
               ))}
             </div>
-            <p className="mt-3 text-sm leading-relaxed text-subtle">
+            <p className="mt-4 text-sm text-subtle">Partial evidence. Not signing clearance. No warning does not mean safe.</p>
+            <details className="mt-2 text-sm text-subtle" data-evidence>
+              <summary className="min-h-8 inline-flex items-center console-link">Scope and limitations</summary>
+            <p className="mt-2 leading-relaxed max-w-3xl">
               Review findings and coverage limits. Evidence may be partial or unavailable; unknown attacks may not be detected.
               No warning is not a safety guarantee or signing clearance. Scores are heuristics, not probabilities of loss.
             </p>
-          </section>
-
-          <section aria-labelledby="permissions-heading" className="mt-6 border-t border-border pt-5">
-            <Link
-              href="/solana"
-              className="inline-flex min-h-11 items-center gap-2 rounded-md text-base font-semibold text-primary-text hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
-            >
-              <WalletCards className="h-5 w-5 shrink-0" aria-hidden="true" />
-              <span id="permissions-heading">Check wallet permissions</span>
-              <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-            </Link>
-            <p className="mt-1 text-sm leading-relaxed text-subtle">
-              Solana: review delegate permissions on legacy SPL Token accounts.
-              Token-2022 and other authority types are not supported. Coverage limits do not establish wallet safety.
-            </p>
+            </details>
           </section>
 
           {showOnboardingPrompt && (

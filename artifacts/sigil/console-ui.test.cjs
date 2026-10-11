@@ -3,6 +3,15 @@ const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const read = file => readFileSync(`${__dirname}/src/${file}`, 'utf8');
 
+test('Solana report collapses input without discarding exact evidence', () => {
+  const page = read('pages/solana-monitor.tsx');
+  assert.match(page, /<details[^>]*open=\{!report\}/);
+  assert.match(page, /Check input/);
+  assert.match(page, /grid-cols-3/);
+  assert.match(page, /data-evidence/);
+  for (const raw of ['balanceRaw', 'delegatedRaw', 'spendableRaw']) assert.ok(page.includes(`d.${raw}`));
+});
+
 test('console surfaces are opaque graphite without ambient decoration', () => {
   const css = read('index.css');
   const layout = read('components/layout/Layout.tsx');

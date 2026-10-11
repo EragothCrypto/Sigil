@@ -46,7 +46,9 @@ export default function SolanaMonitorPage() {
       <p className="text-sm text-subtle mt-2">Solana token-account delegates. Public address only. No signatures.</p>
       <p className="text-sm text-subtle mt-2">For EVM, <Link href="/approvals" className="console-link">review recorded approval events</Link>. These are not current allowances.</p>
     </header>
-    <form onSubmit={scan} className="space-y-4">
+    <details open={!report} className="check-input" data-evidence>
+    <summary className="min-h-11 flex items-center justify-between text-sm font-semibold">Check input</summary>
+    <form onSubmit={scan} className="space-y-4 mt-3">
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px]">
         <div><label htmlFor="solana-wallet" className="block text-sm font-medium mb-2">Public wallet address</label><input id="solana-wallet" value={wallet} disabled={busy} onChange={e => {setWallet(e.target.value); setReport(null); setError('');}} autoComplete="off" spellCheck={false} maxLength={64} className="w-full min-w-0 rounded-md border border-border bg-card px-3 py-3 font-mono text-sm" placeholder="Solana address" /></div>
         <div><label htmlFor="solana-cluster" className="block text-sm font-medium mb-2">Cluster</label><select id="solana-cluster" value={cluster} disabled={busy} onChange={e => {setCluster(e.target.value as SolanaCluster); setReport(null);}} className="w-full rounded-md border border-border bg-card px-3 py-3 text-sm"><option value="devnet">Devnet</option><option value="mainnet-beta">Mainnet</option></select></div>
@@ -58,6 +60,7 @@ export default function SolanaMonitorPage() {
       </div>
       <p className="text-xs text-subtle">An explicit scan sends this public address to Solana's public RPC. No wallet watch is saved on the server.</p>
     </form>
+    </details>
     {error && <p role="alert" className="border-l-2 border-amber-400 pl-4 py-2 text-sm text-amber-200">{error}</p>}
     {busy && <p role="status" className="text-sm text-subtle">Reading finalized token-account state...</p>}
     {report && action && <section aria-label="Solana check result" className="space-y-6 border-t border-border pt-6">
@@ -90,14 +93,14 @@ export default function SolanaMonitorPage() {
         return <article key={d.account} aria-label={`Permission ${shorten(d.account)}`} className="border-t border-border pt-6 space-y-5">
           <div><h3 className="font-semibold text-lg">{guidance.title}</h3><p className="text-sm text-subtle mt-1">Token account <span className="font-mono" title={d.account}>{shorten(d.account)}</span></p></div>
           <div className="text-sm border-l-2 border-amber-300 pl-4"><h4 className="font-semibold">Next action</h4><p className="mt-2 max-w-3xl leading-relaxed">{guidance.nextAction}</p></div>
-          <dl className="grid gap-4 sm:grid-cols-3 text-sm py-4 border-y border-border">
+          <dl className="grid grid-cols-3 gap-3 text-xs sm:text-sm py-4 border-y border-border">
             {[['Account balance (raw)', d.balanceRaw], ['Delegated allowance (raw)', d.delegatedRaw], ['Ordinary upper bound (raw)', d.spendableRaw]].map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-subtle">{label}</dt><dd className="font-mono text-lg break-all mt-1">{value}</dd></div>)}
           </dl>
-          <details className="permission-evidence text-sm">
+          <details className="permission-evidence text-sm" data-evidence>
             <summary>Why review this permission?</summary>
             <dl className="space-y-4">{[['What was detected', example ? 'Synthetic demonstration of a recorded delegate permission; no actual on-chain relationship was established.' : guidance.detected], ['Why it matters', guidance.why], ['Permission capability', guidance.capability], ['What could not be verified', guidance.limits]].map(([label, value]) => <div key={label}><dt className="font-semibold">{label}</dt><dd className="text-subtle mt-1 leading-relaxed">{value}</dd></div>)}</dl>
           </details>
-          <details className="permission-evidence text-sm">
+          <details className="permission-evidence text-sm" data-evidence>
             <summary>{example ? 'Synthetic account evidence' : 'On-chain account evidence'}</summary>
             <dl className="grid gap-4 sm:grid-cols-2">{[['Token account', d.account], ['Delegate authority', d.delegate], ['Mint identity (symbol unverified)', d.mint], ['Token program', d.program], ['Account state', d.state], ['Recorded account balance (raw)', d.balanceRaw], ['Delegated allowance (raw)', d.delegatedRaw], ['Ordinary balance/allowance bound (raw)', d.spendableRaw], [example ? 'Example slot' : 'Finalized slot', String(d.slot)]].map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-subtle">{label}</dt><dd className="font-mono break-all mt-1">{value}</dd></div>)}</dl>
             <p className="mt-4 text-xs text-subtle leading-relaxed">{example ? 'Synthetic values; no provider call or on-chain relationship established.' : `${report.cluster} / getTokenAccountsByOwner / base64 / official legacy SPL decoder / ${report.generatedAt}. Explorer links show independently viewed current state, not a pinned historical snapshot.`}</p>

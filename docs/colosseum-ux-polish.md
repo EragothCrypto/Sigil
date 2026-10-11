@@ -52,6 +52,15 @@ Statuses apply to the priority routes above, not every secondary screen.
 - Deployed evidence files are in ignored `tmp/ux-polish/preview/`. Shared preview access was verified in the authorized browser session; jury access must use Kevin's separately supplied share link. Access capability is never recorded in repository files.
 - All six synthetic branches also exercised on the deployed mobile candidate: correct title, explicit example label, no horizontal overflow. Browser console errors: none observed. These examples are not live victims or live positive exposure findings.
 
+## Final Refinement Pass
+
+- Presentation-only follow-up to the approved console baseline: both entry tasks are visible before the EVM form; shorter entry copy preserves the visible no-clearance warning and full limitations in a native disclosure.
+- Disabled Analyze is visually quiet; explicit example actions remain labeled as running analysis. No automatic request or changed analysis handler.
+- Solana input collapses after a report, with keyboard-accessible reopening. Decision and next action fit the first mobile viewport; exact raw permission values remain available in three stable columns.
+- Open evidence disclosures use the existing evidence accent. Navigation, API contracts, detection, wallet execution boundaries, dependencies and production configuration are unchanged.
+- Local verification: 491 Node tests plus four TypeScript test scripts, workspace typecheck, frontend build and whitespace check passed. In-app browser at 1440x1000 and 390x844: entry balance, native input reopening, address change clearing a prior report, all six labeled synthetic states and no horizontal overflow verified.
+- Deployment verification and exact candidate freeze are recorded separately after same-commit CI and deployed desktop/mobile inspection; the earlier freeze above remains historical evidence, not proof for this follow-up.
+
 ## Jury Walkthrough
 
 1. Open the authorized jury Preview. Transaction check and Wallet permissions are visible named tasks.

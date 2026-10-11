@@ -184,7 +184,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
           </div>
       </section>
 
-      <details className="border-y border-border py-3">
+      <details className="border-y border-border py-3" data-evidence>
         <summary className="cursor-pointer text-sm font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text">Scores and methodology</summary>
         <div className="mt-3 space-y-3">
           {reportV2 ? <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
@@ -226,7 +226,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
         <section className="space-y-5 border-y border-white/10 py-6">
           {reportV2 && <div className="space-y-3">
             <p className="text-sm text-white/75">Coverage: <strong>{reportV2.coverage === 'complete_for_supported_checks' ? 'Complete for supported checks only' : reportV2.coverage === 'partial' ? 'Partial' : 'Unavailable'}</strong>. Not a complete audit or full execution assessment.</p>
-            <details><summary className="cursor-pointer text-sm text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text">Check capabilities</summary>
+            <details data-evidence><summary className="cursor-pointer text-sm text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text">Check capabilities</summary>
             <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
               {([
                 ['sourceVerification', 'Source verification'], ['receiptEvents', 'Receipt events'], ['incidentLookup', 'Incident lookup'], ['inputDecoding', 'Input decoding'],
@@ -250,7 +250,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
                     const evidence = validatedReport.evidence.find(e => e.id === f.evidenceRefs[0])!;
                     return <li key={f.id} className="py-3 text-sm leading-relaxed text-white/75 break-words">
                       {f.text}
-                      <details className="mt-2 text-xs text-white/50">
+                      <details className="mt-2 text-xs text-white/50" data-evidence>
                         <summary className="cursor-pointer min-h-8 py-1 hover:text-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text">Recorded evidence</summary>
                         <dl className="mt-2 space-y-1 break-all">
                           <div><dt className="inline text-subtle">Subject: </dt><dd className="inline font-mono">{evidence.subject}</dd></div>

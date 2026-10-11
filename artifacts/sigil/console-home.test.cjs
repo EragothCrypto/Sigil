@@ -4,6 +4,14 @@ const path = require('node:path');
 const test = require('node:test');
 const source = readFileSync(path.join(__dirname, 'src/pages/home.tsx'), 'utf8');
 
+test('final entry exposes Solana before input and retains visible security qualification', () => {
+  assert.ok(source.indexOf('href="/solana"') < source.indexOf('<form'));
+  assert.match(source, /Partial evidence\. Not signing clearance\./);
+  assert.match(source, /<summary[^>]*>Scope and limitations<\/summary>/);
+  assert.match(source, /entry-analyze/);
+  assert.match(source, /example-action/);
+});
+
 test('HOME begins with a compact labeled analysis form', () => {
   assert.match(source, /<h1[^>]*>Check a transaction or contract<\/h1>/);
   assert.match(source, /<form[\s\S]*?onSubmit=\{[\s\S]*?handleAnalyze\(\)/);
