@@ -4,6 +4,20 @@ Updated 2026-10-11. This is demo QA, not signing clearance or full audit accepta
 
 ## Published Candidate
 
+### Current Candidate: EVM and Solana
+
+Application `dad30cdc4c2b7dbe7f00dd2063aed8e48c1724f5`, [immutable Preview](https://sigil-nanlyi0g2-s3ntrylabs.vercel.app), deployment6996522900. All five [CI gates](https://github.com/EragothCrypto/Sigil/actions/runs/38144968268) passed. Use Kevin's separately supplied branch share link for jury access. The access query is never committed.
+
+Fresh EVM streaming analyses on 2026-10-11 at15:55-15:56Berlin passed: Aave `findings-v2`, caution35; Euler `findings-v2`, dangerous80 with exact sourced historical attribution. Both saved-result views passed at1440x1000/390x844, with qualified ABI/coverage/historical claims, no page errors or horizontal overflow. Evidence: `tmp/colosseum/evm-preclose/report.json` and PNGs. Requests no longer perform schema DDL; ordinary existing analysis persistence remains. No deployed migration or production deployment.
+
+Same candidate Mainnet checks passed at15:56Berlin: public authority below returned27legacy accounts, two explicitly unsupported Token-2022 accounts, correctpartial at finalized slots455675389/455675404. Counts/slots are observations, not guaranteed future results. HTML SHA256 `3a84d62a80dec800c5d95df6ffb74673f7365889a73168dc22c2ec5f09b44568`.
+
+Reproduce EVM live acceptance with the authorized preview URL provided only through `SIGIL_PREVIEW_URL`: `node scripts/verify-colosseum-evm.mjs`. Chrome/Playwright must be resolvable through the configured runtime. Saved reports are evidence of the recorded analysis time, not fresh permission checks. Final combined journey is recorded in the pre-close handoff.
+
+### Historical Preview Checkpoints
+
+The checkpoints below are retained historical evidence. Their pending EVM/DDL statements are superseded by the current candidate above.
+
 ### Passing Live Preview
 
 Application commit `0abfd989a1bc7586893f6dae6bd647caecf2737d`: [immutable preview](https://sigil-jxgtsntc0-s3ntrylabs.vercel.app/solana), accessed for testing through Kevin's authorized branch share link. All five [CI jobs](https://github.com/EragothCrypto/Sigil/actions/runs/38131583171) passed. Later documentation-only commits leave the tested application source unchanged.
@@ -91,7 +105,7 @@ USDC: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
 aUSDC: 0x98c23e9d8f34fefb1b7bd6a91b7ff122f4e16f5c
 ```
 
-Expected: qualified decoded supplyWithPermit intent, recorded token/interface evidence and two transfer-shaped events, with current-only ABI and execution-effect limitations. No guarantee of safety. Previous live evidence exists; retest the actual submitted deployment/candidate before video recording.
+Expected: qualified decoded supplyWithPermit intent, recorded token/interface evidence and two transfer-shaped events, with current-only ABI and execution-effect limitations. No guarantee of safety. Fresh current-candidate acceptance is recorded above; live providers can still fail or rate-limit during recording.
 
 ### Euler Historical Exploit
 
@@ -100,7 +114,7 @@ Transaction: 0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d
 Destination: 0xebc29199c817dc47ba12e3f86102564d640cbf99
 ```
 
-Expected: exact source-backed historical Euler V1 exploit attribution preserved, not a general live-compromise assertion. Do not remove evidence limitations to improve the demo. Previous live evidence exists; current deployment retest still open.
+Expected: exact source-backed historical Euler V1 exploit attribution preserved, not a general live-compromise assertion. Do not remove evidence limitations to improve the demo. Fresh current-candidate acceptance is recorded above.
 
 WETH contract metadata example (not a transaction):
 

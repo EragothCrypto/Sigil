@@ -16,7 +16,7 @@ Feasibility gate completed 2026-10-11: neither the reviewed Euler historical att
 
 Selected user-authorized fallback: action-first Solana Delegate Checker. Next action comes before raw data; each permission answers what/why/capability/evidence/manual review/unknowns. Fixed-host, cluster-bound explorer links; exact raw balance/allowance/bound; frozen/zero distinctions; explicit coverage; six labeled local demo branches. No new providers/dependencies, incident feed, transactions, signing, storage or migrations. [Verification and demo handoff](colosseum-differentiation-sprint.md).
 
-Execution order: local fallback acceptance -> bounded independent review -> authorized commit/push/preview -> remote desktop/mobile Mainnet/Devnet smoke -> feature freeze. EVM no-DDL live gate, jury access, videos and submission remain required/open; the additional feature does not waive them. Incident registry/correlation is Post-Colosseum until exact live predicates and trustworthy positive/negative controls exist.
+Coding pre scope is accepted and frozen at applicationdad30cd: runtime DDL removed; fresh Aave/Euler, actual scanner/reanalysis/cross-chain journey and Mainnet/Devnet desktop/mobile passed; all five CI gates green. [Final coding acceptance and manual handoff](colosseum-pre-close-handoff.md). Only human reviewer permissions/share-link delivery, videos, personal portal fields and submission/receipt remain. Incident registry/correlation is Post-Colosseum until exact live predicates and trustworthy positive/negative controls exist.
 
 ## Delivery Order
 
@@ -27,10 +27,10 @@ These are timeboxes from the planning clock, not estimates that authorize loweri
 | H00 | Hours 0-1 | Reprioritize every original phase and audit group; confirm scope | Approved EVM + narrow Solana scope and persisted plan | Done; independent plan review approved |
 | H01 | Hours 1-7 | Versioned manual Solana scan: validated addresses, bounded RPC, official SPL codecs, ordinary delegate findings | Tested partial/failure semantics; exact integer amounts; both token programs queried; no signing | Slice done; live Devnet and nonempty Mainnet reads passed |
 | H02 | Hours 7-11 | Usable Solana view within existing product; action-first permission report, provenance, examples and clear manual review steps | Desktop/mobile loading, scoped absence, partial, unavailable, frozen/zero and invalid-input paths | Fallback done in scope; candidate8acba96 live Mainnet/Devnet desktop/mobile and five CI gates passed |
-| H03 | Hours 11-14 | Stabilize EVM demo paths and new endpoint; required build/type/regression checks | Aave/Euler expectations retained; changed routes tested; no crashing malformed response | In progress; baseline/types/build/codegen/API smoke passed; deployed EVM controls still pending |
-| H04 | Hours 14-17 | Release candidate and authorized deployment smoke | Exact candidate identified, headers/API dispatch checked; rollback available | Action-first Solana preview8acba96 accepted on Devnet/Mainnet desktop/mobile; EVM live DDL boundary remains open |
-| H05 | Hours 17-20 | Submission package, demo scripts, factual integration list and development disclosure | Copyable test inputs; videos can be recorded; no unsupported claims | Draft package prepared; Solo Founder confirmed; videos and jury repository access pending |
-| H06 | Hours 20-24 | Feature freeze, fix demo blockers only, final smoke and submission buffer | Reproducible jury walkthrough; Kevin submits and verifies receipt | Pending |
+| H03 | Hours 11-14 | Stabilize EVM demo paths and new endpoint; required build/type/regression checks | Aave/Euler expectations retained; changed routes tested; no crashing malformed response | Done in pre scope; SELECT-only runtime, fresh Aave/Euler and475+fourTS/types/build/codegen/wrapper/real SQL gates passed |
+| H04 | Hours 14-17 | Release candidate and authorized deployment smoke | Exact candidate identified, headers/API dispatch checked; rollback available | Done; dad30cd Preview6996522900, all five CI gates and shared-access EVM/Solana desktop/mobile live passed; production unchanged |
+| H05 | Hours 17-20 | Submission package, demo scripts, factual integration list and development disclosure | Copyable test inputs; videos can be recorded; no unsupported claims | Coding/materials done; Solo Founder confirmed; videos/personal fields/jury repository permissions manual |
+| H06 | Hours 20-24 | Feature freeze, fix demo blockers only, final smoke and submission buffer | Reproducible jury walkthrough; Kevin submits and verifies receipt | Coding freeze/final combined journey done; actual submission and receipt remain Kevin's task |
 
 At hour 7, if Solana acquisition cannot meet the exit gate, stop breadth expansion and repair the narrow read path. At hour 14 freeze features. If deployment is unavailable, keep the locally reproducible candidate and recorded demo; do not represent it as deployed. Deferred optional work must not consume the submission buffer.
 
@@ -94,6 +94,12 @@ Broad unchanged-surface browser reruns and open organizational evidence no longe
 Submission checklist: registration/team facts, repo access, logo, live/local setup, presentation video, demo video, development-before/during-period disclosure, target user/problem, competitor differentiation, distribution plan and honest demand evidence. No fabricated traction, revenue, testimonials or market-size numbers.
 
 ## Current Execution State
+
+Superseding final coding state: applicationdad30cdc4c2b7dbe7f00dd2063aed8e48c1724f5 frozen, [Preview](https://sigil-nanlyi0g2-s3ntrylabs.vercel.app), five CI38144968268 gates passed. Runtime schema checks no longer execute DDL; isolated privacy/retention passed, no deployed migration. Fresh live Aave/Euler and scanner -> fresh reanalysis -> Solana -> scanner on desktop/mobile passed at15:58Berlin; same-candidate Mainnet/Devnet live passed. Detailed requirement-by-requirement Pre evidence and manual-only handoff: [coding pre-close](colosseum-pre-close-handoff.md). Do not infer full P00/original-phase/legal/production completion.
+
+### Historical Execution Checkpoints
+
+The notes below are retained chronological history, not current open coding tasks; the superseding state above controls.
 
 - Scope approved by Kevin: EVM + narrow manual Solana check.
 - Solana manual slice implemented: official @solana/kit 6.5.0 and @solana-program/token 0.13.0, bounded genesis/read transport, ordinary legacy delegates, OpenAPI/generated types/Zod, response context validation, /solana view and independent example data.

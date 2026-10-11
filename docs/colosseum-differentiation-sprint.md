@@ -1,5 +1,11 @@
 # Final Colosseum Differentiation Handoff
 
+## Superseding Coding Pre-Close
+
+Application `dad30cdc4c2b7dbe7f00dd2063aed8e48c1724f5`, [Preview](https://sigil-nanlyi0g2-s3ntrylabs.vercel.app), deployment6996522900, all five [CI gates](https://github.com/EragothCrypto/Sigil/actions/runs/38144968268) passed. Analysis runtime schema checks are now SELECT-only, including required columns and a valid immediate unique bearer-ID index. Explicit bootstrap SQL remains outside the application graph; only guarded disposable PostgreSQL integration fixtures invoked it. No deployed migration or production deployment.
+
+Fresh Aave/Euler streams, persisted UUID reports and desktop/mobile views passed at15:55-15:56Berlin on2026-10-11: Aavecaution35/qualified supplyWithPermit, Eulerdangerous80/exact historical attribution. Same candidate Solana Mainnet passed27legacy/2unsupportedToken2022/partial at slots455675389/455675404. New baseline475+fourTS, types/builds/codegen/wrappers and real isolated SQL privacy/retention/helper gates passed. Independent narrow schema review no concrete blocker. Reproduction: `scripts/verify-colosseum-evm.mjs` and existing Solana verifier; access URL in process environment only. Previous DDL-blocked notes below are historical, not current blockers. Final combined journey/feature-freeze acceptance is tracked in the pre-close handoff.
+
 ## Feasibility and Selected Scope
 
 Decision on 2026-10-11: ship the action-first Solana Delegate Checker fallback, not Incident Exposure Checker. Euler's exact historical transaction attribution does not prove current effective allowance/position exposure. Raydium's documented compromised protocol admin and rotation are not ordinary user SPL delegate semantics. Neither reviewed candidate has a supported complete exposure predicate and current affected-wallet control here. See [source-backed gate and plan](superpowers/plans/2026-10-11-colosseum-differentiation.md). No incidents, malicious entities, active approvals or victims were invented.

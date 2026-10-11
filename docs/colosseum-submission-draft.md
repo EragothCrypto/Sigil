@@ -1,6 +1,6 @@
 # Sigil: World's Fair Submission Draft
 
-Status: honest working draft, not submitted. Kevin confirmed registration as a Solo Founder on 2026-10-11 and authorized commit, push and Vercel preview only. Selected ecosystem track, founder biography, candidate deployment link and video URLs still require completion. Production deployments, migrations and paid services are excluded.
+Status: honest working draft, not submitted. Kevin confirmed registration as a Solo Founder on 2026-10-11 and authorized commit, push and Vercel preview only. Selected ecosystem track, founder biography and video URLs require Kevin's completion. Verified candidate link and scope are supplied below. Production deployments, deployed migrations and paid services are excluded.
 
 ## Headline
 
@@ -54,11 +54,9 @@ Next validation: interview ten target users, test comprehension of review versus
 
 ## Before Submission
 
-Newest verified application is `8acba96b8b461e037b5ed977a002911e1cd06b09`, [action-first preview](https://sigil-7884iakpo-s3ntrylabs.vercel.app/solana). All five CI jobs and remote desktop/mobile Mainnet/Devnet checks passed on2026-10-11. Current evidence, limitations and jury walkthrough: [differentiation handoff](colosseum-differentiation-sprint.md). Use Kevin's separate authorized branch share link for jury access, never persist its access capability here. Remaining requirements below are not waived; older candidates are historical.
+Newest verified application is `dad30cdc4c2b7dbe7f00dd2063aed8e48c1724f5`, [Preview](https://sigil-nanlyi0g2-s3ntrylabs.vercel.app/solana). All five [CI jobs](https://github.com/EragothCrypto/Sigil/actions/runs/38144968268) passed. Fresh Aave/Euler analyses and remote desktop/mobile Solana Mainnet checks passed on2026-10-11; runtime schema DDL has been removed. Current evidence and jury inputs: [live-test checklist](colosseum-demo-checklist.md). Use Kevin's separate authorized branch share link for jury access, never persist its access capability here.
 
-Verified application candidate: `0abfd989a1bc7586893f6dae6bd647caecf2737d`, [preview](https://sigil-jxgtsntc0-s3ntrylabs.vercel.app/solana), all five CI jobs passed. Kevin supplied an authorized branch share link; preserve it separately for jury access, not in source control. Actual desktop/mobile Solana live tests passed at12:22Berlin on2026-10-11. The first bd3dbda/f7f0e6f previews below are historical. EVM demo should currently use clearly labeled prior recorded controls: fresh agent-triggered live analysis remains gated by existing schema-DDL behavior and Kevin's no-migration boundary. Later documentation-only commits do not change this tested application source.
-
-Repository branch: `codex/vnext-p00-baseline` at [Sigil](https://github.com/EragothCrypto/Sigil) (private; reviewer access must be arranged). Initial application candidate: `bd3dbdadc25ab7c30b5e56589b5dff2a12084d11`. [Vercel preview](https://sigil-68fs50830-s3ntrylabs.vercel.app/solana) exists but requires Vercel authentication; provide an authorized shareable link before calling it jury-accessible. Final follow-up SHA and remote checks should accompany the submission.
+Repository branch: `codex/vnext-p00-baseline` at [Sigil](https://github.com/EragothCrypto/Sigil) (private; actual reviewer access must be arranged by Kevin). Older previews are historical; do not use `sigil-68fs50830` for recording. The recorded live controls are reproducible, not guarantees of future provider availability. No production deployment or deployed database migration was performed.
 
 - Registration confirmed by Kevin: Solo Founder. Choose track in the actual portal.
 - Identify the exact candidate SHA and repo access. Public repo encouraged; if private, grant requested reviewer access through Kevin's account.
