@@ -20,6 +20,15 @@ const {server, url} = preview;
 let browser;
 const results = [];
 const api = '/api/sigil/monitor/v2/solana/scan';
+async function capture(page, name) {
+  await page.evaluate(() => {if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); window.scrollTo({top: 0, behavior: 'instant'});});
+  await page.waitForFunction(() => window.scrollY === 0 && document.querySelector('header')?.getBoundingClientRect().top === 0);
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const title = await page.getByRole('heading', {name: 'Solana Wallet Check', exact: true}).boundingBox();
+  const header = await page.locator('header').first().boundingBox();
+  assert.ok(title.y >= header.y + header.height, 'first viewport heading must clear the sticky navigation');
+  await page.screenshot({path: fileURLToPath(new URL(name, output)), fullPage: true});
+}
 try {
   if (!remote) {
     const invalid = await fetch(url + api, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({wallet: 'bad', cluster: 'devnet'})});
@@ -67,7 +76,7 @@ try {
     assert.equal(await page.getByRole('link', {name: 'Wallet evidence', exact: true}).count(), 0);
     assert.equal(calls, 0);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'example must fit viewport');
-    await page.screenshot({path: fileURLToPath(new URL(`solana-${viewport.width}-review.png`, output)), fullPage: true});
+    await capture(page, `solana-${viewport.width}-review.png`);
     for (const [button, title, detail] of [
       ['No-delegate example', 'No delegates found in checked scope', 'No delegate change is indicated by this narrow check'],
       ['Incomplete example', 'Some checks could not be completed', 'Coverage is incomplete.'],
@@ -117,7 +126,7 @@ try {
       assert.equal(new URL(walletEvidence).hostname, 'explorer.solana.com');
       assert.equal(new URL(walletEvidence).searchParams.get('cluster'), cluster === 'devnet' ? 'devnet' : null);
       assert.ok(!responseText.includes('Wallet check unavailable'), 'live scan did not establish legacy acquisition');
-      await page.screenshot({path: fileURLToPath(new URL(`solana-${viewport.width}-live.png`, output)), fullPage: true});
+      await capture(page, `solana-${viewport.width}-live.png`);
       results.push({viewport, live: responseText, actualReport, remoteIndexHash});
     } else results.push({viewport, syntheticOnly: true});
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

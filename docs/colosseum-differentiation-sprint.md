@@ -29,7 +29,15 @@ Local candidate desktop1440x1000/mobile390x844 browser tests passed on 2026-10-1
 - Production-filter dependency audit: no known advisories. Initial sandbox loopback/symlink permissions and local TLS-chain failures were rerun with appropriate execution rights/system CA; no TLS checks or tests disabled.
 - Independent scoped review found fixture-specific on-chain provenance wording; corrected to synthetic headings/detection/provenance, covered by tests. Follow-up review passed with no remaining concrete blockers; rendered browser verification was performed separately by the main agent.
 
-Authorized preview publication and fresh remote acceptance pending at this local checkpoint. Production and migrations remain excluded. EVM actual deployed analyze calls still blocked by ensureAnalysesSchema DDL/no-isolated-DB evidence. Do not call that open gate complete based on built/synthetic tests. Vite reports existing large-chunk and tooltip sourcemap warnings; build exit0, not a clean warning-free build or accessibility certification.
+### Final Preview Acceptance
+
+Application commit `8acba96b8b461e037b5ed977a002911e1cd06b09` is committed/pushed, immutable [Vercel preview](https://sigil-7884iakpo-s3ntrylabs.vercel.app/solana), deployment6996175173, Preview environment. Access was tested through the separately human-authorized branch share link, not by exposing its capability in the repository.
+
+Remote desktop/mobile Mainnet passed at 2026-10-11 13:27 UTC / 15:27 Berlin: legacy27, Token-2022unsupported2, correctpartial, finalized slots455667428/455667442. Remote Devnet passed at13:25UTC: legacy35, Token-2022unsupported14, correctpartial, slots509916563/509916577. Both included all six synthetic branches, no-auto-scan, invalid input, malformed HTTP200 rejection, wallet/cluster binding, no-store, official wallet explorer cluster and no page errors/overflow. Screenshots inspected; capture now normalizes scroll/focus and asserts title clears sticky header, correcting a scrolled full-page capture artifact without changing product layout. Remote HTML SHA256 `3a84d62a80dec800c5d95df6ffb74673f7365889a73168dc22c2ec5f09b44568`; reports/screenshots in `tmp/colosseum/preview-mainnet/` and `tmp/colosseum/preview/`. Remote build hash is separately recorded, not asserted equal to the local build's HTML.
+
+All five [CI jobs](https://github.com/EragothCrypto/Sigil/actions/runs/38143010372) passed for8acba96: verify, advisories, package, privacy, retention. Database exercises ran only against CI's isolated synthetic test database; no remote production/preview DB migration was invoked by the agent. Staged Gitleaks/default rules/redaction and whitespace check passed before publication. Later verification-script/documentation commits do not change this tested application code.
+
+Production and migrations remain excluded. EVM actual deployed analyze calls still blocked by ensureAnalysesSchema DDL/no-isolated-DB evidence. Do not call that open gate complete based on built/synthetic tests. Vite reports existing large-chunk and tooltip sourcemap warnings; build exit0, not a clean warning-free build or accessibility certification.
 
 ## Shipped vs Planned
 

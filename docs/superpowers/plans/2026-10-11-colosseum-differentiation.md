@@ -29,7 +29,7 @@ Neither candidate establishes exact current permission/position semantics needed
 - [x] Expand browser checks: all fixture branches, negative/partial API contract tests, tampered data, links, no auto scan/signing and responsive views.
 - [x] Run local baseline, types, builds, codegen, built API smoke, live Mainnet/Devnet browser reads and prod dependency audit; staged secret gate before publication.
 - [x] Independent bounded review; provenance correction and affected regression/browser checks passed; no remaining concrete blocker in follow-up review.
-- [ ] Update sprint/demo/submission docs with evidence and shipped versus planned scope; authorized commit/push/preview smoke only.
+- [x] Update sprint/demo/submission docs with evidence and shipped versus planned scope; application8acba96 committed/pushed, all five CI jobs passed, remote Mainnet/Devnet desktop/mobile passed. No production action.
 
 ## Jury Journey
 
