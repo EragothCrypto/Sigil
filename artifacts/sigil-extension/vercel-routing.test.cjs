@@ -24,8 +24,9 @@ function test(name, fn) {
 
 test("root Vercel config routes API before SPA fallback", () => {
   const config = JSON.parse(read("vercel.json"));
-  assert.deepEqual(config.rewrites[0], { source: "/api/sigil/simulate-v2", destination: "/api/sigil/simulate?executionCheckVersion=2" });
-  assert.deepEqual(config.rewrites[1], { source: "/api/:path*", destination: "/api/:path*" });
+  assert.deepEqual(config.rewrites[0], { source: "/api/sigil/monitor/v2/solana/scan", destination: "/api?solanaWalletCheck=1" });
+  assert.deepEqual(config.rewrites[1], { source: "/api/sigil/simulate-v2", destination: "/api/sigil/simulate?executionCheckVersion=2" });
+  assert.deepEqual(config.rewrites[2], { source: "/api/:path*", destination: "/api/:path*" });
   assert.deepEqual(config.rewrites.at(-1), { source: "/(.*)", destination: "/index.html" });
 });
 
@@ -60,8 +61,9 @@ test("root Vercel API functions import the built Express app", () => {
 test("artifact-root Vercel config exists for Vercel projects rooted at artifacts/sigil", () => {
   const config = JSON.parse(read("artifacts/sigil/vercel.json"));
   assert.match(config.buildCommand, /@workspace\/api-server build/);
-  assert.deepEqual(config.rewrites[0], { source: "/api/sigil/simulate-v2", destination: "/api/sigil/simulate?executionCheckVersion=2" });
-  assert.deepEqual(config.rewrites[1], { source: "/api/:path*", destination: "/api/:path*" });
+  assert.deepEqual(config.rewrites[0], { source: "/api/sigil/monitor/v2/solana/scan", destination: "/api?solanaWalletCheck=1" });
+  assert.deepEqual(config.rewrites[1], { source: "/api/sigil/simulate-v2", destination: "/api/sigil/simulate?executionCheckVersion=2" });
+  assert.deepEqual(config.rewrites[2], { source: "/api/:path*", destination: "/api/:path*" });
   assert.equal(exists("artifacts/sigil/api/index.js"), true);
   assert.equal(exists("artifacts/sigil/api/[...path].js"), true);
   for (const route of [

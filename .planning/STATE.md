@@ -2,6 +2,8 @@
 
 ## Active Override: Hackathon First
 
+Preview follow-up: human branch share link received; parameter is not persisted in source/reports. Actual page access succeeds; live API validation found Solana POST HTTP405 on f7f0e6f (static fallback). Both layout configs now explicitly route to existing API entrypoint; actual wrapper dispatch and red/green route regressions pass, fresh baseline466 plus four TS scripts passes, local desktop/mobile smoke passes. Commit/push and deployed retest next. EVM agent-triggered live scans remain excluded because existing ensureAnalysesSchema executes DDL; no preview DB isolation has been established and human excluded migrations. No such route was called.
+
 Publication checkpoint 2026-10-11: candidate bd3dbdadc25ab7c30b5e56589b5dff2a12084d11 committed and pushed on codex/vnext-p00-baseline. Vercel Preview completed at https://sigil-68fs50830-s3ntrylabs.vercel.app; no production deployment or migration. Unauthenticated HTTP redirects to Vercel SSO, so deployed browser/API acceptance and jury access remain open pending a shareable link. Initial remote CI advisory/package/privacy/retention jobs passed; verify exposed an older UI test's unconditional local Windows package-map dependency. Added missing-map regression (red then green), made fallback optional, reran full local baseline successfully. Follow-up CI still required. Full audit completion is not the current priority.
 
 2026-10-11 human confirmation: Kevin is registered as a Solo Founder. Commit, GitHub push and Vercel preview are authorized after final tests. Production deploys, database migrations and paid services remain excluded. Continue H03/H04 publication and candidate checks; historical authorization requests below are superseded.

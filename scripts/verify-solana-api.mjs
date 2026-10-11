@@ -16,12 +16,13 @@ globalThis.fetch = (input, options) => {
 const {default: app} = await import('../artifacts/api-server/dist/app.mjs');
 const handlers = [{name: 'mounted Express', handler: app}];
 for (const file of ['../api/[...path].js', '../artifacts/sigil/api/[...path].js']) handlers.push({name: file, handler: (await import(file)).default});
+for (const file of ['../api/index.js', '../artifacts/sigil/api/index.js']) handlers.push({name: file, handler: (await import(file)).default});
 for (const {name, handler} of handlers) {
   const server = createServer(handler).listen(0, '127.0.0.1');
   await once(server, 'listening');
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
-    const paths = name === 'mounted Express' ? ['/api/sigil/monitor/v2/solana/scan'] : ['/api/sigil/monitor/v2/solana/scan', '/sigil/monitor/v2/solana/scan'];
+    const paths = name === 'mounted Express' ? ['/api/sigil/monitor/v2/solana/scan'] : name.endsWith('/index.js') ? ['/api?solanaWalletCheck=1', '/api/sigil/monitor/v2/solana/scan'] : ['/api/sigil/monitor/v2/solana/scan', '/sigil/monitor/v2/solana/scan'];
     for (const path of paths) {
       const post = body => fetch(base + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
       assert.equal((await post({wallet: 'bad', cluster: 'devnet'})).status, 400);
@@ -40,6 +41,6 @@ for (const {name, handler} of handlers) {
     console.log(`${name}: Solana POST dispatch, invalid400 and unavailable200 passed`);
   } finally {await new Promise(resolve => server.close(resolve));}
 }
-assert.equal(blockedCalls, 5);
+assert.equal(blockedCalls, 9);
 globalThis.fetch = originalFetch;
 process.exit(0);

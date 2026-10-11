@@ -6,17 +6,23 @@ import { fileURLToPath } from 'node:url';
 import { startSolanaDemoPreview } from './solana-demo-preview.mjs';
 
 const {chromium} = createRequire(import.meta.url)('playwright');
-const output = new URL('../tmp/colosseum/', import.meta.url);
+const remoteInput = process.env.SIGIL_PREVIEW_URL;
+const remote = remoteInput ? new URL(remoteInput) : null;
+if (remote) assert.ok(remote.protocol === 'https:' && remote.hostname.endsWith('.vercel.app'), 'remote verification requires an authorized HTTPS Vercel preview');
+const output = new URL(remote ? '../tmp/colosseum/preview/' : '../tmp/colosseum/', import.meta.url);
 await mkdir(output, {recursive: true});
 const hash = () => readFile(new URL('../artifacts/sigil/dist/public/index.html', import.meta.url)).then(b => createHash('sha256').update(b).digest('hex'));
 const buildHash = await hash();
-const {server, url} = await startSolanaDemoPreview();
+const preview = remote ? {server: null, url: remote.origin} : await startSolanaDemoPreview();
+const {server, url} = preview;
 let browser;
 const results = [];
 const api = '/api/sigil/monitor/v2/solana/scan';
 try {
-  const invalid = await fetch(url + api, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({wallet: 'bad', cluster: 'devnet'})});
-  assert.equal(invalid.status, 400);
+  if (!remote) {
+    const invalid = await fetch(url + api, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({wallet: 'bad', cluster: 'devnet'})});
+    assert.equal(invalid.status, 400);
+  }
   browser = await chromium.launch({headless: true, channel: 'chrome'});
   for (const viewport of [{width: 1440, height: 1000}, {width: 390, height: 844}]) {
     const context = await browser.newContext({viewport, reducedMotion: 'reduce'});
@@ -25,9 +31,22 @@ try {
     page.on('pageerror', e => errors.push(e.message));
     page.on('request', req => {if (req.url().endsWith(api)) calls++;});
     await context.route('**/*', route => route.request().url().startsWith(url) ? route.continue() : route.abort());
-    await page.goto(url + '/solana', {waitUntil: 'networkidle'});
+    const target = new URL('/solana', url);
+    if (remote) target.search = remote.search;
+    const documentResponse = await page.goto(target.href, {waitUntil: 'networkidle'});
+    assert.equal(documentResponse.status(), 200, 'preview access must establish the actual application');
+    const remoteIndexHash = createHash('sha256').update(await documentResponse.body()).digest('hex');
     await page.getByRole('heading', {name: 'Solana Wallet Check', exact: true}).waitFor();
     assert.equal(calls, 0, 'view must not scan automatically');
+    if (remote) {
+      const invalid = await page.evaluate(async api => {
+        const r = await fetch(api, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({wallet: 'bad', cluster: 'devnet'})});
+        return {status: r.status, cache: r.headers.get('cache-control'), type: r.headers.get('content-type'), matched: r.headers.get('x-matched-path'), body: (await r.text()).slice(0, 120)};
+      }, api);
+      assert.equal(invalid.status, 400, JSON.stringify(invalid));
+      calls = 0;
+      assert.ok(documentResponse.headers()['content-security-policy']?.includes("object-src 'none'"));
+    }
     await page.getByRole('button', {name: 'Check wallet', exact: true}).click();
     await page.getByRole('alert').filter({hasText: 'Enter a complete Solana public address.'}).waitFor();
     assert.equal(calls, 0);
@@ -54,13 +73,15 @@ try {
       const responseText = await page.getByRole('region', {name: 'Solana check result'}).innerText();
       assert.ok(!responseText.includes('Wallet check unavailable'), 'live scan did not establish legacy acquisition');
       await page.screenshot({path: fileURLToPath(new URL(`solana-${viewport.width}-live.png`, output)), fullPage: true});
-      results.push({viewport, live: responseText});
+      results.push({viewport, live: responseText, remoteIndexHash});
     } else results.push({viewport, syntheticOnly: true});
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     assert.deepEqual(errors, []);
     await context.close();
   }
   assert.equal(await hash(), buildHash);
-  await writeFile(new URL('browser-report.json', output), JSON.stringify({generatedAt: new Date().toISOString(), buildHash, results}, null, 2));
-  console.log(`Solana desktop/mobile smoke passed; live=${process.argv.includes('--live')}; index=${buildHash}`);
-} finally {await browser?.close(); await new Promise(resolve => server.close(resolve));}
+  await writeFile(new URL('browser-report.json', output), JSON.stringify({generatedAt: new Date().toISOString(), localIndexHash: buildHash, remoteOrigin: remote?.origin, results}, null, 2));
+  console.log(`Solana desktop/mobile smoke passed; live=${process.argv.includes('--live')}; remote=${Boolean(remote)}; localIndex=${buildHash}`);
+} catch (error) {
+  throw new Error(String(error.message).replace(/_vercel_share=[^&\s"']+/g, '_vercel_share=REDACTED'));
+} finally {await browser?.close(); if (server) await new Promise(resolve => server.close(resolve));}

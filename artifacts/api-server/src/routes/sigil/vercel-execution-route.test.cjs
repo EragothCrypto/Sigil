@@ -16,6 +16,19 @@ function handler(layout) {
 }
 
 for (const layout of ['', 'artifacts/sigil']) {
+test(`${layout || 'root'}: Solana scan has an explicit deployment route and normalized read-only dispatch`, () => {
+  const {rewrites} = JSON.parse(readFileSync(path.join(root, layout, 'vercel.json'), 'utf8'));
+  const index = rewrites.findIndex(r => r.source === '/api/sigil/monitor/v2/solana/scan');
+  assert.ok(index >= 0, 'Solana deployment route is required');
+  assert.equal(rewrites[index].destination, '/api?solanaWalletCheck=1');
+  assert.ok(index < rewrites.findIndex(r => r.source === '/api/:path*'));
+  const source = readFileSync(path.join(root, layout, 'api/index.js'), 'utf8').replace(/^import app[^\n]*\n/, '').replace('export default function handler', 'function handler');
+  const context = {URL, app: req => req.url}; vm.createContext(context);
+  vm.runInContext(`${source}\nthis.handler = handler;`, context);
+  assert.equal(context.handler({url: '/api?solanaWalletCheck=1&test=1'}, {}), '/api/sigil/monitor/v2/solana/scan?test=1');
+  assert.equal(context.handler({url: '/api/sigil/monitor/v2/solana/scan'}, {}), '/api/sigil/monitor/v2/solana/scan');
+  assert.equal(context.handler({url: '/healthz'}, {}), '/api/healthz');
+});
 test(`${layout || 'root'}: Vercel routes execution v2 before SPA fallback`, () => {
   const { rewrites } = JSON.parse(readFileSync(path.join(root, layout, 'vercel.json'), 'utf8'));
   const index = rewrites.findIndex(rule => rule.source === '/api/sigil/simulate-v2');

@@ -15,6 +15,10 @@
   "crons": [{ "path": "/api/sigil/maintenance/retention", "schedule": "17 3 * * *" }],
   "rewrites": [
     {
+      "source": "/api/sigil/monitor/v2/solana/scan",
+      "destination": "/api?solanaWalletCheck=1"
+    },
+    {
       "source": "/api/sigil/simulate-v2",
       "destination": "/api/sigil/simulate?executionCheckVersion=2"
     },

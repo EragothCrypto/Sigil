@@ -4,6 +4,10 @@ Updated 2026-10-11. This is demo QA, not signing clearance or full audit accepta
 
 ## Published Candidate
 
+2026-10-11 follow-up: Kevin supplied a branch shareable link (access parameter intentionally omitted from this repository). Authenticated desktop access to `/solana` succeeded, but its API POST returned HTTP405/static response on f7f0e6f. Added an explicit rewrite through the existing API entrypoint in both Vercel layouts, with red/green routing tests and actual built dispatch smoke. Final remote retest is required after the follow-up push. `SIGIL_PREVIEW_URL` lets `scripts/verify-solana-demo.mjs --live` reuse authorized preview access; reports omit the share parameter.
+
+EVM deployed live scans are currently not executed by the agent: existing `ensureAnalysesSchema` runs CREATE/ALTER/INDEX statements before analysis, and Kevin excluded database migrations. Use prior recorded Aave/Euler controls until a no-DDL runtime path or explicit isolated-database authorization is established. Do not infer that a preview has an isolated database.
+
 Application candidate `bd3dbdadc25ab7c30b5e56589b5dff2a12084d11` was committed/pushed on `codex/vnext-p00-baseline`. Initial [Vercel preview](https://sigil-68fs50830-s3ntrylabs.vercel.app/solana) built successfully. It redirects unauthenticated requests to Vercel SSO: jury access and deployed live checks require Kevin's shareable preview link. Production was not changed. A follow-up test-portability/documentation commit does not alter this application build.
 
 Local baseline after the Linux CI package-map fix passes 464 Node tests plus four TS scripts. Initial remote advisory, extension-package, private-history and isolated retention jobs passed; verify is being rerun after the portability fix. Do not equate local results with deployed acceptance.

@@ -53,6 +53,7 @@ test("header changes preserve both deployment API rewrites and daily retention d
   for (const config of configs) {
     assert.deepEqual(config.crons, [{ path: "/api/sigil/maintenance/retention", schedule: "17 3 * * *" }]);
     assert.deepEqual(config.rewrites, [
+      { source: "/api/sigil/monitor/v2/solana/scan", destination: "/api?solanaWalletCheck=1" },
       { source: "/api/sigil/simulate-v2", destination: "/api/sigil/simulate?executionCheckVersion=2" },
       { source: "/api/:path*", destination: "/api/:path*" },
       { source: "/(.*)", destination: "/index.html" },
