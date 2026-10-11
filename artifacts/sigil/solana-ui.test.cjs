@@ -8,7 +8,8 @@ test('Solana view is reachable, explicit read-only scan is context validated, ex
   assert.match(source, /parseSolanaReport\(payload, requestedWallet, requestedCluster\)/);
   assert.match(source, /api\/sigil\/monitor\/v2\/solana\/scan/);
   assert.match(source, /Example data/);
-  assert.match(source, /No delegates found in checked scope/);
+  assert.match(source, /solanaAction\(report\)/);
+  assert.match(readFileSync(`${__dirname}/src/lib/solana-actions.ts`, 'utf8'), /No delegates found in checked scope/);
   assert.doesNotMatch(source, /signTransaction|sendTransaction|window\.solana|setInterval/);
   assert.match(readFileSync(`${__dirname}/src/App.tsx`, 'utf8'), /path="\/solana"/);
   assert.match(readFileSync(`${__dirname}/src/components/layout/Layout.tsx`, 'utf8'), /href: '\/solana'/);

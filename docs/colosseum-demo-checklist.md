@@ -24,6 +24,8 @@ Local baseline after the Linux CI package-map fix passes 464 Node tests plus fou
 
 ## Solana: New Manual Check
 
+Action-first differentiation: [handoff, exact scope and jury steps](colosseum-differentiation-sprint.md). Each permission now exposes next action, what/why/capability/unknowns and exact account evidence; unknown delegates are not incident findings. Incident Exposure Checker was rejected at the source/effective-evidence feasibility gate, not silently represented as shipped.
+
 Route `/solana`. Select Devnet, click Load Devnet address, then Check wallet. No signing/wallet connection needed.
 
 Copyable public input from [official Solana RPC documentation](https://solana.com/docs/rpc/http/gettokenaccountsbyowner):
@@ -46,6 +48,10 @@ Additional tests:
 - `not-a-solana-address`: inline invalid-input error, no RPC request.
 - Review example: synthetic delegate250raw / balance500raw, review only, conspicuous Example data label. Not a real wallet/mint relationship or malicious delegate.
 - Unavailable example: no counts established, no successful-negative claim, no outbound request.
+- No-delegate example: clearly synthetic complete scoped absence, not wallet safety.
+- Incomplete example: clearly synthetic unsupported coverage, not a negative finding.
+- Frozen example / Zero-bound example: exact bound0 and explicit future-state caveat, no automatic remedy.
+- Synthetic permission cards show synthetic detection/provenance/slots and no live explorer evidence links. Official manual revocation documentation remains a reference, not a prepared transaction.
 - Load Devnet address alone: changes input; does not scan automatically.
 - Mainnet toggle: separate cluster context, never reuse a Devnet result as Mainnet evidence. Live Mainnet fixtures and results are recorded below.
 

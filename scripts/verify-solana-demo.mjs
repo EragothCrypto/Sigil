@@ -59,12 +59,35 @@ try {
     await page.getByRole('button', {name: 'Review example', exact: true}).click();
     await page.getByRole('heading', {name: 'Delegation needs review'}).waitFor();
     await page.getByText('Example data - not a live scan', {exact: true}).waitFor();
+    await page.getByRole('heading', {name: 'Next action', exact: true}).waitFor();
+    const permission = page.getByRole('article');
+    for (const question of ['What was detected', 'Why it matters', 'Permission capability', 'What could not be verified', 'Synthetic account evidence']) await permission.getByText(question, {exact: true}).waitFor();
+    assert.ok((await permission.innerText()).includes('250 raw units'));
+    assert.equal(await page.getByRole('navigation', {name: 'Permission evidence'}).count(), 0, 'synthetic addresses must not masquerade as live evidence');
+    assert.equal(await page.getByRole('link', {name: 'Wallet evidence', exact: true}).count(), 0);
     assert.equal(calls, 0);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'example must fit viewport');
     await page.screenshot({path: fileURLToPath(new URL(`solana-${viewport.width}-review.png`, output)), fullPage: true});
+    for (const [button, title, detail] of [
+      ['No-delegate example', 'No delegates found in checked scope', 'No delegate change is indicated by this narrow check'],
+      ['Incomplete example', 'Some checks could not be completed', 'Coverage is incomplete.'],
+      ['Frozen example', 'Delegation needs review', 'The account was frozen'],
+      ['Zero-bound example', 'Delegation needs review', 'current ordinary bound zero'],
+    ]) {
+      await page.getByRole('button', {name: button, exact: true}).click();
+      await page.getByRole('heading', {name: title, exact: true}).waitFor();
+      assert.ok((await page.getByRole('region', {name: 'Solana check result'}).innerText()).includes(detail));
+      assert.equal(await page.getByRole('link', {name: 'Wallet evidence', exact: true}).count(), 0);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    }
+    assert.equal(calls, 0, 'all example outcomes must remain synthetic and local');
     await page.getByRole('button', {name: 'Unavailable example', exact: true}).click();
     await page.getByRole('heading', {name: 'Wallet check unavailable'}).waitFor();
     await page.getByText('No count established').first().waitFor();
+    await page.getByRole('button', {name: 'Load Mainnet address', exact: true}).click();
+    assert.equal(await page.getByLabel('Public wallet address', {exact: true}).inputValue(), 'HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ');
+    assert.equal(await page.getByLabel('Cluster', {exact: true}).inputValue(), 'mainnet-beta');
+    assert.equal(await page.getByRole('region', {name: 'Solana check result'}).count(), 0);
     await page.getByRole('button', {name: 'Load Devnet address', exact: true}).click();
     assert.equal(await page.getByLabel('Public wallet address', {exact: true}).inputValue(), 'A1TMhSGzQxMr1TboBKtgixKz1sS6REASMxPo1qsyTSJd');
     assert.equal(calls, 0);
@@ -89,6 +112,10 @@ try {
       await page.getByRole('region', {name: 'Solana check result'}).waitFor({timeout: 25000});
       await page.getByText('Live RPC snapshot', {exact: true}).waitFor();
       const responseText = await page.getByRole('region', {name: 'Solana check result'}).innerText();
+      assert.ok(responseText.includes('Next action'));
+      const walletEvidence = await page.getByRole('link', {name: 'Wallet evidence', exact: true}).getAttribute('href');
+      assert.equal(new URL(walletEvidence).hostname, 'explorer.solana.com');
+      assert.equal(new URL(walletEvidence).searchParams.get('cluster'), cluster === 'devnet' ? 'devnet' : null);
       assert.ok(!responseText.includes('Wallet check unavailable'), 'live scan did not establish legacy acquisition');
       await page.screenshot({path: fileURLToPath(new URL(`solana-${viewport.width}-live.png`, output)), fullPage: true});
       results.push({viewport, live: responseText, actualReport, remoteIndexHash});

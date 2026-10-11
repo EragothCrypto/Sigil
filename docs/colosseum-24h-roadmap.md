@@ -10,6 +10,14 @@ Official [World's Fair rules](https://colosseum.com/legal/Crypto%20World%27s%20F
 
 The demo must answer: what needs review, why, what evidence supports it, and what remains unknown. A real bounded Solana RPC read is necessary to claim a live Solana integration. Synthetic examples are visibly separate; never invent a malicious mainnet address. Existing EVM scanner results remain qualified and available.
 
+## Final Differentiation Sprint
+
+Feasibility gate completed 2026-10-11: neither the reviewed Euler historical attribution nor Raydium protocol-admin incident has a supported current effective wallet-exposure predicate in the existing pipelines. Do not ship an Incident Exposure Checker, an incident selector or NO_MATCHING_EXPOSURE from historical interaction. Detailed rationale, source references and narrow plan: [feasibility/design](superpowers/plans/2026-10-11-colosseum-differentiation.md).
+
+Selected user-authorized fallback: action-first Solana Delegate Checker. Next action comes before raw data; each permission answers what/why/capability/evidence/manual review/unknowns. Fixed-host, cluster-bound explorer links; exact raw balance/allowance/bound; frozen/zero distinctions; explicit coverage; six labeled local demo branches. No new providers/dependencies, incident feed, transactions, signing, storage or migrations. [Verification and demo handoff](colosseum-differentiation-sprint.md).
+
+Execution order: local fallback acceptance -> bounded independent review -> authorized commit/push/preview -> remote desktop/mobile Mainnet/Devnet smoke -> feature freeze. EVM no-DDL live gate, jury access, videos and submission remain required/open; the additional feature does not waive them. Incident registry/correlation is Post-Colosseum until exact live predicates and trustworthy positive/negative controls exist.
+
 ## Delivery Order
 
 These are timeboxes from the planning clock, not estimates that authorize lowering correctness requirements. Work proceeds automatically except for external actions or essential human facts.
@@ -18,10 +26,10 @@ These are timeboxes from the planning clock, not estimates that authorize loweri
 | --- | --- | --- | --- | --- |
 | H00 | Hours 0-1 | Reprioritize every original phase and audit group; confirm scope | Approved EVM + narrow Solana scope and persisted plan | Done; independent plan review approved |
 | H01 | Hours 1-7 | Versioned manual Solana scan: validated addresses, bounded RPC, official SPL codecs, ordinary delegate findings | Tested partial/failure semantics; exact integer amounts; both token programs queried; no signing | Slice done; live Devnet and nonempty Mainnet reads passed |
-| H02 | Hours 7-11 | Usable Solana view within existing product; evidence, examples, clear review steps | Desktop/mobile loading, success, partial, unavailable and invalid-input paths | Local slice done; browser smoke passed |
+| H02 | Hours 7-11 | Usable Solana view within existing product; action-first permission report, provenance, examples and clear manual review steps | Desktop/mobile loading, scoped absence, partial, unavailable, frozen/zero and invalid-input paths | Fallback local live Mainnet/Devnet browser smoke passed; remote updated candidate pending |
 | H03 | Hours 11-14 | Stabilize EVM demo paths and new endpoint; required build/type/regression checks | Aave/Euler expectations retained; changed routes tested; no crashing malformed response | In progress; baseline/types/build/codegen/API smoke passed; deployed EVM controls still pending |
 | H04 | Hours 14-17 | Release candidate and authorized deployment smoke | Exact candidate identified, headers/API dispatch checked; rollback available | Solana preview acceptance passed on Devnet/Mainnet desktop/mobile; EVM live DDL boundary remains open |
-| H05 | Hours 17-20 | Submission package, demo scripts, factual integration list and development disclosure | Copyable test inputs; videos can be recorded; no unsupported claims | Draft package prepared; founder facts and video recording pending |
+| H05 | Hours 17-20 | Submission package, demo scripts, factual integration list and development disclosure | Copyable test inputs; videos can be recorded; no unsupported claims | Draft package prepared; Solo Founder confirmed; videos and jury repository access pending |
 | H06 | Hours 20-24 | Feature freeze, fix demo blockers only, final smoke and submission buffer | Reproducible jury walkthrough; Kevin submits and verifies receipt | Pending |
 
 At hour 7, if Solana acquisition cannot meet the exit gate, stop breadth expansion and repair the narrow read path. At hour 14 freeze features. If deployment is unavailable, keep the locally reproducible candidate and recorded demo; do not represent it as deployed. Deferred optional work must not consume the submission buffer.

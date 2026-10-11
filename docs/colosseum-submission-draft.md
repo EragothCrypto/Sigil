@@ -20,6 +20,8 @@ Implemented during the current sprint: Solana SDK/decoder integration, bounded r
 
 The Solana check requires no account, wallet connection, transaction signature or AI call. No cloud background monitoring, production Solana threat feed, universal Token-2022 analysis, prepared revoke, billing or asset-loss prediction is shipped in this scope. The public RPC demonstration has no production SLA.
 
+Final differentiation slice: the Solana report is now action-first. It identifies the exact token account, mint, delegate and allowance/balance upper bound, explains ordinary transfer/non-native burn authority and what was not verified, and offers manual owner-reviewed next steps. Live and synthetic provenance are separated on each account card. Incident Exposure Checker was not shipped: reviewed incidents lack a supported current effective exposure predicate in these pipelines. Do not market historical attribution as Am I Affected.
+
 ## Presentation Script: 2-3 Minutes
 
 0:00-0:25: Introduce the user problem: wallet permissions and transaction prompts are difficult to interpret. Sigil separates what is observed from what remains unknown.
@@ -36,9 +38,9 @@ The Solana check requires no account, wallet connection, transaction signature o
 
 0:00-0:25: Open the verified candidate. State manual read-only scope.
 
-0:25-1:00: Open /solana, Load Devnet address, Check wallet. Show real finalized slots, legacy accounts and unsupported Token-2022 state. Make clear this live wallet is not a manufactured attack case.
+0:25-1:00: Open /solana, Load Mainnet address, Check wallet. Show real finalized slots, account coverage and next action. The public protocol token-account authority is an acquisition control, not a manufactured attack victim or protocol-position check.
 
-1:00-1:30: Click Review example. Explicitly say synthetic. Show delegate/account/raw-unit bound and review guidance. Then Unavailable example: failed data never becomes safe.
+1:00-1:30: Click Review example. Explicitly say synthetic. Answer what the permission can do, show account/delegate/mint and balance500/allowance250/bound250 raw units, then explain the manual next action. Briefly show Incomplete/Unavailable examples: missing data never becomes safe. See the differentiation handoff for frozen/zero and scoped-negative controls.
 
 1:30-2:15: Use the verified Euler hash in EVM scanner or its clearly recorded result if live latency is unpredictable. Show primary attribution and historical limitation. Do not describe a recorded result as a fresh scan.
 
