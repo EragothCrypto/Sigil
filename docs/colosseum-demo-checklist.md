@@ -4,6 +4,14 @@ Updated 2026-10-11. This is demo QA, not signing clearance or full audit accepta
 
 ## Published Candidate
 
+### Passing Live Preview
+
+Application commit `0abfd989a1bc7586893f6dae6bd647caecf2737d`: [immutable preview](https://sigil-jxgtsntc0-s3ntrylabs.vercel.app/solana), accessed for testing through Kevin's authorized branch share link. All five [CI jobs](https://github.com/EragothCrypto/Sigil/actions/runs/38131583171) passed. Later documentation-only commits leave the tested application source unchanged.
+
+Actual deployed tests on 2026-10-11 at 12:22 Berlin passed at1440x1000 and390x844: live finalized Devnet read, invalid-input400, no automatic scan, labeled synthetic Review/Unavailable examples, malformed successful-response rejection, no horizontal overflow and no page errors. Both live reads observed35legacy accounts and14unsupportedToken2022 accounts, correctlypartial. Slots509870513desktop and509870527mobile; these are historical observations, not stable future counts. Screenshots were inspected.
+
+Evidence: `tmp/colosseum/preview/browser-report.json` and corresponding PNGs. Remote HTML SHA256 `e28006f69dc22bcb13af3fe96fd0dbe6fe2a81b1ae1ef1440fab91ed4c6de8a9`. Share parameter is intentionally omitted. Production remains unchanged. This acceptance is scoped to Solana and the listed controls, not fresh deployed EVM acceptance or full release clearance.
+
 Routing retest on 9f3068e established real API dispatch but exposed restricted-CORS HTTP500 for the branch origin (same invalid request without Origin400). Preview allowlist now derives only exact trusted Vercel deployment/branch hostnames in the preview environment; foreign Vercel origins remain denied. Fresh local baseline468 and four TS scripts/typecheck/API build/actual built dispatch pass. Final preview live read remains a separate gate until its actual successful retest.
 
 2026-10-11 follow-up: Kevin supplied a branch shareable link (access parameter intentionally omitted from this repository). Authenticated desktop access to `/solana` succeeded, but its API POST returned HTTP405/static response on f7f0e6f. Added an explicit rewrite through the existing API entrypoint in both Vercel layouts, with red/green routing tests and actual built dispatch smoke. Final remote retest is required after the follow-up push. `SIGIL_PREVIEW_URL` lets `scripts/verify-solana-demo.mjs --live` reuse authorized preview access; reports omit the share parameter.

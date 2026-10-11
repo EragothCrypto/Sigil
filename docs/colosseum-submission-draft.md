@@ -52,6 +52,8 @@ Next validation: interview ten target users, test comprehension of review versus
 
 ## Before Submission
 
+Verified application candidate: `0abfd989a1bc7586893f6dae6bd647caecf2737d`, [preview](https://sigil-jxgtsntc0-s3ntrylabs.vercel.app/solana), all five CI jobs passed. Kevin supplied an authorized branch share link; preserve it separately for jury access, not in source control. Actual desktop/mobile Solana live tests passed at12:22Berlin on2026-10-11. The first bd3dbda/f7f0e6f previews below are historical. EVM demo should currently use clearly labeled prior recorded controls: fresh agent-triggered live analysis remains gated by existing schema-DDL behavior and Kevin's no-migration boundary. Later documentation-only commits do not change this tested application source.
+
 Repository branch: `codex/vnext-p00-baseline` at [Sigil](https://github.com/EragothCrypto/Sigil) (private; reviewer access must be arranged). Initial application candidate: `bd3dbdadc25ab7c30b5e56589b5dff2a12084d11`. [Vercel preview](https://sigil-68fs50830-s3ntrylabs.vercel.app/solana) exists but requires Vercel authentication; provide an authorized shareable link before calling it jury-accessible. Final follow-up SHA and remote checks should accompany the submission.
 
 - Registration confirmed by Kevin: Solo Founder. Choose track in the actual portal.
