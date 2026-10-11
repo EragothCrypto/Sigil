@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const {readFileSync} = require('node:fs');
+const {existsSync, readFileSync} = require('node:fs');
 const vm = require('node:vm');
 const {test} = require('node:test');
 const path = require('node:path');
@@ -7,8 +7,9 @@ const {pathToFileURL, fileURLToPath} = require('node:url');
 const {registerHooks} = require('node:module');
 // Resolve the workspace's portable pnpm map when Windows symlinks are unavailable.
 const modules = path.resolve(__dirname, '../../node_modules');
-const packages = JSON.parse(readFileSync(path.join(modules, '.package-map.json'), 'utf8')).packages;
-registerHooks({resolve(specifier, context, next) {
+const mapPath = path.join(modules, '.package-map.json');
+const packages = existsSync(mapPath) ? JSON.parse(readFileSync(mapPath, 'utf8')).packages : null;
+if (packages) registerHooks({resolve(specifier, context, next) {
   try { return next(specifier, context); } catch (error) {
     const name = specifier.startsWith('@') ? specifier.split('/').slice(0, 2).join('/') : specifier.split('/')[0];
     const parent = context.parentURL?.startsWith('file:') ? fileURLToPath(context.parentURL) : '';
@@ -40,6 +41,15 @@ const base = {verdict: 'caution', verdictReason: 'Review evidence', riskScore: 9
 const legacy = {version: 'findings-v1', scorePolicy: 'max-floor-v1', findings: [{id: 'f:source_verified', code: 'source_verified', category: 'supported_indicator', text: 'Source inspectable, not audited.', evidenceRefs: ['e:source_verified']}], evidence: [{id: 'e:source_verified', kind: 'source_verified', subject: 'mainnet:destination', value: 'verified'}]};
 const report = {...legacy, version: 'findings-v2', scorePolicy: 'dual-floor-v2', evidenceRiskScore: null, uncertaintyScore: 35, decisionScore: 35, coverage: 'partial', capabilities: {sourceVerification: true, receiptEvents: false, incidentLookup: true, inputDecoding: false, reportedTokenState: false, reportedPermissionState: false, internalTraces: false, isolatedBalanceDeltas: false}};
 const render = validatedReport => renderToStaticMarkup(React.createElement(AnalysisResultView, {data: {...base, details: {validatedReport, unsafeObservation: 'RAW_UNSAFE'}}}));
+
+test('normal package installations do not require a Windows portable package map', () => {
+  const bootstrap = readFileSync(__filename, 'utf8').split("const ts = require('typescript');")[0];
+  assert.doesNotThrow(() => vm.runInNewContext(bootstrap, {__dirname, require: name => {
+    if (name === 'node:fs') return {existsSync: () => false, readFileSync: () => {throw new Error('portable map must not be read');}};
+    if (name === 'node:module') return {registerHooks: () => {}};
+    return require(name);
+  }}));
+});
 test('v2 separates evidenced risk from coverage and decision heuristic', () => {
   const html = render(report);
   for (const text of ['Evidence-backed risk', 'No concrete risk established', 'Uncertainty', 'Decision score', '35/100', 'Coverage', 'Partial', 'not a loss probability', 'Internal traces']) assert.ok(html.includes(text), text);

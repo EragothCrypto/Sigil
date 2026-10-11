@@ -52,6 +52,8 @@ Next validation: interview ten target users, test comprehension of review versus
 
 ## Before Submission
 
+Repository branch: `codex/vnext-p00-baseline` at [Sigil](https://github.com/EragothCrypto/Sigil) (private; reviewer access must be arranged). Initial application candidate: `bd3dbdadc25ab7c30b5e56589b5dff2a12084d11`. [Vercel preview](https://sigil-68fs50830-s3ntrylabs.vercel.app/solana) exists but requires Vercel authentication; provide an authorized shareable link before calling it jury-accessible. Final follow-up SHA and remote checks should accompany the submission.
+
 - Registration confirmed by Kevin: Solo Founder. Choose track in the actual portal.
 - Identify the exact candidate SHA and repo access. Public repo encouraged; if private, grant requested reviewer access through Kevin's account.
 - Preview deployment authorized; verify and record its final URL, or accurately document local reproduction/recorded demo. Do not deploy production.

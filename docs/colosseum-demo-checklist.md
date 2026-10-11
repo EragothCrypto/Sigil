@@ -2,6 +2,12 @@
 
 Updated 2026-10-11. This is demo QA, not signing clearance or full audit acceptance.
 
+## Published Candidate
+
+Application candidate `bd3dbdadc25ab7c30b5e56589b5dff2a12084d11` was committed/pushed on `codex/vnext-p00-baseline`. Initial [Vercel preview](https://sigil-68fs50830-s3ntrylabs.vercel.app/solana) built successfully. It redirects unauthenticated requests to Vercel SSO: jury access and deployed live checks require Kevin's shareable preview link. Production was not changed. A follow-up test-portability/documentation commit does not alter this application build.
+
+Local baseline after the Linux CI package-map fix passes 464 Node tests plus four TS scripts. Initial remote advisory, extension-package, private-history and isolated retention jobs passed; verify is being rerun after the portability fix. Do not equate local results with deployed acceptance.
+
 ## Solana: New Manual Check
 
 Route `/solana`. Select Devnet, click Load Devnet address, then Check wallet. No signing/wallet connection needed.
