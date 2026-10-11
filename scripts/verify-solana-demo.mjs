@@ -24,7 +24,7 @@ async function capture(page, name) {
   await page.evaluate(() => {if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); window.scrollTo({top: 0, behavior: 'instant'});});
   await page.waitForFunction(() => window.scrollY === 0 && document.querySelector('header')?.getBoundingClientRect().top === 0);
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  const title = await page.getByRole('heading', {name: 'Solana Wallet Check', exact: true}).boundingBox();
+  const title = await page.getByRole('heading', {name: 'Check wallet permissions', exact: true}).boundingBox();
   const header = await page.locator('header').first().boundingBox();
   assert.ok(title.y >= header.y + header.height, 'first viewport heading must clear the sticky navigation');
   await page.screenshot({path: fileURLToPath(new URL(name, output)), fullPage: true});
@@ -47,7 +47,7 @@ try {
     const documentResponse = await page.goto(target.href, {waitUntil: 'networkidle'});
     assert.equal(documentResponse.status(), 200, 'preview access must establish the actual application');
     const remoteIndexHash = createHash('sha256').update(await documentResponse.body()).digest('hex');
-    await page.getByRole('heading', {name: 'Solana Wallet Check', exact: true}).waitFor();
+    await page.getByRole('heading', {name: 'Check wallet permissions', exact: true}).waitFor();
     assert.equal(calls, 0, 'view must not scan automatically');
     if (remote) {
       const invalid = await page.evaluate(async api => {
@@ -70,6 +70,8 @@ try {
     await page.getByText('Example data - not a live scan', {exact: true}).waitFor();
     await page.getByRole('heading', {name: 'Next action', exact: true}).waitFor();
     const permission = page.getByRole('article');
+    await permission.getByText('Why review this permission?', {exact: true}).click();
+    await permission.getByText('Synthetic account evidence', {exact: true}).click();
     for (const question of ['What was detected', 'Why it matters', 'Permission capability', 'What could not be verified', 'Synthetic account evidence']) await permission.getByText(question, {exact: true}).waitFor();
     assert.ok((await permission.innerText()).includes('250 raw units'));
     assert.equal(await page.getByRole('navigation', {name: 'Permission evidence'}).count(), 0, 'synthetic addresses must not masquerade as live evidence');

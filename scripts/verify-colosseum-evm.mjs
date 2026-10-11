@@ -72,8 +72,10 @@ try {
     for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
       await page.setViewportSize(viewport);
       await page.goto(`${target.origin}/analysis/${record.id}`, { waitUntil: 'networkidle' });
-      await page.getByText('Risk Findings', { exact: true }).waitFor();
-      await page.getByText('Analysis Limits', { exact: true }).waitFor();
+      await page.getByText(/^Risk Findings \(\d+\)$/).waitFor();
+      await page.getByText(/^Analysis Limits \(\d+\)$/).waitFor();
+      await page.getByText('Scores and methodology', { exact: true }).click();
+      await page.getByText(/^Observations \(\d+\)$/).click();
       const text = await page.locator('main').innerText();
       assert.match(text, /Coverage: Partial/);
       assert.match(text, /not signing clearance/);
@@ -100,7 +102,7 @@ try {
     await page.getByLabel('Transaction hash or contract address', { exact: true }).fill(controls[0].hash);
     await page.getByRole('button', { name: 'Analyze', exact: true }).click();
     await page.waitForURL('**/analysis/**', { timeout: 100000 });
-    await page.getByText('Risk Findings', { exact: true }).waitFor();
+    await page.getByText(/^Risk Findings \(\d+\)$/).waitFor();
     if (viewport.width === 1440) {
       const savedId = new URL(page.url()).pathname.split('/').at(-1);
       // Open this actually stored report in the existing saved-report view.
@@ -115,18 +117,18 @@ try {
       assert.equal(refreshed.input, controls[0].hash);
       assert.equal(refreshed.details.validatedReport.version, 'findings-v2');
       await page.waitForURL(`**/analysis/${refreshed.id}`);
-      await page.getByText('Risk Findings', { exact: true }).waitFor();
+      await page.getByText(/^Risk Findings \(\d+\)$/).waitFor();
     }
     const navigation = page.getByRole('navigation', { name: 'Main navigation', exact: true });
-    await navigation.getByRole('link', { name: 'Solana', exact: true }).focus();
-    await navigation.getByRole('link', { name: 'Solana', exact: true }).click();
-    await page.getByRole('heading', { name: 'Solana Wallet Check', exact: true }).waitFor();
+    await navigation.getByRole('link', { name: 'Wallet permissions', exact: true }).focus();
+    await navigation.getByRole('link', { name: 'Wallet permissions', exact: true }).click();
+    await page.getByRole('heading', { name: 'Check wallet permissions', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Review example', exact: true }).click();
     await page.getByRole('heading', { name: 'Delegation needs review', exact: true }).waitFor();
     await page.getByText('Example data - not a live scan', { exact: true }).waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-    await navigation.getByRole('link', { name: 'Scanner', exact: true }).focus();
-    await navigation.getByRole('link', { name: 'Scanner', exact: true }).click();
+    await navigation.getByRole('link', { name: 'Transaction check', exact: true }).focus();
+    await navigation.getByRole('link', { name: 'Transaction check', exact: true }).click();
     await page.getByLabel('Transaction hash or contract address', { exact: true }).waitFor();
   }
   assert.deepEqual(errors, []);

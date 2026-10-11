@@ -33,7 +33,7 @@ function load(path, imports) {
 }
 const parser = load(`${__dirname}/../../lib/api-zod/src/validated-report.ts`, {});
 const stub = () => React.createElement('span', null, 'LEGACY_WIDGET');
-const imports = {'@/lib/validated-report': parser, '@/hooks/use-toast': {useToast: () => ({toast() {}})}, './JargonTooltip': {JargonText: ({text}) => text}, './ShareButton': {ShareButton: () => null}, './RiskRing': {RiskRing: ({score}) => React.createElement('span', null, `RING:${score}`)}};
+const imports = {'@/lib/validated-report': parser, '@/hooks/use-toast': {useToast: () => ({toast() {}})}, './JargonTooltip': {JargonText: ({text}) => text}, './ShareButton': {ShareButton: () => React.createElement('button', null, 'Share report on X')}, './RiskRing': {RiskRing: ({score}) => React.createElement('span', null, `RING:${score}`)}};
 imports['lucide-react'] = new Proxy({}, {get: () => () => null});
 for (const name of ['ApprovalInspector', 'TransactionBreakdown', 'ContractReputationCard', 'PatternDetectionCard', 'ContractDiffView', 'RiskScoreBreakdown']) imports[`./${name}`] = {[name]: stub};
 const {AnalysisResultView} = load(`${__dirname}/src/components/sigil/AnalysisResultView.tsx`, imports);
@@ -41,6 +41,64 @@ const base = {verdict: 'caution', verdictReason: 'Review evidence', riskScore: 9
 const legacy = {version: 'findings-v1', scorePolicy: 'max-floor-v1', findings: [{id: 'f:source_verified', code: 'source_verified', category: 'supported_indicator', text: 'Source inspectable, not audited.', evidenceRefs: ['e:source_verified']}], evidence: [{id: 'e:source_verified', kind: 'source_verified', subject: 'mainnet:destination', value: 'verified'}]};
 const report = {...legacy, version: 'findings-v2', scorePolicy: 'dual-floor-v2', evidenceRiskScore: null, uncertaintyScore: 35, decisionScore: 35, coverage: 'partial', capabilities: {sourceVerification: true, receiptEvents: false, incidentLookup: true, inputDecoding: false, reportedTokenState: false, reportedPermissionState: false, internalTraces: false, isolatedBalanceDeltas: false}};
 const render = validatedReport => renderToStaticMarkup(React.createElement(AnalysisResultView, {data: {...base, details: {validatedReport, unsafeObservation: 'RAW_UNSAFE'}}}));
+
+test('decision, reason and grounded next action precede explanation and scores', () => {
+  const html = render(report);
+  assert.match(html, /Next action/);
+  assert.ok(html.indexOf('Proceed with Caution') < html.indexOf('Review evidence'));
+  assert.ok(html.indexOf('Next action') < html.indexOf('Assessment'));
+  assert.ok(html.indexOf('Assessment') < html.indexOf('Evidence-backed risk'));
+  assert.doesNotMatch(html, /Should I sign this\?|radial-gradient|fade-in|rounded-2xl/);
+  for (const [score, label, advice] of [[25, 'No Concrete Warning Signs Detected', 'Verify the destination'], [60, 'Proceed with Caution', 'Resolve the recorded limitations'], [61, 'Do Not Sign', 'Do not sign this request']]) {
+    const result = render({...report, uncertaintyScore: score, decisionScore: score});
+    assert.ok(result.includes(label), label);
+    assert.ok(result.includes(advice), advice);
+    assert.doesNotMatch(result, /revoke|currently exposed|funds are safe/i);
+  }
+});
+
+test('full selectable input, visible coverage and secondary disclosures retain report contents', () => {
+  const html = render(report);
+  assert.match(html, new RegExp(`<code[^>]*select-text[^>]*>${base.input}</code>`));
+  assert.match(html, /title="Copy input"/);
+  assert.match(html, /<summary[^>]*>Scores and methodology<\/summary>/);
+  assert.match(html, /<summary[^>]*>Check capabilities<\/summary>/);
+  assert.match(html, /Coverage: <strong>Partial<\/strong>/);
+  assert.match(html, /<summary[^>]*>Supporting Evidence \(1\)<\/summary>/);
+  assert.match(html, /Source inspectable, not audited\./);
+  assert.match(html, /<summary[^>]*>Recorded evidence<\/summary>/);
+  assert.ok(html.indexOf('Share report on X') > html.indexOf('Recorded evidence'));
+});
+
+test('EVM page and share control use compact neutral surfaces without entrance animation', () => {
+  const share = readFileSync(`${__dirname}/src/components/sigil/ShareButton.tsx`, 'utf8');
+  const page = readFileSync(`${__dirname}/src/pages/analysis.tsx`, 'utf8');
+  assert.match(share, /Share report on X/);
+  assert.doesNotMatch(share, /w-full|VERDICT_STYLE|group-hover:scale|py-4/);
+  assert.doesNotMatch(page, /motion\.|framer-motion|blur-xl|rounded-2xl|tracking-widest/);
+  assert.match(page, /Previously saved report/);
+});
+
+test('finding disclosures retain escaped evidence and every recorded transfer', () => {
+  const address = base.input;
+  const html = render({...report, evidence: [{...report.evidence[0], value: '<script>alert(1)</script>', transfers: [
+    {kind: 'erc20-shaped', token: address, from: address, to: address, amountRaw: '321'},
+    {kind: 'erc721-shaped', token: address, from: address, to: address, tokenIdRaw: '654'},
+  ]}]});
+  assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.doesNotMatch(html, /<script>/);
+  assert.match(html, /Raw amount: 321/);
+  assert.match(html, /Raw token ID: 654/);
+});
+
+test('legacy metrics and warnings remain available behind disclosures', () => {
+  const html = renderToStaticMarkup(React.createElement(AnalysisResultView, {data: {...base, inputType: 'transaction', breakdown: null, warnings: ['Legacy warning'], positives: ['Legacy positive']}}));
+  assert.match(html, /RING:99/);
+  assert.match(html, /Legacy warning/);
+  assert.match(html, /Legacy positive/);
+  assert.match(html, /Run a fresh analysis before relying/);
+  assert.match(html, /<summary[^>]*>Legacy findings and evidence<\/summary>/);
+});
 
 test('normal package installations do not require a Windows portable package map', () => {
   const bootstrap = readFileSync(__filename, 'utf8').split("const ts = require('typescript');")[0];

@@ -1,8 +1,7 @@
 import { useParams, Link, useLocation, useSearch } from 'wouter';
 import { getGetAnalysisByIdQueryKey, useGetAnalysisById, useAnalyzeInput, type AnalyzeInputMutationError } from '@workspace/api-client-react';
 import { AnalysisResultView } from '@/components/sigil/AnalysisResultView';
-import { ArrowLeft, ShieldAlert, Zap, RefreshCw } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowLeft, ShieldAlert, History, RefreshCw } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
 export default function AnalysisPage() {
@@ -66,29 +65,27 @@ export default function AnalysisPage() {
         className="inline-flex items-center gap-2 text-sm font-mono text-subtle hover:text-primary-text transition-colors group cursor-pointer w-fit"
       >
         <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-        Scanner
+        Transaction check
       </Link>
 
       {/* ── Cached banner ── */}
       {isCached && !isLoading && data && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl border border-violet-500/20 bg-violet-500/6"
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 py-3 border-y border-border"
         >
-          <span className="flex items-center gap-2 text-xs font-mono text-violet-300">
-            <Zap className="w-3.5 h-3.5 text-violet-400" />
+          <span className="flex items-center gap-2 text-sm text-subtle">
+            <History className="w-4 h-4 shrink-0" />
             Previously saved report
           </span>
           <button
             onClick={handleReanalyze}
             disabled={reanalyzeMutation.isPending}
-            className="flex items-center gap-1.5 text-xs font-mono text-subtle hover:text-primary-text transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 min-h-8 text-sm text-subtle hover:text-primary-text transition-colors disabled:opacity-50 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text"
           >
             <RefreshCw className={`w-3 h-3 ${reanalyzeMutation.isPending ? 'animate-spin' : ''}`} />
             {reanalyzeMutation.isPending ? 'Analyzing…' : 'Re-analyze fresh'}
           </button>
-        </motion.div>
+        </div>
       )}
 
       {isCurrentReanalysis && reanalyzeMutation.isPending && (
@@ -100,25 +97,18 @@ export default function AnalysisPage() {
 
       {isLoading && (
         <div role="status" aria-live="polite" aria-busy="true" className="flex flex-col items-center justify-center min-h-[50vh] gap-6">
-          <div className="relative w-12 h-12">
-            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
-            <div className="relative w-12 h-12 rounded-xl border border-primary/25 bg-primary/8 flex items-center justify-center">
-              <div className="w-5 h-5 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
-            </div>
-          </div>
-          <p className="font-mono text-subtle tracking-widest text-xs uppercase animate-pulse">Retrieving analysis…</p>
+          <RefreshCw className="w-5 h-5 text-subtle animate-spin" />
+          <p className="text-subtle text-sm">Retrieving analysis...</p>
         </div>
       )}
 
       {!isLoading && (isError || !hasAnalysisData) && (
-        <motion.div
+        <div
           role="alert"
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center justify-center min-h-[50vh]"
         >
-          <div className="p-10 rounded-2xl border border-rose-500/15 bg-rose-500/5 text-center max-w-md">
-            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto mb-5">
+          <div className="border-l-2 border-rose-400 pl-4 py-3 max-w-md">
+            <div className="mb-3">
               <ShieldAlert className="w-6 h-6 text-rose-400" strokeWidth={1.7} />
             </div>
             <h2 className="text-xl font-display font-bold text-rose-300 mb-3">Record Not Found</h2>
@@ -126,7 +116,7 @@ export default function AnalysisPage() {
               This analysis record doesn't exist or the link has expired.
             </p>
           </div>
-        </motion.div>
+        </div>
       )}
 
       {!isLoading && !isError && hasAnalysisData && (

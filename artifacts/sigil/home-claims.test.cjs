@@ -5,7 +5,7 @@ const test = require("node:test");
 const source = readFileSync(path.join(__dirname, "src/pages/home.tsx"), "utf8");
 
 test("home chain count derives from the selectable network list", () => {
-  assert.match(source, /value: String\(NETWORKS\.length\)/);
+  assert.match(source, /\{NETWORKS\.length\} selectable EVM networks/);
   assert.doesNotMatch(source, /every major EVM chain/);
 });
 

@@ -12,6 +12,8 @@ The demo must answer: what needs review, why, what evidence supports it, and wha
 
 ## Final Differentiation Sprint
 
+Approved final UX sprint: task-oriented security console, main entry, Solana decision/action/evidence hierarchy, EVM result presentation and shared navigation. Local implementation and 489-test regression gate passed; new candidate publication/CI/deployed smoke pending. No detection/API/execution/configuration changes. [Design checks, verification and demo](colosseum-ux-polish.md). The earlier application freeze below is historical until this candidate is accepted; production remains untouched.
+
 Feasibility gate completed 2026-10-11: neither the reviewed Euler historical attribution nor Raydium protocol-admin incident has a supported current effective wallet-exposure predicate in the existing pipelines. Do not ship an Incident Exposure Checker, an incident selector or NO_MATCHING_EXPOSURE from historical interaction. Detailed rationale, source references and narrow plan: [feasibility/design](superpowers/plans/2026-10-11-colosseum-differentiation.md).
 
 Selected user-authorized fallback: action-first Solana Delegate Checker. Next action comes before raw data; each permission answers what/why/capability/evidence/manual review/unknowns. Fixed-host, cluster-bound explorer links; exact raw balance/allowance/bound; frozen/zero distinctions; explicit coverage; six labeled local demo branches. No new providers/dependencies, incident feed, transactions, signing, storage or migrations. [Verification and demo handoff](colosseum-differentiation-sprint.md).

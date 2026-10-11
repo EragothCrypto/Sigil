@@ -1,114 +1,81 @@
 import { Link, useLocation } from 'wouter';
-import { Puzzle, ScanLine, History, Zap, ShieldCheck, ListChecks, Globe2, WalletCards, GraduationCap } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
 
-const NAV_ITEMS = [
-  { href: '/', label: 'Scanner', icon: ScanLine },
-  { href: '/approvals', label: 'Approvals', icon: ShieldCheck },
-  { href: '/monitor', label: 'Monitor', icon: WalletCards },
-  { href: '/solana', label: 'Solana', icon: WalletCards },
-  { href: '/watchlist', label: 'Watchlist', icon: ListChecks },
-  { href: '/sites', label: 'Sites', icon: Globe2 },
-  { href: '/simulate', label: 'Simulate', icon: Zap, pulse: true },
-  { href: '/history', label: 'Feed', icon: History },
-  { href: '/extension', label: 'Extension', icon: Puzzle },
-  { href: '/onboarding', label: 'Start', icon: GraduationCap },
+const PRIMARY_TASKS = [
+  { href: '/', label: 'Transaction check' },
+  { href: '/solana', label: 'Wallet permissions' },
+];
+const TOOLS = [
+  { href: '/approvals', label: 'Approval events' },
+  { href: '/monitor', label: 'EVM wallet review' },
+  { href: '/watchlist', label: 'Saved watchlist' },
+  { href: '/sites', label: 'Website check' },
+  { href: '/simulate', label: 'Read-only call check' },
+  { href: '/history', label: 'Historical cases' },
+  { href: '/extension', label: 'Browser extension' },
+  { href: '/onboarding', label: 'Getting started' },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const logo = `${import.meta.env.BASE_URL}sigil-logo.png`;
   const [location] = useLocation();
-  const [scrolled, setScrolled] = useState(false);
-
+  const tools = useRef<HTMLDetailsElement>(null);
+  const summary = useRef<HTMLElement>(null);
+  useEffect(() => { if (tools.current) tools.current.open = false; }, [location]);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const dismiss = (event: PointerEvent) => {
+      if (tools.current && !tools.current.contains(event.target as Node)) tools.current.open = false;
+    };
+    document.addEventListener('pointerdown', dismiss);
+    return () => document.removeEventListener('pointerdown', dismiss);
   }, []);
+  const secondaryActive = TOOLS.some(item => item.href === location);
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <a href="#main-content" className="skip-link">Skip to content</a>
-
-      {/* Ambient background orbs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden>
-        <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] rounded-full bg-primary/10 blur-[120px]" style={{ animation: 'glow-pulse 8s ease-in-out infinite' }} />
-        <div className="absolute top-[30%] right-[-10%] w-[500px] h-[500px] rounded-full bg-accent/8 blur-[100px]" style={{ animation: 'glow-pulse 10s ease-in-out infinite 2s' }} />
-        <div className="absolute bottom-[-10%] left-[30%] w-[400px] h-[400px] rounded-full bg-primary/6 blur-[80px]" style={{ animation: 'glow-pulse 12s ease-in-out infinite 4s' }} />
-      </div>
-
-      {/* Header */}
-      <header
-        className={`sticky top-0 z-50 w-full transition-all duration-500 ${
-          scrolled
-            ? 'bg-[rgba(6,4,15,0.85)] backdrop-blur-2xl border-b border-primary/10 shadow-[0_1px_0_rgba(139,92,246,0.08)]'
-            : 'bg-transparent border-b border-transparent'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[72px] flex items-center justify-between gap-6">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group cursor-pointer shrink-0">
-            <div className="relative w-9 h-9 flex items-center justify-center shrink-0">
-              <div className="absolute inset-0 bg-primary/40 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 scale-110" />
-              <img src={logo} alt="Sigil" className="relative w-9 h-9 object-contain drop-shadow-[0_0_8px_rgba(139,92,246,0.5)] group-hover:drop-shadow-[0_0_12px_rgba(139,92,246,0.8)] transition-all duration-300" />
+  return <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <a href="#main-content" className="skip-link">Skip to content</a>
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+        <Link href="/" aria-label="Sigil home" className="flex items-center gap-3 min-h-16 w-fit shrink-0">
+          <img src={`${import.meta.env.BASE_URL}sigil-logo.png`} alt="" className="w-8 h-8 object-contain" />
+          <span className="font-display font-bold text-xl">Sigil</span>
+        </Link>
+        <nav aria-label="Main navigation" className="flex items-stretch min-w-0 gap-1 pb-2 sm:py-2">
+          {PRIMARY_TASKS.map(({ href, label }) => {
+            const active = location === href || (href === '/' && location.startsWith('/analysis/'));
+            return <Link key={href} href={href} aria-current={active ? 'page' : undefined}
+              className={`flex items-center justify-center min-h-11 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${active ? 'border-primary-text text-foreground bg-secondary' : 'border-transparent text-subtle hover:text-foreground hover:bg-card'}`}>
+              {label}
+            </Link>;
+          })}
+          <details ref={tools} className="relative" onBlur={event => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) event.currentTarget.open = false;
+          }} onKeyDown={event => {
+            if (event.key === 'Escape' && tools.current?.open) { tools.current.open = false; summary.current?.focus(); }
+          }}>
+            <summary ref={summary} className={`list-none flex items-center justify-center min-h-11 gap-1 px-3 py-2 text-sm font-medium cursor-pointer border-b-2 hover:bg-card ${secondaryActive ? 'text-foreground border-primary-text' : 'text-subtle border-transparent'}`}>
+              Tools <ChevronDown className="w-4 h-4 shrink-0" aria-hidden="true" />
+            </summary>
+            <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-10rem)] overflow-y-auto overscroll-contain bg-card border border-border rounded-md shadow-lg p-2">
+              {TOOLS.map(({ href, label }) => <Link key={href} href={href} aria-current={location === href ? 'page' : undefined}
+                className={`flex items-center min-h-11 px-3 py-2 text-sm rounded-sm hover:bg-secondary hover:text-foreground ${location === href ? 'bg-secondary text-foreground' : 'text-subtle'}`}>
+                {label}
+              </Link>)}
             </div>
-            <span className="font-display font-bold text-xl tracking-[0.15em] text-white group-hover:text-primary-text transition-colors duration-200 uppercase">
-              Sigil
-            </span>
-          </Link>
-
-          {/* Nav */}
-          <nav aria-label="Main navigation" className="flex min-w-0 items-center gap-1 overflow-x-auto">
-            {NAV_ITEMS.map(({ href, label, icon: Icon, pulse }) => {
-              const isActive = location === href;
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-label={label}
-                  aria-current={isActive ? 'page' : undefined}
-                  onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })}
-                  title={label}
-                  className={`relative flex shrink-0 items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer group
-                    ${isActive
-                      ? 'bg-primary/12 text-primary-text border border-primary/20'
-                      : 'text-white/50 hover:text-white/90 hover:bg-white/5 border border-transparent'
-                    }`}
-                >
-                  <Icon
-                    className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-primary-text' : 'text-subtle group-hover:text-white/60'}`}
-                    strokeWidth={isActive ? 2 : 1.5}
-                  />
-                  <span className="tracking-wide hidden sm:inline">{label}</span>
-                  {pulse && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 animate-pulse" />
-                  )}
-                  {isActive && (
-                    <span className="absolute inset-x-3 -bottom-[1px] h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-      </header>
-
-      {/* Main */}
-      <main id="main-content" tabIndex={-1} className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col">
-        {children}
-      </main>
-
-      <footer className="relative z-10 border-t border-white/6 bg-background/70">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-subtle">
-          <p>© 2026 S3ntryLabs. Sigil provides security analysis, not financial advice.</p>
-          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-            <Link href="/impressum" className="hover:text-primary-text transition-colors">Impressum</Link>
-            <Link href="/privacy" className="hover:text-primary-text transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-primary-text transition-colors">Terms</Link>
-            <Link href="/cookies" className="hover:text-primary-text transition-colors">Cookies</Link>
-          </nav>
-        </div>
-      </footer>
-    </div>
-  );
+          </details>
+        </nav>
+      </div>
+    </header>
+    <main id="main-content" tabIndex={-1} className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {children}
+    </main>
+    <footer className="border-t border-border bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-subtle">
+        <p>Copyright 2026 S3ntryLabs. Sigil provides security analysis, not financial advice.</p>
+        <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2">
+          {[['/impressum', 'Impressum'], ['/privacy', 'Privacy'], ['/terms', 'Terms'], ['/cookies', 'Cookies']].map(([href, label]) =>
+            <Link key={href} href={href} className="min-h-8 inline-flex items-center hover:text-foreground hover:underline">{label}</Link>)}
+        </nav>
+      </div>
+    </footer>
+  </div>;
 }

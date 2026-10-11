@@ -1,4 +1,4 @@
-import { ShieldCheck, ShieldAlert, CheckCircle2, Copy, CheckCircle, AlertTriangle, XCircle, ExternalLink, BadgeCheck, Zap, RefreshCw } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, CheckCircle2, Copy, CheckCircle, AlertTriangle, XCircle, ExternalLink, BadgeCheck } from 'lucide-react';
 import type { AnalysisResult, KnownEntity } from '@workspace/api-client-react';
 import { RiskRing } from './RiskRing';
 import { ApprovalInspector } from './ApprovalInspector';
@@ -54,38 +54,22 @@ function AdditionalEvidence({ evidence }: { evidence: ReportEvidence }) {
   </>;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  "DEX": "⚡",
-  "Lending": "🏦",
-  "NFT Marketplace": "🖼️",
-  "Bridge": "🌉",
-  "Stablecoin": "💵",
-  "Wrapped Token": "🔀",
-  "Derivatives": "📈",
-  "Yield": "🌱",
-  "DAO": "🏛️",
-  "Oracle": "🔮",
-  "Wallet / Multisig": "🔐",
-  "Token": "🪙",
-};
-
 function KnownEntityBadge({ entity }: { entity: KnownEntity }) {
-  const icon = CATEGORY_ICONS[entity.category] ?? "🔷";
   return (
     <a
       href={entity.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-4 bg-primary/5 border border-primary/15 hover:border-primary/35 hover:bg-primary/8 transition-all rounded-2xl px-5 py-4 group w-full"
+      className="flex items-center gap-3 border-y border-border hover:bg-accent transition-colors py-3 group w-full"
     >
-      <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-primary/12 border border-primary/20 flex items-center justify-center text-xl font-bold text-primary font-mono">
+      <div className="flex-shrink-0 w-9 h-9 rounded-md bg-muted flex items-center justify-center text-sm font-bold text-foreground font-mono">
         {entity.logoLetter}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap mb-0.5">
           <span className="font-display font-semibold text-white text-base leading-tight">{entity.name}</span>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/15">
-            {icon} {entity.category}
+            {entity.category}
           </span>
           {entity.trustLevel === "trusted" && (
             <span className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -93,7 +77,7 @@ function KnownEntityBadge({ entity }: { entity: KnownEntity }) {
             </span>
           )}
         </div>
-        <p className="text-xs text-white/35 truncate">{entity.description}</p>
+        <p className="text-sm text-subtle break-words">{entity.description}</p>
       </div>
       <ExternalLink className="w-4 h-4 text-white/20 group-hover:text-primary transition-colors flex-shrink-0" />
     </a>
@@ -107,9 +91,7 @@ const VERDICT_CONFIG = {
     bg: 'bg-emerald-500/8',
     border: 'border-emerald-500/20',
     text: 'text-emerald-400',
-    ring: '#10b981',
-    badge: 'bg-emerald-500/12 text-emerald-300 border-emerald-500/20',
-    emoji: '✅',
+    nextAction: 'Verify the destination and intended permissions independently before signing. No warning signs in acquired data is not signing clearance.',
   },
   caution: {
     icon: AlertTriangle,
@@ -117,9 +99,7 @@ const VERDICT_CONFIG = {
     bg: 'bg-amber-500/8',
     border: 'border-amber-500/20',
     text: 'text-amber-400',
-    ring: '#f59e0b',
-    badge: 'bg-amber-500/12 text-amber-300 border-amber-500/20',
-    emoji: '⚠️',
+    nextAction: 'Resolve the recorded limitations and review the findings before deciding whether to sign.',
   },
   dangerous: {
     icon: XCircle,
@@ -127,9 +107,7 @@ const VERDICT_CONFIG = {
     bg: 'bg-rose-500/8',
     border: 'border-rose-500/20',
     text: 'text-rose-400',
-    ring: '#f43f5e',
-    badge: 'bg-rose-500/12 text-rose-300 border-rose-500/20',
-    emoji: '🚨',
+    nextAction: 'Do not sign this request. Review the recorded findings and verify the intended destination and permissions independently.',
   },
 } as const;
 
@@ -155,7 +133,7 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
   }
 
   return (
-    <div className="w-full space-y-5 animate-in fade-in duration-500">
+    <div className="w-full min-w-0 space-y-5">
 
       {!validatedReport && (
         <p role="status" className="border-l-2 border-amber-400 pl-4 py-2 text-sm text-amber-200/80">
@@ -165,83 +143,69 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
       {validatedReport?.version === 'findings-v1' && <p role="status" className="border-l-2 border-amber-400 pl-4 py-2 text-sm text-amber-200/80">Legacy validated report (findings-v1): narrower coverage. Separate evidence risk, uncertainty and adapter capabilities were not recorded. Run a fresh analysis for current supported checks.</p>}
 
       {/* ── VERDICT BANNER ── */}
-      <div className={`relative overflow-hidden rounded-2xl border ${config.bg} ${config.border} p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-5`}>
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: `radial-gradient(ellipse at 0% 50%, ${config.ring}18 0%, transparent 70%)` }} />
-
-        <div className={`relative flex-shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center border ${config.border} ${config.bg}`}>
-          <VerdictIcon className={`w-8 h-8 ${config.text}`} strokeWidth={1.5} />
-        </div>
-
-        <div className="relative flex-1 text-center sm:text-left space-y-1.5">
-          <span className={`text-[10px] font-mono font-bold tracking-widest uppercase px-3 py-1 rounded-full border inline-block ${config.badge}`}>
-            Should I sign this?
-          </span>
-          <p className={`text-xl md:text-2xl font-display font-bold ${config.text}`}>
-            {config.emoji} {config.label}
-          </p>
-          <p className="text-white/55 text-sm leading-relaxed">
+      <section aria-label="Decision" className={`border-l-2 ${config.border} pl-4 py-2 space-y-3`}>
+          <h2 className={`flex items-start gap-2 text-xl font-display font-semibold ${config.text}`}>
+            <VerdictIcon className="w-5 h-5 shrink-0 mt-1" strokeWidth={1.8} />{config.label}
+          </h2>
+          <p className="text-foreground text-sm leading-relaxed break-words">
             <JargonText text={data.verdictReason} />
           </p>
-        </div>
-      </div>
-
-      {/* ── SHARE BUTTON ── */}
-      <ShareButton data={data} />
-
-      {/* ── KNOWN ENTITY ── */}
-      {!validatedReport && data.knownEntity && <KnownEntityBadge entity={data.knownEntity} />}
-
-      {/* ── APPROVAL INSPECTOR ── */}
-      {!validatedReport && data.approvalInfo?.isApproval && <ApprovalInspector info={data.approvalInfo} />}
+          <div className="space-y-1 text-sm leading-relaxed">
+            <h3 className="font-semibold text-foreground">Next action</h3>
+            <p className="text-subtle">{!validatedReport || validatedReport.version === 'findings-v1' ? 'Run a fresh analysis before relying on this legacy report. Review the intended destination and permissions independently.' : config.nextAction}</p>
+          </div>
+      </section>
 
       {/* ── HEADER PANEL ── */}
-      <div
-        className="rounded-2xl border border-white/6 p-6 md:p-8 flex flex-col md:flex-row gap-8 items-center"
-        style={{ background: 'rgba(139,92,246,0.04)' }}
-      >
-        {reportV2 ? <dl className="grid grid-cols-1 gap-3 w-full md:w-56 shrink-0 text-sm">
-          <div><dt className="text-white/50">Evidence-backed risk</dt><dd className="text-white/90 font-semibold">{reportV2.evidenceRiskScore === null ? 'No concrete risk established' : `${reportV2.evidenceRiskScore}/100`}</dd></div>
-          <div><dt className="text-white/50">Uncertainty</dt><dd className="text-amber-300 font-mono">{reportV2.uncertaintyScore}/100</dd></div>
-          <div><dt className="text-white/50">Decision score</dt><dd className="text-white/90 font-mono">{reportV2.decisionScore}/100</dd></div>
-        </dl> : <RiskRing score={data.riskScore} level={data.riskLevel} />}
-
-        <div className="flex-1 space-y-4 text-center md:text-left">
-          <div className="flex flex-wrap items-center gap-2 justify-center md:justify-start">
-            <span className="px-3 py-1 bg-primary/8 border border-primary/15 text-primary-text rounded-full font-mono text-[10px] font-bold tracking-wider uppercase">
+      <section aria-label="Explanation" className="border-t border-border pt-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-subtle">
+            <span className="font-mono">
               {data.network}
             </span>
-            <span className="px-3 py-1 bg-white/4 border border-white/8 rounded-full font-mono text-[10px] text-subtle tracking-wider uppercase">
+            <span className="font-mono">
               {data.inputType}
             </span>
           </div>
 
-          <h2 className="text-xl md:text-2xl font-display font-semibold text-white/90 leading-snug">
+          <p className="text-sm text-foreground leading-relaxed break-words">
             <JargonText text={data.summary} />
-          </h2>
+          </p>
 
-          <div className="inline-flex items-center gap-2.5 text-subtle bg-white/3 border border-white/6 px-4 py-2 rounded-xl mx-auto md:mx-0">
-            <span className="font-mono text-xs break-all">
-              {data.input.length > 22
-                ? `${data.input.slice(0, 10)}…${data.input.slice(-8)}`
-                : data.input}
-            </span>
+          <div className="flex items-start gap-2 text-subtle min-w-0">
+            <code className="font-mono text-xs break-all select-text min-w-0 flex-1">{data.input}</code>
             <button
               onClick={() => handleCopy(data.input)}
-              className="hover:text-primary-text transition-colors shrink-0"
-              aria-label="Copy"
+              className="flex items-center justify-center w-8 h-8 hover:text-primary-text transition-colors shrink-0 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text"
+              aria-label="Copy input"
+              title="Copy input"
             >
               <Copy className="w-3.5 h-3.5" />
             </button>
           </div>
-        </div>
-      </div>
+      </section>
+
+      <details className="border-y border-border py-3">
+        <summary className="cursor-pointer text-sm font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text">Scores and methodology</summary>
+        <div className="mt-3 space-y-3">
+          {reportV2 ? <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div><dt className="text-subtle">Evidence-backed risk</dt><dd className="text-foreground font-semibold">{reportV2.evidenceRiskScore === null ? 'No concrete risk established' : `${reportV2.evidenceRiskScore}/100`}</dd></div>
+            <div><dt className="text-subtle">Uncertainty</dt><dd className="text-amber-300 font-mono">{reportV2.uncertaintyScore}/100</dd></div>
+            <div><dt className="text-subtle">Decision score</dt><dd className="text-foreground font-mono">{reportV2.decisionScore}/100</dd></div>
+          </dl> : <RiskRing score={data.riskScore} level={data.riskLevel} />}
+          {validatedReport && <p className="text-sm text-subtle">Assessed evidence only, not signing clearance. {reportV2 ? 'Decision score uses dual evidence-risk and uncertainty floors v2; a product heuristic, not a loss probability. No concrete risk established does not mean safe.' : 'Score policy: maximum evidence floor v1; a product heuristic, not a loss probability.'}</p>}
 
       {/* ── SCORE BREAKDOWN ── */}
       {!validatedReport && data.scoreFactors && data.scoreFactors.length > 0 && (
         <RiskScoreBreakdown factors={data.scoreFactors} riskScore={data.riskScore} />
       )}
+        </div>
+      </details>
 
+      {!validatedReport && <details className="border-b border-border pb-3">
+        <summary className="cursor-pointer text-sm font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text">Legacy findings and evidence</summary>
+        <div className="mt-3 space-y-4">
+          {data.knownEntity && <KnownEntityBadge entity={data.knownEntity} />}
+          {data.approvalInfo?.isApproval && <ApprovalInspector info={data.approvalInfo} />}
       {/* ── PATTERN DETECTION ── */}
       {!validatedReport && data.patterns && data.patterns.length > 0 && (
         <PatternDetectionCard patterns={data.patterns} />
@@ -254,21 +218,24 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
       {!validatedReport && data.inputType === 'contract' && (
         <ContractDiffView address={data.input} network={data.network.toLowerCase()} />
       )}
+        </div>
+      </details>}
 
       {/* ── STRUCTURED BREAKDOWN ── */}
       {validatedReport ? (
         <section className="space-y-5 border-y border-white/10 py-6">
-          <p className="text-xs text-white/50">Assessed evidence only, not signing clearance. {reportV2 ? 'Decision score uses dual evidence-risk and uncertainty floors v2; a product heuristic, not a loss probability. No concrete risk established does not mean safe.' : 'Score policy: maximum evidence floor v1; a product heuristic, not a loss probability.'}</p>
           {reportV2 && <div className="space-y-3">
             <p className="text-sm text-white/75">Coverage: <strong>{reportV2.coverage === 'complete_for_supported_checks' ? 'Complete for supported checks only' : reportV2.coverage === 'partial' ? 'Partial' : 'Unavailable'}</strong>. Not a complete audit or full execution assessment.</p>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-xs">
+            <details><summary className="cursor-pointer text-sm text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text">Check capabilities</summary>
+            <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
               {([
                 ['sourceVerification', 'Source verification'], ['receiptEvents', 'Receipt events'], ['incidentLookup', 'Incident lookup'], ['inputDecoding', 'Input decoding'],
                 ['reportedTokenState', 'Reported token state'], ['reportedPermissionState', 'Reported permission state'], ['internalTraces', 'Internal traces'], ['isolatedBalanceDeltas', 'Isolated balance deltas'],
               ] as const).map(([key, label]) => <div key={key} className="flex justify-between gap-3 border-b border-white/5 pb-2"><dt className="text-white/60">{label}</dt><dd className={reportV2.capabilities[key] ? 'text-white/80' : 'text-amber-300'}>{reportV2.capabilities[key] ? 'Available' : 'Not established'}</dd></div>)}
             </dl>
+            </details>
           </div>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+          <div className="space-y-3">
             {([
               { category: 'risk', label: 'Risk Findings', icon: ShieldAlert, color: 'text-rose-400', empty: 'No concrete risk findings in the acquired data.' },
               { category: 'limitation', label: 'Analysis Limits', icon: AlertTriangle, color: 'text-amber-300', empty: 'No additional recorded limitations.' },
@@ -276,16 +243,15 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
               { category: 'supported_indicator', label: 'Supporting Evidence', icon: ShieldCheck, color: 'text-emerald-300', empty: 'No supporting indicators established.' },
             ] as const).map(group => {
               const entries = validatedReport.findings.filter(f => f.category === group.category);
-              const Icon = group.icon;
               return (
-                <div key={group.category} className="min-w-0 space-y-3">
-                  <h3 className={`flex items-center gap-2 text-sm font-semibold ${group.color}`}><Icon className="w-4 h-4 shrink-0" />{group.label}</h3>
+                <details key={group.category} open={group.category === 'risk' || group.category === 'limitation'} className="min-w-0 border-t border-border py-3">
+                  <summary className={`cursor-pointer text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text ${group.color}`}>{group.label} ({entries.length})</summary>
                   {entries.length ? <ul className="divide-y divide-white/5">{entries.map(f => {
                     const evidence = validatedReport.evidence.find(e => e.id === f.evidenceRefs[0])!;
                     return <li key={f.id} className="py-3 text-sm leading-relaxed text-white/75 break-words">
                       {f.text}
                       <details className="mt-2 text-xs text-white/50">
-                        <summary className="cursor-pointer hover:text-white/80">Recorded evidence</summary>
+                        <summary className="cursor-pointer min-h-8 py-1 hover:text-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text">Recorded evidence</summary>
                         <dl className="mt-2 space-y-1 break-all">
                           <div><dt className="inline text-subtle">Subject: </dt><dd className="inline font-mono">{evidence.subject}</dd></div>
                           <div><dt className="inline text-subtle">Observation: </dt><dd className="inline">{evidence.value}</dd></div>
@@ -299,26 +265,26 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
                       </details>
                     </li>;
                   })}</ul> : <p className="text-sm text-subtle">{group.empty}</p>}
-                </div>
+                </details>
               );
             })}
           </div>
         </section>
-      ) : data.breakdown ? (
-        <TransactionBreakdown data={data.breakdown} />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <details className="border-y border-border py-3" open>
+          <summary className="cursor-pointer text-sm font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text">Legacy transaction breakdown</summary>
+          {data.breakdown ? <TransactionBreakdown data={data.breakdown} /> : <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Warnings */}
-          <div className="rounded-2xl border border-rose-500/12 bg-rose-500/4 p-6 space-y-4">
+          <div className="space-y-3 min-w-0">
             <h3 className="flex items-center gap-2.5 font-display text-base text-rose-400 font-bold">
               <ShieldAlert className="w-4.5 h-4.5" strokeWidth={1.7} /> Threat Vectors
             </h3>
             {data.warnings.length === 0 ? (
-              <p className="text-subtle text-sm font-mono p-3 rounded-xl border border-white/5 bg-white/2">No threats detected.</p>
+              <p className="text-subtle text-sm">No threats detected.</p>
             ) : (
               <ul className="space-y-3">
                 {data.warnings.map((w, i) => (
-                  <li key={i} className="flex items-start gap-3 p-3 rounded-xl border border-rose-500/8 bg-rose-500/4">
+                  <li key={i} className="flex items-start gap-3 py-3 border-b border-border break-words">
                     <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" strokeWidth={1.7} />
                     <span className="text-sm text-white/75 leading-relaxed"><JargonText text={w} /></span>
                   </li>
@@ -328,16 +294,16 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
           </div>
 
           {/* Positives */}
-          <div className="rounded-2xl border border-emerald-500/12 bg-emerald-500/4 p-6 space-y-4">
+          <div className="space-y-3 min-w-0">
             <h3 className="flex items-center gap-2.5 font-display text-base text-emerald-400 font-bold">
               <ShieldCheck className="w-4.5 h-4.5" strokeWidth={1.7} /> Trust Indicators
             </h3>
             {data.positives.length === 0 ? (
-              <p className="text-subtle text-sm font-mono p-3 rounded-xl border border-white/5 bg-white/2">No positive indicators found.</p>
+              <p className="text-subtle text-sm">No positive indicators found.</p>
             ) : (
               <ul className="space-y-3">
                 {data.positives.map((p, i) => (
-                  <li key={i} className="flex items-start gap-3 p-3 rounded-xl border border-emerald-500/8 bg-emerald-500/4">
+                  <li key={i} className="flex items-start gap-3 py-3 border-b border-border break-words">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" strokeWidth={1.7} />
                     <span className="text-sm text-white/75 leading-relaxed"><JargonText text={p} /></span>
                   </li>
@@ -345,13 +311,14 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
               </ul>
             )}
           </div>
-        </div>
+        </div>}
+        </details>
       )}
 
       {/* ── RAW DETAILS ── */}
       {!validatedReport && data.details && Object.keys(data.details).length > 0 && (
-        <div className="rounded-2xl border border-white/5 bg-white/2 p-6">
-          <h3 className="font-display text-sm font-bold text-white/50 uppercase tracking-widest mb-5">Execution Details</h3>
+        <details className="border-b border-border pb-3">
+          <summary className="cursor-pointer text-sm font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text">Execution Details</summary>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(data.details).map(([key, value]) => {
               if (value === undefined || value === null || key === 'rawData' || key === 'reputation' || key === 'validatedReport') return null;
@@ -363,8 +330,11 @@ export function AnalysisResultView({ data }: { data: AnalysisResult }) {
               );
             })}
           </div>
-        </div>
+        </details>
       )}
+      <footer className="border-t border-border pt-4">
+        <ShareButton data={data} />
+      </footer>
     </div>
   );
 }

@@ -8,16 +8,10 @@ const context = vm.createContext({ URL, TextEncoder, window: { location: { origi
 const validator = readFileSync(`${__dirname}/../../lib/api-zod/src/validated-report.ts`, 'utf8').replace(/export /g, '');
 vm.runInContext(stripTypeScriptTypes(validator), context);
 const source = readFileSync(`${__dirname}/src/components/sigil/ShareButton.tsx`, 'utf8');
-vm.runInContext(stripTypeScriptTypes(source.split('const VERDICT_STYLE')[0].replace(/^import .*;\r?\n/gm, '')), context);
+vm.runInContext(stripTypeScriptTypes(source.split('export function ShareButton')[0].replace(/^import .*;\r?\n/gm, '')), context);
 function share(data) {
   context.data = data;
   return vm.runInContext('buildTweetText(data)', context);
-}
-function shareVerdict(data) {
-  context.data = data;
-  const declarations = source.match(/export function ShareButton[\s\S]*?(\s+const (?:report|verdict) =[\s\S]*?)\s+const style/)?.[1];
-  assert.ok(declarations, 'Actual share style selection must be available');
-  return vm.runInContext(stripTypeScriptTypes(`(function () { ${declarations} return verdict; })()`), context);
 }
 function report(category = 'observation') {
   return { version: 'findings-v2', scorePolicy: 'dual-floor-v2', evidenceRiskScore: category === 'risk' ? 80 : null,
@@ -64,13 +58,9 @@ test('legacy and malformed reports receive bounded unvalidated copy', () => {
   assert.match(share(data(v1)), /legacy validated report with narrower coverage/i);
 });
 
-test('current attributed risk uses dangerous share styling despite a stale safe verdict', () => {
-  assert.equal(shareVerdict(data(report('risk'))), 'dangerous');
-});
-test('current low-warning share styling ignores a stale dangerous verdict', () => {
-  const low = { ...report(), uncertaintyScore: 0, decisionScore: 5 };
-  assert.equal(shareVerdict({ ...data(low), verdict: 'dangerous' }), 'safe');
-});
-test('legacy share styling retains its bounded fallback verdict', () => {
-  assert.equal(shareVerdict({ ...data(), verdict: 'caution' }), 'caution');
+test('share presentation is neutral for all verdicts and retains safe window options', () => {
+  const control = source.split('export function ShareButton')[1];
+  assert.doesNotMatch(control, /data\.verdict|decisionScore|text-(rose|amber|emerald)|w-full/);
+  assert.match(control, /Share report on X/);
+  assert.match(control, /noopener,noreferrer,width=600,height=500/);
 });

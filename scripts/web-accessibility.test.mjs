@@ -5,6 +5,17 @@ import vm from "node:vm";
 
 const read = (file) => readFileSync(new URL(`../artifacts/sigil/${file}`, import.meta.url), "utf8");
 
+function contrast(a, b) {
+  const luminance = hex => {
+    const values = hex.replace('#', '').match(/../g).map(value => parseInt(value, 16) / 255)
+      .map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+    return values[0] * 0.2126 + values[1] * 0.7152 + values[2] * 0.0722;
+  };
+  const values = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (values[0] + 0.05) / (values[1] + 0.05);
+}
+const token = (css, name) => css.match(new RegExp(`--color-${name}:\\s*(#[0-9a-f]{6});`, 'i'))?.[1];
+
 test("jargon disclosures use existing portal tooltip with unique library-owned associations", () => {
   const source = read("src/components/sigil/JargonTooltip.tsx");
   assert.match(source, /import \{ Tooltip, TooltipTrigger, TooltipContent \} from '@\/components\/ui\/tooltip'/);
@@ -29,7 +40,14 @@ test("legacy approval price copy and title retain contrast and history rows can 
 });
 
 test("primary analysis commands keep contrasting solid fills when hovered", () => {
-  for (const [file, marker] of [["home", "{/* Analyze button */}"], ["simulate", "{/* Simulate button */}"]]) {
+  const home = read('src/pages/home.tsx');
+  assert.match(home, /type="submit"[\s\S]*?className="console-button/);
+  const css = read('src/index.css');
+  assert.ok(contrast('#ffffff', token(css, 'primary')) >= 4.5);
+  const hover = css.match(/\.console-button:hover:not\(:disabled\)\s*\{[^}]*background:\s*(#[0-9a-f]{6})/)[1];
+  assert.ok(contrast('#ffffff', hover) >= 4.5, 'Hover fill must retain text contrast');
+  assert.notEqual(hover, token(css, 'primary'), 'Hover must visibly change the fill');
+  for (const [file, marker] of [["simulate", "{/* Simulate button */}"]]) {
     const button = read(`src/pages/${file}.tsx`).split(marker)[1]?.split("</button>")[0];
     assert.ok(button);
     assert.match(button, /bg-primary hover:bg-\[#6d28d9\]/);
@@ -72,8 +90,9 @@ test("validated results retain readable labels and source links", () => {
   const structured = result.split("{validatedReport ? (")[1].split(") : data.breakdown")[0];
   assert.doesNotMatch(structured, /text-white\/(?:35|40)\b/);
   assert.match(result, /underline underline-offset-4 text-primary-text/);
-  assert.match(result, /bg-primary\/8 border border-primary\/15 text-primary-text/);
-  assert.match(result, /inline-flex items-center gap-2\.5 text-subtle/);
+  assert.match(result, /<code className="[^"]*text-xs break-all select-text/);
+  assert.match(result, /aria-label="Copy input"/);
+  assert.match(result, /text-subtle/);
 });
 
 test("notifications provide a named dismiss command and a contrasting error fill", () => {
@@ -134,9 +153,12 @@ test("saved-report controls read the router search parameter without claiming ca
 
 test("secondary and brand text use opaque contrast tokens, separate from primary fills", () => {
   const css = read("src/index.css");
-  assert.match(css, /--color-subtle:\s*#b3acc7;/);
-  assert.match(css, /--color-primary-text:\s*#c4b5fd;/);
-  assert.match(css, /--color-primary:\s*#7c3aed;/);
+  for (const text of ['subtle', 'primary-text', 'foreground']) {
+    const value = token(css, text);
+    assert.ok(value, `${text} must be an opaque color token`);
+    for (const surface of ['background', 'card', 'secondary']) assert.ok(contrast(value, token(css, surface)) >= 4.5, `${text} on ${surface}`);
+  }
+  assert.notEqual(token(css, 'primary-text'), token(css, 'primary'));
   for (const name of ["home", "approvals", "wallet-monitor", "watchlist", "sites", "simulate", "history", "extension", "onboarding", "legal"]) {
     assert.doesNotMatch(read(`src/pages/${name}.tsx`), /text-white\/(?:[1-3]\d|4[0-5]|6)(?!\d)/, name);
     assert.doesNotMatch(read(`src/pages/${name}.tsx`), /text-primary(?!-)(?:\/\d+)?\b/, name);
@@ -154,12 +176,14 @@ test("shared layout provides a keyboard skip link and focusable main target", ()
   const layout = read("src/components/layout/Layout.tsx");
   assert.match(layout, /<a\s+href="#main-content"\s+className="skip-link">Skip to content<\/a>/);
   assert.match(layout, /<main\s+id="main-content"\s+tabIndex=\{-1\}/);
-  assert.match(layout, /aria-current=\{isActive\s*\?\s*'page'\s*:\s*undefined\}/);
+  assert.match(layout, /aria-current=\{active\s*\?\s*'page'\s*:\s*undefined\}/);
 });
 
 test("shared styles and motion provider respect reduced motion and keyboard focus", () => {
   const css = read("src/index.css");
-  assert.match(css, /:focus-visible\s*\{[^}]*outline:\s*2px solid #fff !important/s);
+  const outline = css.match(/:focus-visible\s*\{[^}]*outline:\s*2px solid (#[0-9a-f]{6}) !important/s);
+  assert.ok(outline);
+  assert.ok(contrast(outline[1], token(css, 'background')) >= 3);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*animation-duration:\s*0\.01ms !important/);
   assert.match(css, /animation-iteration-count:\s*1 !important/);
   assert.match(css, /scroll-behavior:\s*auto !important/);
@@ -168,11 +192,12 @@ test("shared styles and motion provider respect reduced motion and keyboard focu
 
 test("navigation focus stays inset and fragment target clears the sticky header", () => {
   const css = read("src/index.css");
-  assert.match(css, /nav\[aria-label="Main navigation"\] a:focus-visible\s*\{[^}]*outline-offset:\s*-2px/s);
-  assert.match(css, /#main-content\s*\{[^}]*scroll-margin-top:\s*88px/s);
+  assert.match(css, /nav\[aria-label="Main navigation"\] a:focus-visible\s*\{[^}]*outline-offset:\s*-\d+px/s);
+  assert.ok(Number(css.match(/#main-content\s*\{[^}]*scroll-margin-top:\s*(\d+)px/s)[1]) >= 128);
   const layout = read("src/components/layout/Layout.tsx");
-  assert.match(layout, /min-h-\[72px\]/);
-  assert.match(layout, /onFocus=\{\(event\) => event\.currentTarget\.scrollIntoView\(\{ block: 'nearest', inline: 'nearest' \}\)\}/);
+  assert.match(layout, /min-h-16/);
+  assert.doesNotMatch(layout, /hidden sm:inline|overflow-x-auto/);
+  assert.match(layout, /<summary[\s\S]*?Tools/);
 });
 
 test("execution loading uses a static announced status when reduced motion is requested", () => {

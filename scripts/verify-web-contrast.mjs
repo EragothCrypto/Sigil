@@ -87,7 +87,7 @@ let browser;
 const reports = [];
 const commandContrast = [];
 const routes = {
-  "/": "The Trust Layer of Web3",
+  "/": "Check a transaction or contract",
   "/approvals": "Find wallet approvals worth cleaning up.",
   "/monitor": "Recorded approval events, sorted for review.",
   "/watchlist": "Keep important addresses in one calm security view.",

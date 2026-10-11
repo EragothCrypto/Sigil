@@ -1,4 +1,4 @@
-import { Share2, Twitter } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 import type { AnalysisResult } from '@workspace/api-client-react';
 import { parseValidatedReport } from '@/lib/validated-report';
 
@@ -19,34 +19,7 @@ function buildTweetText(data: AnalysisResult): string {
   return `Sigil: ${status} No safety guarantee or signing clearance.\n${appUrl}`;
 }
 
-const VERDICT_STYLE = {
-  dangerous: {
-    bg: 'bg-rose-500/8 hover:bg-rose-500/14',
-    border: 'border-rose-500/20 hover:border-rose-500/35',
-    text: 'text-rose-400',
-    icon: 'text-rose-400',
-  },
-  caution: {
-    bg: 'bg-amber-500/8 hover:bg-amber-500/14',
-    border: 'border-amber-500/20 hover:border-amber-500/35',
-    text: 'text-amber-400',
-    icon: 'text-amber-400',
-  },
-  safe: {
-    bg: 'bg-emerald-500/8 hover:bg-emerald-500/14',
-    border: 'border-emerald-500/20 hover:border-emerald-500/35',
-    text: 'text-emerald-400',
-    icon: 'text-emerald-400',
-  },
-} as const;
-
 export function ShareButton({ data }: { data: AnalysisResult }) {
-  const report = parseValidatedReport(data.details);
-  const verdict = (report?.version === 'findings-v2'
-    ? report.decisionScore <= 25 ? 'safe' : report.decisionScore <= 60 ? 'caution' : 'dangerous'
-    : data.verdict ?? 'caution') as keyof typeof VERDICT_STYLE;
-  const style = VERDICT_STYLE[verdict] || VERDICT_STYLE.caution;
-
   const handleShare = () => {
     const text = buildTweetText(data);
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
@@ -55,17 +28,13 @@ export function ShareButton({ data }: { data: AnalysisResult }) {
 
   return (
     <button
+      type="button"
       onClick={handleShare}
-      className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border transition-all duration-200 cursor-pointer group ${style.bg} ${style.border}`}
+      title="Share report on X"
+      className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border text-subtle hover:text-foreground hover:bg-accent transition-colors text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-text"
     >
-      <Share2 className={`w-4 h-4 ${style.icon} group-hover:scale-110 transition-transform`} strokeWidth={1.8} />
-      <span className={`font-display font-semibold text-sm ${style.text}`}>
-        Share This Transaction on
-      </span>
-      <Twitter className={`w-4 h-4 ${style.icon}`} strokeWidth={1.8} />
-      <span className={`font-display font-semibold text-sm ${style.text}`}>
-        X / Twitter
-      </span>
+      <Share2 className="w-4 h-4 shrink-0" strokeWidth={1.8} />
+      Share report on X
     </button>
   );
 }
