@@ -2,53 +2,26 @@ import { pool } from "@workspace/db";
 
 let ensurePromise: Promise<void> | undefined;
 
-async function createOrUpdateAnalysesTable(): Promise<void> {
+async function checkAnalysesTable(): Promise<void> {
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS analyses (
-      id serial PRIMARY KEY,
-      public_id text UNIQUE,
-      input text NOT NULL,
-      input_type text NOT NULL DEFAULT 'unknown',
-      network text NOT NULL DEFAULT 'mainnet',
-      summary text NOT NULL,
-      verdict text NOT NULL DEFAULT 'caution',
-      verdict_reason text NOT NULL DEFAULT '',
-      risk_score integer NOT NULL DEFAULT 0,
-      risk_level text NOT NULL DEFAULT 'low',
-      warnings jsonb NOT NULL DEFAULT '[]'::jsonb,
-      positives jsonb NOT NULL DEFAULT '[]'::jsonb,
-      details jsonb,
-      created_at timestamp NOT NULL DEFAULT now(),
-      hall_of_shame boolean NOT NULL DEFAULT false,
-      hall_of_shame_label text
-    );
+    SELECT id, public_id, input, input_type, network, summary, verdict,
+      verdict_reason, risk_score, risk_level, warnings, positives, details,
+      created_at, hall_of_shame, hall_of_shame_label
+    FROM analyses LIMIT 0
   `);
-
-  await pool.query(`
-    ALTER TABLE analyses
-      ADD COLUMN IF NOT EXISTS public_id text,
-      ADD COLUMN IF NOT EXISTS input text NOT NULL DEFAULT '',
-      ADD COLUMN IF NOT EXISTS input_type text NOT NULL DEFAULT 'unknown',
-      ADD COLUMN IF NOT EXISTS network text NOT NULL DEFAULT 'mainnet',
-      ADD COLUMN IF NOT EXISTS summary text NOT NULL DEFAULT '',
-      ADD COLUMN IF NOT EXISTS verdict text NOT NULL DEFAULT 'caution',
-      ADD COLUMN IF NOT EXISTS verdict_reason text NOT NULL DEFAULT '',
-      ADD COLUMN IF NOT EXISTS risk_score integer NOT NULL DEFAULT 0,
-      ADD COLUMN IF NOT EXISTS risk_level text NOT NULL DEFAULT 'low',
-      ADD COLUMN IF NOT EXISTS warnings jsonb NOT NULL DEFAULT '[]'::jsonb,
-      ADD COLUMN IF NOT EXISTS positives jsonb NOT NULL DEFAULT '[]'::jsonb,
-      ADD COLUMN IF NOT EXISTS details jsonb,
-      ADD COLUMN IF NOT EXISTS created_at timestamp NOT NULL DEFAULT now(),
-      ADD COLUMN IF NOT EXISTS hall_of_shame boolean NOT NULL DEFAULT false,
-      ADD COLUMN IF NOT EXISTS hall_of_shame_label text;
+  // Bearer result IDs must remain unique; a legacy schema is not repaired at runtime.
+  const result = await pool.query(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_index i
+      JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attname = 'public_id'
+      WHERE i.indrelid = 'analyses'::regclass
+        AND i.indisunique AND i.indisvalid AND i.indisready AND i.indimmediate
+        AND i.indnkeyatts = 1 AND i.indkey[0] = a.attnum
+        AND i.indexprs IS NULL
+        AND (i.indpred IS NULL OR pg_get_expr(i.indpred, i.indrelid) = '(public_id IS NOT NULL)')
+    ) AS ready
   `);
-
-  await pool.query(`
-    CREATE INDEX IF NOT EXISTS analyses_created_at_idx ON analyses (created_at DESC);
-    CREATE INDEX IF NOT EXISTS analyses_hall_of_shame_idx ON analyses (hall_of_shame);
-    CREATE UNIQUE INDEX IF NOT EXISTS analyses_public_id_idx ON analyses (public_id) WHERE public_id IS NOT NULL;
-  `);
-
+  if (result.rows[0]?.ready !== true) throw new Error("analysis_schema_not_ready");
 }
 
 export async function runAnalysisRetentionCleanup(): Promise<number> {
@@ -64,7 +37,7 @@ export async function runAnalysisRetentionCleanup(): Promise<number> {
 }
 
 export async function ensureAnalysesSchema(): Promise<void> {
-  ensurePromise ??= createOrUpdateAnalysesTable().catch((error) => {
+  ensurePromise ??= checkAnalysesTable().catch((error) => {
     ensurePromise = undefined;
     throw error;
   });

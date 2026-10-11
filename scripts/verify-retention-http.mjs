@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cp, mkdir, mkdtemp, access } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, access, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { once } from "node:events";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -71,10 +71,19 @@ async function main() {
     const get = async (route, status = 200) => {
       const response = await fetch(`${origin}/api/sigil/${route}`, { signal: AbortSignal.timeout(10000) });
       assert.equal(response.status, status, route);
+      if (status === 500) {
+        assert.doesNotMatch(await response.text(), /public_id|SELECT|postgresql:|column .*does not exist/);
+        return;
+      }
       return response.json();
     };
     const notFound = { error: "not_found", message: "Analysis not found" };
-    stage = "privacy_migration";
+    stage = "privacy_missing_schema_no_runtime_repair";
+    await get("history", 500);
+    const legacyColumns = (await client.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='analyses'")).rows;
+    assert.equal(legacyColumns.some(row => row.column_name === "public_id"), false);
+    stage = "explicit_isolated_privacy_bootstrap";
+    await client.query(await readFile(new URL("./analyses-schema.sql", import.meta.url), "utf8"));
     assert.deepEqual(await get("history"), []);
     const migrated = (await client.query("SELECT id,input,public_id FROM public.analyses ORDER BY id")).rows;
     assert.deepEqual(migrated, [
@@ -112,7 +121,7 @@ async function main() {
     assert.deepEqual(hall.map(row => ({ id: row.id, input: row.input })), [{ id: "2", input: "synthetic-curated" }]);
     assert.equal((await client.query("SELECT count(*)::int AS count FROM public.analyses")).rows[0].count, 3);
     console.log(JSON.stringify({ status: "pass", scope: "isolated_built_http_real_postgres_privacy", controls: [
-      "legacy_schema_migration", "legacy_private_rows_not_backfilled_or_exposed", "empty_public_history",
+      "missing_schema_no_runtime_repair", "explicit_isolated_schema_bootstrap", "legacy_private_rows_not_backfilled_or_exposed", "empty_public_history",
       "private_numeric_denied", "invalid_unknown_ids_denied", "opaque_path_and_query_access",
       "unique_opaque_index", "curated_numeric_and_hall_only", "fixtures_preserved",
     ], limits: ["not_production_migration", "not_authenticated_ownership", "not_uuid_generation_on_save",
@@ -144,7 +153,11 @@ async function main() {
   await unauthorized();
   await unauthorized("Bearer wrong-synthetic-secret");
   assert.equal(await countRelations(), 0);
-  stage = "schema";
+  stage = "missing_schema_no_runtime_repair";
+  assert.equal((await request(`Bearer ${secret}`)).status, 500);
+  assert.equal(await countRelations(), 0);
+  stage = "explicit_isolated_schema_bootstrap";
+  await client.query(await readFile(new URL("./analyses-schema.sql", import.meta.url), "utf8"));
   await authorized();
   const columns = (await client.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='analyses'")).rows.map(row => row.column_name);
   for (const column of ["id", "public_id", "input", "summary", "created_at", "hall_of_shame"]) assert.ok(columns.includes(column));
@@ -186,7 +199,7 @@ async function main() {
   await authorized(0, ip);
   assert.deepEqual(await survivors(), expected);
   console.log(JSON.stringify({ status: "pass", scope: "isolated_built_http_real_postgres", controls: [
-    "auth_before_schema", "actual_schema", "old_deleted_recent_curated_near_cutoff_preserved",
+    "auth_before_schema", "missing_schema_no_runtime_repair", "explicit_isolated_schema_bootstrap", "old_deleted_recent_curated_near_cutoff_preserved",
     "idempotent", "bounded_database_error", "database_recovery", "rate_limit_and_recovery",
   ], limits: ["not_production_cron", "not_backup_restore", "not_exact_boundary_http", "not_deployed_proxy_policy"] }));
 }

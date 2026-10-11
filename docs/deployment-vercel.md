@@ -55,7 +55,7 @@ is introduced; the existing non-streaming transport fallback retains the same ca
 
 `DATABASE_URL_UNPOOLED` is recommended for schema pushes and migrations. Use the direct Neon connection string without `-pooler`.
 
-Sigil creates or updates its small `analyses` table on first API use. For manual database management, the same schema can also be pushed from the repo with `pnpm --filter @workspace/db push`.
+Sigil never creates or updates the `analyses` schema during API requests. Runtime preflight reads all required columns and checks a valid, immediate unique index covering non-null `public_id` values; missing schema fails closed. Schema changes require separate operator authorization. `scripts/analyses-schema.sql` retains the explicit bootstrap SQL used only after disposable-database guards in the integration harness. Do not run it against a deployed database without migration approval. No production or preview migration is authorized by the Colosseum sprint.
 
 Use the exact uppercase variable name `DATABASE_URL` in Vercel. `Database_Url`, `database_url`, and other casing variants will not be read by Node.js. Do not use Replit's internal/provisioned database URL in Vercel; use a database that accepts external connections from Vercel Functions.
 

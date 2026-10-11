@@ -45,17 +45,38 @@ test("scheduled cleanup runs repeatedly and propagates database failures", async
   assert.equal(calls, 3);
 });
 
-test("schema initialization is coalesced and retries after failure without deleting data", async () => {
+test("runtime schema preflight is read-only, coalesced and retries after failure", async () => {
   let calls = 0;
   const queries = [];
   const schema = loadSchema(async (sql) => {
     calls += 1;
     queries.push(sql);
     if (calls === 1) throw new Error("temporary failure");
-    return {};
+    return { rows: [{ ready: true }] };
   });
   await assert.rejects(schema.ensureAnalysesSchema());
   await Promise.all([schema.ensureAnalysesSchema(), schema.ensureAnalysesSchema()]);
-  assert.equal(calls, 4);
-  assert.ok(queries.every((sql) => !/DELETE FROM/.test(sql)));
+  assert.equal(calls, 3);
+  assert.ok(queries.every((sql) => /^\s*SELECT\b/.test(sql)));
+  assert.ok(queries.every((sql) => !/\b(CREATE|ALTER|DELETE|INSERT|UPDATE|DROP)\b/i.test(sql)));
+  assert.match(queries[1], /public_id/);
+  assert.match(queries[2], /indisunique/);
+  await schema.ensureAnalysesSchema();
+  assert.equal(calls, 3);
+});
+
+test("runtime preflight rejects absent uniqueness and never repairs missing columns", async () => {
+  const queries = [];
+  const schema = loadSchema(async (sql) => {
+    queries.push(sql);
+    return { rows: [{ ready: false }] };
+  });
+  await assert.rejects(schema.ensureAnalysesSchema(), /analysis_schema_not_ready/);
+  assert.equal(queries.length, 2);
+  const failure = Object.assign(new Error("missing column"), { code: "42703" });
+  const missing = loadSchema(async (sql) => {
+    assert.match(sql, /^\s*SELECT\b/);
+    throw failure;
+  });
+  await assert.rejects(missing.ensureAnalysesSchema(), error => error === failure);
 });

@@ -93,9 +93,13 @@ test("api-server build emits an app bundle for Vercel functions", () => {
   assert.match(read("artifacts/api-server/build.mjs"), /src\/app\.ts/);
 });
 
-test("api-server repairs Replit-created database schema on first use", () => {
-  assert.match(read("artifacts/api-server/src/routes/sigil/analysis-schema.ts"), /CREATE TABLE IF NOT EXISTS analyses/);
-  assert.match(read("artifacts/api-server/src/routes/sigil/analysis-schema.ts"), /ADD COLUMN IF NOT EXISTS hall_of_shame/);
+test("api-server checks schema without runtime DDL; bootstrap is explicit", () => {
+  const schema = read("artifacts/api-server/src/routes/sigil/analysis-schema.ts");
+  assert.doesNotMatch(schema, /\b(CREATE|ALTER|DROP)\b/);
+  assert.match(schema, /FROM analyses LIMIT 0/);
+  assert.match(schema, /indisunique/);
+  assert.match(read("scripts/analyses-schema.sql"), /CREATE TABLE IF NOT EXISTS analyses/);
+  assert.match(read("scripts/analyses-schema.sql"), /ADD COLUMN IF NOT EXISTS hall_of_shame/);
   assert.match(read("artifacts/api-server/src/routes/sigil/index.ts"), /ensureAnalysesSchema/);
   assert.match(read("artifacts/api-server/src/routes/health.ts"), /database\.status === "ready"/);
 });
