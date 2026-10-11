@@ -1,6 +1,6 @@
 # Colosseum Coding Pre-Task Acceptance
 
-Current approved UX candidate: application `240afdcbe295c160bc07f4799cfe7dea7aa4a765`, [Preview](https://sigil-18j89a47h-s3ntrylabs.vercel.app). Five same-candidate CI gates and actual deployed Mainnet/EVM desktop/mobile checks passed. This presentation-only successor supersedes the application freeze below. [UX acceptance, 20-pattern ledger and jury walkthrough](colosseum-ux-polish.md). No production promotion or new security behavior. Earlier evidence below remains historical.
+Current frozen UX candidate: application `c1a834ec92d9028e384b60c4901fa80313be4574`, [Preview](https://sigil-9m0oclrto-s3ntrylabs.vercel.app). All five same-candidate CI38149821945 gates passed; 491 Node tests plus four TS scripts, types/builds/codegen/wrappers, Gitleaks and scoped review passed. Final desktop/mobile entry, saved Aave report and live Mainnet partial snapshot (slot455695028, legacy27, unsupported2) verified. Presentation-only final refinement supersedes240afdc and the older freeze below; navigation/backend/detection/configuration unchanged. [UX acceptance, 20-pattern ledger, screenshots and jury walkthrough](colosseum-ux-polish.md). No production promotion or new security behavior. Earlier evidence below remains historical.
 
 Updated 2026-10-11, 16:03 Europe/Berlin. Coding scope frozen at application `dad30cdc4c2b7dbe7f00dd2063aed8e48c1724f5`. This is scoped hackathon acceptance, not full original-phase completion, production authorization or EU/legal clearance.
 
