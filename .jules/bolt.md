@@ -13,3 +13,6 @@
 ## 2024-03-24 - Batch Etherscan API calls for contract reputation
 **Learning:** Etherscan limits to 5 req/sec on the free tier. Making concurrent API calls per item using `Promise.allSettled` uses more network overhead and quota than necessary when we can retrieve up to 200 items in a single paginated Etherscan API call using offset 200.
 **Action:** When querying Etherscan, always max out the offset limit (up to 200) instead of concurrently firing requests when trying to get a large number of items. Also gracefully handle rejection/error conditions using `.catch(() => ({}))` to maintain fault tolerance instead of just directly awaiting.
+## 2025-02-23 - Reaffirmed Pattern of Chained Array Overheads in Watchlist Page
+**Learning:** The anti-pattern of using multiple `.filter(..).length` chaining was identified again in `watchlist.tsx`, leading to 4x O(N) passes over potentially large arrays of watchlist entries. This confirms that this frontend overhead remains a common risk throughout this codebase.
+**Action:** Always replace multiple chained array passes over the same list with a single accumulator loop `for (let i = 0; i < entries.length; i++) { ... }` when deriving multiple aggregate metrics from an array in frontend components, especially inside `useMemo`.

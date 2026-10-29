@@ -111,16 +111,29 @@ export default function WatchlistPage() {
     saveEntries(entries);
   }, [entries]);
 
+  // ⚡ Bolt Optimization: Use a single O(N) pass to gather all metrics instead of multiple filter passes.
   const summary = useMemo(() => {
+    let clean = 0;
+    let review = 0;
+    let highRisk = 0;
+    let unchecked = 0;
+
+    for (let i = 0; i < entries.length; i++) {
+      const status = entries[i].status;
+      if (status === "clean") clean++;
+      else if (status === "review") review++;
+      else if (status === "high-risk") highRisk++;
+      else if (status === "unchecked") unchecked++;
+    }
+
     return {
       total: entries.length,
-      clean: entries.filter((entry) => entry.status === 'clean').length,
-      review: entries.filter((entry) => entry.status === 'review').length,
-      highRisk: entries.filter((entry) => entry.status === 'high-risk').length,
-      unchecked: entries.filter((entry) => entry.status === 'unchecked').length,
+      clean,
+      review,
+      highRisk,
+      unchecked,
     };
   }, [entries]);
-
   function handleAdd(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
